@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Edit Taro Type</title>
+    <script defer src="/js/service-navigation.js"></script>
+</head>
+
+<body class="page-form">
+
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="http://localhost:8081/customers">Taro Allocation System</a>
+        <button class="app-nav__toggle" type="button" aria-expanded="false" aria-controls="service-navigation">
+            <span aria-hidden="true">☰</span> Menu
+        </button>
+        <div class="app-nav__links" id="service-navigation">
+            <a href="http://localhost:8081/customers">Customer Service</a>
+            <a href="/taro-types" aria-current="page">Taro Service</a>
+            <a href="http://localhost:8082/allocations">Allocation Service</a>
+        </div>
+    </nav>
+
+    <h1>Edit Taro Type (Server-rendered)</h1>
+
+    <div class="error-message" role="alert" th:if="${errors != null && !errors.isEmpty()}">
+
+        <strong>Unable to update taro type:</strong>
+
+        <ul>
+            <li th:each="error : ${errors}" th:text="${error}">
+                Error message
+            </li>
+        </ul>
+
+    </div>
+
+    <form th:action="@{/taro-types/{id}/edit(id=${taroTypeId})}" method="post">
+
+        <div>
+            <label for="name">
+                Name
+            </label>
+
+            <input type="text" id="name" name="name" th:value="${name}" required>
+        </div>
+
+        <br>
+
+        <div>
+            <label for="description">
+                Description
+            </label>
+
+            <input type="text" id="description" name="description" th:value="${description}">
+        </div>
+
+        <br>
+
+        <div>
+            <label for="standardPrice">
+                Standard Price
+            </label>
+
+            <input type="number" id="standardPrice" name="standardPrice" step="0.01" th:value="${standardPrice}"
+                required>
+        </div>
+
+        <br>
+
+        <button type="submit">
+            Update Taro Type
+        </button>
+
+        <a href="/taro-types">
+            Cancel
+        </a>
+
+    </form>
+
+</body>
+
+</html>

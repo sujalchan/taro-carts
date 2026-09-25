@@ -26,10 +26,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
+import nz.ac.aut.comp713.allocation_service.client.TaroClient;
 import nz.ac.aut.comp713.allocation_service.client.CustomerResponse;
 import nz.ac.aut.comp713.allocation_service.client.TaroTypeResponse;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerServiceUnavailableException;
+import nz.ac.aut.comp713.allocation_service.exception.TaroServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
@@ -49,6 +51,9 @@ class WeeklyAllocationApiTest {
 
 	@MockitoBean
 	private CustomerClient customerClient;
+
+	@MockitoBean
+	private TaroClient taroClient;
 
 	@BeforeEach
 	void setUp() {
@@ -74,14 +79,14 @@ class WeeklyAllocationApiTest {
 						"0215555555",
 						true));
 
-		when(customerClient.getTaroType(1L))
+		when(taroClient.getTaroType(1L))
 				.thenReturn(new TaroTypeResponse(
 						1L,
 						"Samoan Taro",
 						"Large premium taro",
 						new BigDecimal("50.00")));
 
-		when(customerClient.getTaroType(2L))
+		when(taroClient.getTaroType(2L))
 				.thenReturn(new TaroTypeResponse(
 						2L,
 						"Fiji Taro",
@@ -362,7 +367,7 @@ class WeeklyAllocationApiTest {
 	// found
 	void missingTaroTypeReturns404() throws Exception {
 
-		when(customerClient.getTaroType(999L))
+		when(taroClient.getTaroType(999L))
 				.thenThrow(new TaroTypeNotFoundException(999L));
 
 		mockMvc.perform(post("/api/v1/allocations")
@@ -833,7 +838,7 @@ class WeeklyAllocationApiTest {
 
 		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
 
-		when(customerClient.getTaroType(999L))
+		when(taroClient.getTaroType(999L))
 				.thenThrow(new TaroTypeNotFoundException(999L));
 
 		mockMvc.perform(put("/api/v1/allocations/{id}", id)
@@ -949,7 +954,7 @@ class WeeklyAllocationApiTest {
 
 		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
 
-		when(customerClient.getTaroType(999L))
+		when(taroClient.getTaroType(999L))
 				.thenThrow(new TaroTypeNotFoundException(999L));
 
 		mockMvc.perform(put("/api/v1/allocations/{id}", id)
@@ -1052,6 +1057,67 @@ class WeeklyAllocationApiTest {
 				.andExpect(jsonPath("$.message")
 						.value(
 								"Quantity must be a positive whole number"));
+	}
+
+	@Test
+	void taroServiceUnavailableDuringCreateReturns503() throws Exception {
+		when(taroClient.getTaroType(1L)).thenThrow(new TaroServiceUnavailableException());
+		mockMvc.perform(post("/api/v1/allocations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						"customerId": 1,
+						"weekStart": "2026-09-14",
+						"allocationItems": [{"taroTypeId": 1, "quantity": 100}]
+						}
+						"""))
+				.andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.code").value("TARO_SERVICE_UNAVAILABLE"));
+	}
+
+	@Test
+	void taroServiceUnavailableDuringGetReturns503() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		when(taroClient.getTaroType(1L)).thenThrow(new TaroServiceUnavailableException());
+		mockMvc.perform(get("/api/v1/allocations/{id}", id))
+				.andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.code").value("TARO_SERVICE_UNAVAILABLE"));
+		mockMvc.perform(get("/api/v1/allocations"))
+				.andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.code").value("TARO_SERVICE_UNAVAILABLE"));
+	}
+
+	@Test
+	void taroServiceUnavailableDuringUpdateReturns503() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		when(taroClient.getTaroType(1L)).thenThrow(new TaroServiceUnavailableException());
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						"customerId": 1,
+						"weekStart": "2026-09-14",
+						"allocationItems": [{"taroTypeId": 1, "quantity": 100}]
+						}
+						"""))
+				.andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.code").value("TARO_SERVICE_UNAVAILABLE"));
+	}
+
+	@Test
+	void referenceEndpointsUseSeparateClients() throws Exception {
+		when(customerClient.getCustomers()).thenReturn(java.util.List.of(
+				new CustomerResponse(1L, "Island Foods", "John", "0211234567", true)));
+		when(taroClient.getTaroTypes()).thenReturn(java.util.List.of(
+				new TaroTypeResponse(1L, "Samoan Taro", "Large premium taro", new BigDecimal("50.00"))));
+		mockMvc.perform(get("/api/v1/customer-service-reference/customers"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].name").value("Island Foods"));
+		mockMvc.perform(get("/api/v1/taro-service-reference/taro-types"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].name").value("Samoan Taro"));
 	}
 
 	// create an allocation used as setup for tests

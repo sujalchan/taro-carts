@@ -6,14 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/css/style.css">
     <title>Edit Customer</title>
+    <script defer src="/js/service-navigation.js"></script>
 </head>
 
 <body class="page-form">
 
     <nav class="app-nav" aria-label="Service navigation">
         <a class="app-nav__brand" href="/customers">Taro Allocation System</a>
-        <div class="app-nav__links">
+        <button class="app-nav__toggle" type="button" aria-expanded="false" aria-controls="service-navigation">
+            <span aria-hidden="true">☰</span> Menu
+        </button>
+        <div class="app-nav__links" id="service-navigation">
             <a href="/customers" aria-current="page">Customer Service</a>
+            <a href="http://localhost:8083/taro-types">Taro Service</a>
             <a href="http://localhost:8082/allocations">Allocation Service</a>
         </div>
     </nav>

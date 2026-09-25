@@ -6,12 +6,12 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import nz.ac.aut.comp713.allocation_service.exception.CustomerNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerServiceUnavailableException;
-import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
 
 // HTTP client used by allocation-service to communicate with customer-service
 @Component
@@ -42,7 +42,7 @@ public class CustomerClient {
             }
             return Arrays.asList(customers);
 
-        } catch (ResourceAccessException e) {
+        } catch (ResourceAccessException | HttpServerErrorException e) {
             // translate connection failures into an application-specific service exception
             throw new CustomerServiceUnavailableException();
         }
@@ -60,47 +60,10 @@ public class CustomerClient {
             // translate a remote 404 into the allocation-service customer exception
             throw new CustomerNotFoundException(customerId);
 
-        } catch (ResourceAccessException e) {
+        } catch (ResourceAccessException | HttpServerErrorException e) {
             // handle cases where customer-service cannot be reached
             throw new CustomerServiceUnavailableException();
         }
     }
 
-    // retrieve all taro types from customer-service
-    public List<TaroTypeResponse> getTaroTypes() {
-        try {
-            // call the customer-service taro type endpoint and deserialize the JSON
-            // response
-            TaroTypeResponse[] taroTypes = restClient.get()
-                    .uri("/api/v1/taro-types")
-                    .retrieve()
-                    .body(TaroTypeResponse[].class);
-
-            if (taroTypes == null) {
-                return List.of();
-            }
-
-            return Arrays.asList(taroTypes);
-
-        } catch (ResourceAccessException e) {
-            throw new CustomerServiceUnavailableException();
-        }
-    }
-
-    // retrieve a taro type from customer-service by ID
-    public TaroTypeResponse getTaroType(Long taroTypeId) {
-        try {
-            return restClient.get()
-                    .uri("/api/v1/taro-types/{id}", taroTypeId)
-                    .retrieve()
-                    .body(TaroTypeResponse.class);
-
-        } catch (HttpClientErrorException.NotFound e) {
-            // translate a remote 404 into the allocation-service taro type exception
-            throw new TaroTypeNotFoundException(taroTypeId);
-
-        } catch (ResourceAccessException e) {
-            throw new CustomerServiceUnavailableException();
-        }
-    }
 }

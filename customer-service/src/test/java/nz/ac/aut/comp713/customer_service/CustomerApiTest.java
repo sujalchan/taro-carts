@@ -34,6 +34,12 @@ class CustomerApiTest {
 		customerRepository.deleteAll();
 	}
 
+	@Test
+	void taroTypeApiIsNotOwnedByCustomerService() throws Exception {
+		mockMvc.perform(get("/api/v1/taro-types"))
+				.andExpect(status().isNotFound());
+	}
+
 	// test retrieving customers when the database is empty
 	@Test
 	void getAllCustomersReturnsEmptyList() throws Exception {

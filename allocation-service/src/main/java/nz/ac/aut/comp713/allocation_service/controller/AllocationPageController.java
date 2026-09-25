@@ -19,11 +19,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
+import nz.ac.aut.comp713.allocation_service.client.TaroClient;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemRequest;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationRequest;
 
 import nz.ac.aut.comp713.allocation_service.exception.CustomerNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerServiceUnavailableException;
+import nz.ac.aut.comp713.allocation_service.exception.TaroServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationAlreadyExistsException;
@@ -39,16 +41,19 @@ public class AllocationPageController {
 
 	private final WeeklyAllocationService weeklyAllocationService;
 	private final CustomerClient customerClient;
+	private final TaroClient taroClient;
 	private final Validator validator;
 
-	// pass the allocation service, customer-service client, and form validator
+	// pass the allocation service, both reference clients, and form validator
 	public AllocationPageController(
 			WeeklyAllocationService weeklyAllocationService,
 			CustomerClient customerClient,
+			TaroClient taroClient,
 			Validator validator) {
 
 		this.weeklyAllocationService = weeklyAllocationService;
 		this.customerClient = customerClient;
+		this.taroClient = taroClient;
 		this.validator = validator;
 	}
 
@@ -60,8 +65,8 @@ public class AllocationPageController {
 			model.addAttribute(
 					"allocations",
 					weeklyAllocationService.getAllWeeklyAllocations());
-		} catch (CustomerServiceUnavailableException exception) {
-			// show error if customer-service is unavaliable
+		} catch (CustomerServiceUnavailableException | TaroServiceUnavailableException exception) {
+			// show the unavailable service error
 			model.addAttribute(
 					"allocations",
 					List.of());
@@ -159,7 +164,8 @@ public class AllocationPageController {
 				| InvalidQuantityException
 				| CustomerNotFoundException
 				| TaroTypeNotFoundException
-				| CustomerServiceUnavailableException exception) {
+				| CustomerServiceUnavailableException
+				| TaroServiceUnavailableException exception) {
 
 			errors.add(exception.getMessage());
 
@@ -277,6 +283,7 @@ public class AllocationPageController {
 				| CustomerNotFoundException
 				| TaroTypeNotFoundException
 				| CustomerServiceUnavailableException
+				| TaroServiceUnavailableException
 				| WeeklyAllocationNotFoundException exception) {
 
 			errors.add(exception.getMessage());
@@ -339,9 +346,9 @@ public class AllocationPageController {
 
 			model.addAttribute(
 					"taroTypes",
-					customerClient.getTaroTypes());
+					taroClient.getTaroTypes());
 
-		} catch (CustomerServiceUnavailableException exception) {
+		} catch (CustomerServiceUnavailableException | TaroServiceUnavailableException exception) {
 			model.addAttribute(
 					"customers",
 					List.of());
@@ -401,9 +408,9 @@ public class AllocationPageController {
 
 			model.addAttribute(
 					"taroTypes",
-					customerClient.getTaroTypes());
+					taroClient.getTaroTypes());
 
-		} catch (CustomerServiceUnavailableException exception) {
+		} catch (CustomerServiceUnavailableException | TaroServiceUnavailableException exception) {
 			model.addAttribute(
 					"customers",
 					List.of());

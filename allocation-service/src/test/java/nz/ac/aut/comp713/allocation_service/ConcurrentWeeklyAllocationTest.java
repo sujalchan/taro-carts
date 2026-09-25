@@ -21,6 +21,7 @@ import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
+import nz.ac.aut.comp713.allocation_service.client.TaroClient;
 import nz.ac.aut.comp713.allocation_service.client.CustomerResponse;
 import nz.ac.aut.comp713.allocation_service.client.TaroTypeResponse;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemRequest;
@@ -45,6 +46,9 @@ class ConcurrentWeeklyAllocationTest {
 	@MockitoBean
 	private CustomerClient customerClient;
 
+	@MockitoBean
+	private TaroClient taroClient;
+
 	@BeforeEach
 	void setUp() {
 
@@ -61,7 +65,7 @@ class ConcurrentWeeklyAllocationTest {
 						"0211234567",
 						true));
 
-		when(customerClient.getTaroType(1L))
+		when(taroClient.getTaroType(1L))
 				.thenReturn(new TaroTypeResponse(
 						1L,
 						"Samoan Taro",

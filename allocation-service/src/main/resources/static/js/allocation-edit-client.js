@@ -41,7 +41,7 @@ async function loadPage() {
         const [allocationResponse, customerResponse, taroResponse] = await Promise.all([
             fetch(`/api/v1/allocations/${allocationId}`),
             fetch("/api/v1/customer-service-reference/customers"),
-            fetch("/api/v1/customer-service-reference/taro-types")
+            fetch("/api/v1/taro-service-reference/taro-types")
         ]);
 
         if (!allocationResponse.ok) {

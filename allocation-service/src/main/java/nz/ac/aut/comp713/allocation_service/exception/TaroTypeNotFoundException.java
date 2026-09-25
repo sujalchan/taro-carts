@@ -1,6 +1,6 @@
 package nz.ac.aut.comp713.allocation_service.exception;
 
-// thrown when customer-service reports that the requested taro type ID does not exist
+// thrown when taro-service reports that the requested taro type ID does not exist
 public class TaroTypeNotFoundException extends RuntimeException {
 
     public TaroTypeNotFoundException(Long taroTypeId) {

@@ -1,4 +1,4 @@
-/* Shared visual system: keep common components consistent across both services. */
+/* Shared visual system: keep common components consistent across all three services. */
 :root {
     color-scheme: light;
     --page: #f4f6f6;
@@ -37,7 +37,12 @@ body {
 body.page-form { max-width: 720px; }
 body.page-form.page-allocation { max-width: 1080px; }
 
+/* Let navigation span wider than page content, including narrow form pages. */
 .app-nav {
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(1280px, calc(100vw - 56px));
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -60,8 +65,8 @@ body.page-form.page-allocation { max-width: 1080px; }
 }
 .app-nav__links {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    flex-wrap: nowrap;
+    gap: 14px;
 }
 .app-nav__links a {
     padding: 7px 10px;
@@ -71,6 +76,56 @@ body.page-form.page-allocation { max-width: 1080px; }
 .app-nav__links a[aria-current="page"] {
     background: #dceae8;
     color: var(--accent-hover);
+}
+
+/* The menu button is only needed when the links cannot fit in one row. */
+.app-nav__toggle {
+    display: none;
+}
+
+@media (max-width: 850px) {
+    .app-nav {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px 14px;
+        width: calc(100vw - 32px);
+    }
+
+    .app-nav__brand {
+        min-width: 0;
+        white-space: normal;
+    }
+
+    .app-nav__toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 7px 12px;
+        border-color: var(--line);
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+    }
+
+    .app-nav__links {
+        display: none;
+        grid-column: 1 / -1;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        padding-top: 8px;
+        border-top: 1px solid var(--line);
+    }
+
+    .app-nav__toggle[aria-expanded="true"] + .app-nav__links {
+        display: flex;
+    }
+
+    .app-nav__links a {
+        width: 100%;
+    }
 }
 
 h1 {
@@ -309,8 +364,6 @@ td:last-child { white-space: nowrap; }
 
 @media (max-width: 760px) {
     body { padding: 24px 16px 40px; }
-    .app-nav { align-items: flex-start; flex-direction: column; gap: 10px; }
-    .app-nav__brand { white-space: normal; }
     .page-form form { padding: 20px; }
     .allocation-item-row { grid-template-columns: 1fr 1fr; }
     .allocation-item-row > div:last-of-type { padding-top: 30px; }

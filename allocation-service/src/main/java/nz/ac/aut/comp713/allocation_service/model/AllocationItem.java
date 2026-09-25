@@ -30,7 +30,7 @@ public class AllocationItem {
     @JoinColumn(name = "weekly_allocation_id", nullable = false)
     private WeeklyAllocation weeklyAllocation;
 
-    // stores only the taro type ID because taro types are owned by customer-service
+    // stores only the taro type ID because taro types are owned by taro-service
     @Column(name = "taro_type_id", nullable = false)
     private Long taroTypeId;
 

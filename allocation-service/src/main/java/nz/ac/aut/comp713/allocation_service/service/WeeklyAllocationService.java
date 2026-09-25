@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
+import nz.ac.aut.comp713.allocation_service.client.TaroClient;
 import nz.ac.aut.comp713.allocation_service.client.CustomerResponse;
 import nz.ac.aut.comp713.allocation_service.client.TaroTypeResponse;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemRequest;
@@ -40,15 +41,18 @@ public class WeeklyAllocationService {
     private final WeeklyAllocationRepository weeklyAllocationRepository;
     private final AllocationItemRepository allocationItemRepository;
     private final CustomerClient customerClient;
+    private final TaroClient taroClient;
 
     public WeeklyAllocationService(
             WeeklyAllocationRepository weeklyAllocationRepository,
             AllocationItemRepository allocationItemRepository,
-            CustomerClient customerClient) {
+            CustomerClient customerClient,
+            TaroClient taroClient) {
 
         this.weeklyAllocationRepository = weeklyAllocationRepository;
         this.allocationItemRepository = allocationItemRepository;
         this.customerClient = customerClient;
+        this.taroClient = taroClient;
     }
 
     // get all weekly allocations
@@ -93,7 +97,7 @@ public class WeeklyAllocationService {
                         duplicateTaroType.name());
             }
 
-            TaroTypeResponse taroType = customerClient.getTaroType(item.taroTypeId());
+            TaroTypeResponse taroType = taroClient.getTaroType(item.taroTypeId());
             taroTypes.put(item.taroTypeId(), taroType);
         }
 
@@ -183,7 +187,7 @@ public class WeeklyAllocationService {
                         duplicateTaroType.name());
             }
 
-            TaroTypeResponse taroType = customerClient.getTaroType(item.taroTypeId());
+            TaroTypeResponse taroType = taroClient.getTaroType(item.taroTypeId());
             taroTypes.put(item.taroTypeId(), taroType);
         }
 
@@ -283,7 +287,7 @@ public class WeeklyAllocationService {
     private AllocationItemResponse toItemResponse(
             AllocationItem allocationItem) {
 
-        TaroTypeResponse taroType = customerClient.getTaroType(allocationItem.getTaroTypeId());
+        TaroTypeResponse taroType = taroClient.getTaroType(allocationItem.getTaroTypeId());
 
         return new AllocationItemResponse(
                 allocationItem.getId(),

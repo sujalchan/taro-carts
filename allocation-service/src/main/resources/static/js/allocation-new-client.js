@@ -1,4 +1,4 @@
-// creates weekly allocations using customer service reference data
+// creates weekly allocations using customer and taro service reference data
 const allocationForm = document.getElementById("allocationForm");
 const customerSelect = document.getElementById("customerId");
 const weekStartInput = document.getElementById("weekStart");
@@ -31,7 +31,7 @@ async function loadReferenceData() {
     try {
         const [customerResponse, taroResponse] = await Promise.all([
             fetch("/api/v1/customer-service-reference/customers"),
-            fetch("/api/v1/customer-service-reference/taro-types")
+            fetch("/api/v1/taro-service-reference/taro-types")
         ]);
 
         if (!customerResponse.ok || !taroResponse.ok) {

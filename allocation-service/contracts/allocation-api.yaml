@@ -5,8 +5,8 @@ info:
   version: 1.0.0
   description: >
     REST API for managing weekly taro allocations.
-    The allocation service communicates with customer-service to validate
-    customers and taro types and to enrich responses with their names.
+    The allocation service communicates with customer-service for customers
+    and taro-service for taro types to validate references and enrich responses.
 
 servers:
   - url: http://localhost:8082
@@ -29,15 +29,22 @@ paths:
                   $ref: "#/components/schemas/WeeklyAllocationResponse"
 
         "503":
-          description: Customer service is unavailable
+          description: Customer or taro service is unavailable
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
-              example:
-                code: CUSTOMER_SERVICE_UNAVAILABLE
-                message: Customer service is currently unavailable
-                path: /api/v1/allocations
+              examples:
+                customerServiceUnavailable:
+                  value:
+                    code: CUSTOMER_SERVICE_UNAVAILABLE
+                    message: Customer service is currently unavailable
+                    path: /api/v1/allocations
+                taroServiceUnavailable:
+                  value:
+                    code: TARO_SERVICE_UNAVAILABLE
+                    message: Taro service is currently unavailable
+                    path: /api/v1/allocations
 
         "500":
           description: Unexpected server error
@@ -161,15 +168,22 @@ paths:
                 path: /api/v1/allocations
 
         "503":
-          description: Customer service is unavailable
+          description: Customer or taro service is unavailable
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
-              example:
-                code: CUSTOMER_SERVICE_UNAVAILABLE
-                message: Customer service is currently unavailable
-                path: /api/v1/allocations
+              examples:
+                customerServiceUnavailable:
+                  value:
+                    code: CUSTOMER_SERVICE_UNAVAILABLE
+                    message: Customer service is currently unavailable
+                    path: /api/v1/allocations
+                taroServiceUnavailable:
+                  value:
+                    code: TARO_SERVICE_UNAVAILABLE
+                    message: Taro service is currently unavailable
+                    path: /api/v1/allocations
 
         "500":
           description: Unexpected server error
@@ -227,15 +241,22 @@ paths:
                 path: /api/v1/allocations/999
 
         "503":
-          description: Customer service is unavailable
+          description: Customer or taro service is unavailable
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
-              example:
-                code: CUSTOMER_SERVICE_UNAVAILABLE
-                message: Customer service is currently unavailable
-                path: /api/v1/allocations/1
+              examples:
+                customerServiceUnavailable:
+                  value:
+                    code: CUSTOMER_SERVICE_UNAVAILABLE
+                    message: Customer service is currently unavailable
+                    path: /api/v1/allocations/1
+                taroServiceUnavailable:
+                  value:
+                    code: TARO_SERVICE_UNAVAILABLE
+                    message: Taro service is currently unavailable
+                    path: /api/v1/allocations/1
 
         "500":
           description: Unexpected server error
@@ -369,15 +390,22 @@ paths:
                 path: /api/v1/allocations/1
 
         "503":
-          description: Customer service is unavailable
+          description: Customer or taro service is unavailable
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
-              example:
-                code: CUSTOMER_SERVICE_UNAVAILABLE
-                message: Customer service is currently unavailable
-                path: /api/v1/allocations/1
+              examples:
+                customerServiceUnavailable:
+                  value:
+                    code: CUSTOMER_SERVICE_UNAVAILABLE
+                    message: Customer service is currently unavailable
+                    path: /api/v1/allocations/1
+                taroServiceUnavailable:
+                  value:
+                    code: TARO_SERVICE_UNAVAILABLE
+                    message: Taro service is currently unavailable
+                    path: /api/v1/allocations/1
 
         "500":
           description: Unexpected server error
@@ -484,7 +512,7 @@ components:
           description: >
             Optional price per kg for this allocation item.
             If omitted, the current standard price of the taro type
-            from customer-service is used.
+            from taro-service is used.
 
     WeeklyAllocationResponse:
       type: object

@@ -1,0 +1,269 @@
+openapi: 3.0.3
+
+info:
+  title: Taro Service API
+  version: 1.0.0
+  description: REST API for managing taro types in the Taro Allocation System.
+
+servers:
+  - url: http://localhost:8083
+    description: Local development server
+
+paths:
+  /api/v1/taro-types:
+    get:
+      summary: Retrieve all taro types
+      operationId: getAllTaroTypes
+      parameters:
+        - name: search
+          in: query
+          required: false
+          description: Filter taro types by name
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: Taro types retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaroTypeResponse"
+
+    post:
+      summary: Create a taro type
+      operationId: createTaroType
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaroTypeRequest"
+            example:
+              name: Samoan Taro
+              description: Large premium taro
+              standardPrice: 50.00
+
+      responses:
+        "201":
+          description: Taro type created successfully
+          headers:
+            Location:
+              description: URI of the newly created taro type
+              schema:
+                type: string
+                format: uri
+              example: http://localhost:8083/api/v1/taro-types/1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaroTypeResponse"
+              example:
+                id: 1
+                name: Samoan Taro
+                description: Large premium taro
+                standardPrice: 50.00
+
+        "400":
+          description: Invalid taro type data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: Taro type name is required
+                path: /api/v1/taro-types
+
+        "409":
+          description: Taro type already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: TARO_TYPE_ALREADY_EXISTS
+                message: Taro type 'Samoan Taro' already exists.
+                path: /api/v1/taro-types
+
+  /api/v1/taro-types/{id}:
+    get:
+      summary: Retrieve a taro type by ID
+      operationId: getTaroTypeById
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Taro type ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+
+      responses:
+        "200":
+          description: Taro type retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaroTypeResponse"
+              example:
+                id: 1
+                name: Samoan Taro
+                description: Large premium taro
+                standardPrice: 50.00
+
+        "404":
+          description: Taro type not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: TARO_TYPE_NOT_FOUND
+                message: "Taro type not found with id: 999"
+                path: /api/v1/taro-types/999
+
+    put:
+      summary: Update an existing taro type
+      operationId: updateTaroType
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Taro type ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaroTypeRequest"
+            example:
+              name: Samoan Taro
+              description: Updated premium Samoan taro
+              standardPrice: 55.00
+
+      responses:
+        "200":
+          description: Taro type updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaroTypeResponse"
+              example:
+                id: 1
+                name: Samoan Taro
+                description: Updated premium Samoan taro
+                standardPrice: 55.00
+
+        "400":
+          description: Invalid taro type data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: Standard price cannot be negative
+                path: /api/v1/taro-types/1
+
+        "404":
+          description: Taro type not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: TARO_TYPE_NOT_FOUND
+                message: "Taro type not found with id: 999"
+                path: /api/v1/taro-types/999
+
+        "409":
+          description: Taro type name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: TARO_TYPE_ALREADY_EXISTS
+                message: Taro type 'Samoan Taro' already exists.
+                path: /api/v1/taro-types/2
+components:
+  schemas:
+    TaroTypeRequest:
+      type: object
+      required:
+        - name
+        - standardPrice
+
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: Samoan Taro
+
+        description:
+          type: string
+          example: Large premium taro
+
+        standardPrice:
+          type: number
+          minimum: 0
+          example: 50.00
+
+    TaroTypeResponse:
+      type: object
+      required:
+        - id
+        - name
+        - standardPrice
+
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+
+        name:
+          type: string
+          example: Samoan Taro
+
+        description:
+          type: string
+          example: Large premium taro
+
+        standardPrice:
+          type: number
+          minimum: 0
+          example: 50.00
+
+    ApiError:
+      type: object
+
+      required:
+        - code
+        - message
+        - path
+
+      properties:
+        code:
+          type: string
+          example: TARO_TYPE_NOT_FOUND
+
+        message:
+          type: string
+          example: "Taro type not found with id: 999"
+
+        path:
+          type: string
+          example: /api/v1/taro-types/999

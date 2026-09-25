@@ -41,7 +41,7 @@ public class WeeklyAllocationController {
 	@Operation(summary = "Retrieve all weekly allocations")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Weekly allocations retrieved successfully"),
-			@ApiResponse(responseCode = "503", description = "Customer service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
+			@ApiResponse(responseCode = "503", description = "Customer or taro service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
 	})
 	// return all weekly allocations, including customer and taro type details
 	@GetMapping
@@ -53,7 +53,7 @@ public class WeeklyAllocationController {
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Weekly allocation retrieved successfully"),
 			@ApiResponse(responseCode = "404", description = "Weekly allocation not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
-			@ApiResponse(responseCode = "503", description = "Customer service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
+			@ApiResponse(responseCode = "503", description = "Customer or taro service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
 	})
 	// retrieve one weekly allocation using the ID from the request path
 	@GetMapping("/{id}")
@@ -67,7 +67,7 @@ public class WeeklyAllocationController {
 			@ApiResponse(responseCode = "400", description = "Invalid allocation data or duplicate taro type", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
 			@ApiResponse(responseCode = "404", description = "Customer or taro type not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
 			@ApiResponse(responseCode = "409", description = "Weekly allocation already exists for the customer and week", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
-			@ApiResponse(responseCode = "503", description = "Customer service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
+			@ApiResponse(responseCode = "503", description = "Customer or taro service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
 	})
 	// validate the request body before creating a new weekly allocation
 	@PostMapping
@@ -91,7 +91,7 @@ public class WeeklyAllocationController {
 			@ApiResponse(responseCode = "400", description = "Invalid allocation data or duplicate taro type", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
 			@ApiResponse(responseCode = "404", description = "Allocation, customer, or taro type not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
 			@ApiResponse(responseCode = "409", description = "Another weekly allocation already exists for the customer and week", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
-			@ApiResponse(responseCode = "503", description = "Customer service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
+			@ApiResponse(responseCode = "503", description = "Customer or taro service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
 	})
 	// validate and update the weekly allocation identified by the path ID
 	@PutMapping("/{id}")

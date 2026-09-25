@@ -18,7 +18,7 @@ The initial project baseline contains:
 - JavaScript client-rendered interfaces
 - SQLite persistence
 - Input validation and structured error handling
-- Communication between `allocation-service` and `customer-service`
+- Communication between `allocation-service`, `customer-service`, and `taro-service`
 
 Assessment 3 development extends this baseline with:
 
@@ -64,53 +64,26 @@ Actions performed by one user can affect what the other user sees or can do.
 
 ## Architecture
 
-The project contains two independently running Spring Boot backend services and a native Android client.
+The project contains three independently running Spring Boot backend services and a native Android client.
 
 ```text
-                         Web Client
-                      Manager / Admin
-                            |
-                     HTTP / REST
-                            |
-                            v
-                 +---------------------+
-                 | allocation-service  |
-                 |       :8082         |
-                 +----------+----------+
-                            |
-                     Service-to-Service
-                       Communication
-                            |
-                            v
-                 +---------------------+
-                 |  customer-service   |
-                 |       :8081         |
-                 +----------+----------+
-                            |
-                         SQLite
-                            |
-                       customer.db
-
-
-                      Android App
-                         Worker
-                            |
-                       HTTP / REST
-                            |
-                            v
-                 +---------------------+
-                 | allocation-service  |
-                 |       :8082         |
-                 +----------+----------+
-                            |
-                         SQLite
-                            |
-                      allocation.db
+Web manager / Android worker
+             |
+             v
+ allocation-service :8082  →  allocation.db
+       |             |
+       | HTTP        | HTTP
+       v             v
+customer-service   taro-service
+     :8081             :8083
+       |                 |
+       v                 v
+  customer.db         taro.db
 ```
 
 Each backend service owns its own persistent data.
 
-`allocation-service` does not directly access the customer-service database. Information owned by `customer-service` is accessed through a service interface.
+`allocation-service` stores customer and taro type IDs only. It retrieves customer data from `customer-service` and taro type data from `taro-service` over HTTP; it does not access either database directly.
 
 ---
 
@@ -120,6 +93,11 @@ Each backend service owns its own persistent data.
 taro-carts/
 │
 ├── customer-service/
+│   ├── pom.xml
+│   ├── mvnw
+│   └── src/
+│
+├── taro-service/
 │   ├── pom.xml
 │   ├── mvnw
 │   └── src/
@@ -197,28 +175,12 @@ The build systems are independent and do not need to match because communication
 http://localhost:8081
 ```
 
-It owns:
+It owns customer records and supports customer creation, retrieval, updates, search, and activation.
+Its SQLite database is `customer.db`.
 
-- Customers
-- Taro types
+### Taro Service
 
-Main responsibilities include:
-
-- Creating and retrieving customers
-- Updating customer information
-- Searching customers
-- Activating and deactivating customers
-- Creating and retrieving taro types
-- Updating taro types
-- Searching taro types
-- Preventing duplicate customer and taro names
-- Providing customer and taro information to other services
-
-Persistent database:
-
-```text
-customer.db
-```
+`taro-service` runs at `http://localhost:8083`. It owns taro types and supports creation, retrieval, updates, and search. Its independent SQLite database is `taro.db`.
 
 ### Allocation Service
 
@@ -245,7 +207,7 @@ Main responsibilities include:
 - Preventing duplicate weekly allocations
 - Preventing duplicate taro types within an allocation
 - Validating allocation quantities
-- Communicating with customer-service
+- Communicating with customer-service and taro-service
 
 Persistent database:
 
@@ -334,6 +296,10 @@ Customer searching:
 GET /customers?search=<value>
 ```
 
+### Taro Service
+
+Base URL: `http://localhost:8083/api/v1`
+
 Taro type operations include:
 
 ```text
@@ -379,6 +345,12 @@ Customer Service:
 http://localhost:8081/swagger-ui/index.html
 ```
 
+Taro Service:
+
+```text
+http://localhost:8083/swagger-ui/index.html
+```
+
 Allocation Service:
 
 ```text
@@ -389,6 +361,7 @@ Raw OpenAPI definitions are available at:
 
 ```text
 http://localhost:8081/v3/api-docs
+http://localhost:8083/v3/api-docs
 http://localhost:8082/v3/api-docs
 ```
 
@@ -471,7 +444,7 @@ If no custom price is supplied:
 ```text
 allocation-service
        ↓
-customer-service
+taro-service
        ↓
 retrieve taro standard price
        ↓
@@ -642,7 +615,7 @@ The existing:
 ```text
 allocation-service
       ↓ REST
-customer-service
+customer-service + taro-service
 ```
 
 communication will be extended or replaced with:
@@ -650,12 +623,12 @@ communication will be extended or replaced with:
 ```text
 allocation-service
       ↓ gRPC
-customer-service
+customer-service + taro-service
 ```
 
 External clients will continue using REST.
 
-A `.proto` contract will define the communication between the two backend services.
+A `.proto` contract will define the communication between the three backend services.
 
 ---
 
@@ -675,7 +648,7 @@ The Maven and Gradle wrappers included with the projects should be used where po
 
 ## Running the Backend
 
-Both backend services should be running for the complete system to operate.
+All three backend services should be running for the complete system to operate.
 
 ### 1. Start Customer Service
 
@@ -692,7 +665,28 @@ Customer-service will start on:
 http://localhost:8081
 ```
 
-### 2. Start Allocation Service
+### 2. Start Taro Service
+
+In another terminal:
+
+```bash
+cd taro-service
+./mvnw spring-boot:run
+```
+
+Taro-service starts at `http://localhost:8083`.
+
+Set `TARO_SERVICE_URL` to override the allocation service's taro-service URL (default `http://localhost:8083`). Set `CUSTOMER_SERVICE_URL` to override its customer-service URL (default `http://localhost:8081`).
+
+For an existing installation, stop the services and back up `customer-service/customer.db` before moving the `taro_type` rows into `taro-service/taro.db`. Preserve each row's `id` so allocation records continue to resolve. Start `taro-service` once to create its schema, stop it, then from the repository root run:
+
+```bash
+sqlite3 taro-service/taro.db "ATTACH DATABASE 'customer-service/customer.db' AS legacy; INSERT INTO taro_type (id, name, normalized_name, description, standard_price) SELECT id, name, normalized_name, description, standard_price FROM legacy.taro_type; DETACH DATABASE legacy;"
+```
+
+Verify the migrated rows before removing the legacy `taro_type` table from `customer-service/customer.db`. New installations have no data to migrate.
+
+### 3. Start Allocation Service
 
 In another terminal:
 
@@ -762,6 +756,13 @@ cd customer-service
 ./mvnw test
 ```
 
+Run the taro-service tests:
+
+```bash
+cd taro-service
+./mvnw test
+```
+
 Run the allocation-service tests:
 
 ```bash
@@ -801,7 +802,7 @@ Taro Carts extends the Taro Allocation System originally developed as an individ
 
 The Assessment 2 baseline includes:
 
-- Spring Boot customer-service
+- Spring Boot customer-service and taro-service
 - Spring Boot allocation-service
 - Separate SQLite databases
 - REST APIs

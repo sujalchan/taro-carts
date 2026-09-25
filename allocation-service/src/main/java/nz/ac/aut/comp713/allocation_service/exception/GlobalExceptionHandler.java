@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
 				.body(error);
 	}
 
-	// handle a taro type that does not exist in customer-service
+	// handle a taro type that does not exist in taro-service
 	@ExceptionHandler(TaroTypeNotFoundException.class)
 	public ResponseEntity<ApiError> handleTaroTypeNotFound(
 			TaroTypeNotFoundException exception,
@@ -129,6 +129,14 @@ public class GlobalExceptionHandler {
 		return ResponseEntity
 				.status(HttpStatus.SERVICE_UNAVAILABLE)
 				.body(error);
+	}
+
+	@ExceptionHandler(TaroServiceUnavailableException.class)
+	public ResponseEntity<ApiError> handleTaroServiceUnavailable(
+			TaroServiceUnavailableException exception,
+			HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+				.body(new ApiError("TARO_SERVICE_UNAVAILABLE", exception.getMessage(), request.getRequestURI()));
 	}
 
 	// handle invalid allocation quantity
