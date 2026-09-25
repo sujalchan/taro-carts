@@ -1,0 +1,37 @@
+# maven build output
+target/
+
+# java
+*.class
+*.jar
+*.war
+*.ear
+
+# vscode
+.vscode/
+
+# intellij
+.idea/
+*.iml
+
+# eclipse
+.classpath
+.project
+.settings/
+
+# operating system files
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+
+# sqlite temporary files
+*.db-shm
+*.db-wal
+*.db-journal
+
+# environment variables and secrets
+.env
+.env.*
+!.env.example
