@@ -180,7 +180,13 @@ Its SQLite database is `customer.db`.
 
 ### Taro Service
 
-`taro-service` runs at `http://localhost:8083`. It owns taro types and supports creation, retrieval, updates, and search. Its independent SQLite database is `taro.db`.
+`taro-service` runs on:
+
+```text
+http://localhost:8083
+```
+It owns taro types and supports creation, retrieval, updates, and search. 
+Its SQLite database is `taro.db`.
 
 ### Allocation Service
 
