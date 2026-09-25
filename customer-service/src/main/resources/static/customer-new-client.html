@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Add Customer</title>
+</head>
+
+<body class="page-form">
+
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="/customers">Taro Allocation System</a>
+        <div class="app-nav__links">
+            <a href="/customers" aria-current="page">Customer Service</a>
+            <a href="http://localhost:8082/allocations">Allocation Service</a>
+        </div>
+    </nav>
+    <h1>Add Customer (JSON API)</h1>
+
+    <div id="errorContainer" class="error-message" role="alert" hidden>
+        <strong>Unable to create customer:</strong>
+        <ul id="errorList">
+        </ul>
+    </div>
+
+    <form id="customerForm">
+        <div>
+            <label for="name">
+                Business Name
+            </label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <br>
+        <div>
+            <label for="contactName">
+                Contact Name
+            </label>
+            <input type="text" id="contactName" name="contactName">
+        </div>
+
+        <br>
+        <div>
+            <label for="phone">
+                Phone
+            </label>
+            <input type="text" id="phone" name="phone">
+        </div>
+
+        <br>
+        <div>
+            <label for="active">
+                Active
+            </label>
+            <input type="checkbox" id="active" name="active" checked>
+        </div>
+
+        <br>
+        <button type="submit">
+            Create Customer
+        </button>
+
+        <a href="/customers-client.html">
+            Cancel
+        </a>
+    </form>
+
+    <script src="/js/customer-new-client.js"></script>
+</body>
+
+</html>

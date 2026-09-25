@@ -1,0 +1,328 @@
+/* Shared visual system: keep common components consistent across both services. */
+:root {
+    color-scheme: light;
+    --page: #f4f6f6;
+    --surface: #ffffff;
+    --text: #243333;
+    --muted: #526464;
+    --line: #d5dede;
+    --accent: #17665f;
+    --accent-hover: #104c47;
+    --danger: #a52828;
+    --danger-bg: #fff3f2;
+    --radius: 5px;
+}
+
+* { box-sizing: border-box; }
+
+/* Preserve the visibility states controlled by existing JavaScript. */
+[hidden] { display: none !important; }
+
+html {
+    background: var(--page);
+    border-top: 5px solid var(--accent);
+}
+
+body {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px 28px 64px;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+body.page-form { max-width: 720px; }
+body.page-form.page-allocation { max-width: 1080px; }
+
+.app-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 36px;
+    padding: 14px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+.app-nav a {
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+}
+.app-nav a:hover { color: var(--accent); }
+.app-nav__brand {
+    font-size: 1.05rem;
+    white-space: nowrap;
+}
+.app-nav__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.app-nav__links a {
+    padding: 7px 10px;
+    border-radius: var(--radius);
+}
+.app-nav__links a:hover { background: #eaf0ef; }
+.app-nav__links a[aria-current="page"] {
+    background: #dceae8;
+    color: var(--accent-hover);
+}
+
+h1 {
+    margin: 0 0 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+    font-size: clamp(1.45rem, 3vw, 1.85rem);
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+}
+
+h2 {
+    margin: 24px 0 16px;
+    font-size: 1.15rem;
+    line-height: 1.4;
+    font-weight: 650;
+}
+
+p { margin: 16px 0; }
+a {
+    color: var(--accent);
+    text-underline-offset: 3px;
+}
+a:hover { color: var(--accent-hover); }
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, .table-scroll:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+}
+
+/* Primary submit/create actions and neutral secondary actions. */
+button, .button-primary, td a, .allocation-actions > a,
+#allocationsContainer > div > p > a, .page-form form > a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 9px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
+    text-decoration: none;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+button:hover, td a:hover, .allocation-actions > a:hover,
+#allocationsContainer > div > p > a:hover, .page-form form > a:hover {
+    background: #eaf0ef;
+    border-color: #8a9f9d;
+    color: var(--text);
+}
+
+button[type="submit"], .button-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+button[type="submit"]:hover, .button-primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: #fff;
+}
+
+.page-form form > a { margin-left: 8px; }
+button:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* Forms retain native input types and validation behaviour. */
+.page-form form {
+    padding: 28px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+.page-form form > div { margin-bottom: 22px; }
+label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 0.925rem;
+    font-weight: 600;
+}
+input:not([type="checkbox"]), select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 9px 11px;
+    border: 1px solid #879c9a;
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    line-height: 1.4;
+}
+input:hover, select:hover { border-color: var(--accent); }
+input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: var(--accent);
+    vertical-align: middle;
+}
+small {
+    display: block;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+hr {
+    margin: 28px 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+}
+/* Spacing replaces the original presentational line breaks. */
+.page-form form > br, .allocation-item-row > br { display: none; }
+
+/* Both cloned and JavaScript-created rows share the existing row class. */
+.allocation-item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.7fr) minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: start;
+    margin-bottom: 16px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+}
+.allocation-item-row > div { min-width: 0; }
+.allocation-item-row > div:last-of-type { padding-top: 30px; }
+#addItemButton, button[onclick="addAllocationItem()"] {
+    display: flex;
+    margin: 0 0 28px;
+}
+.allocation-item-row button, .delete-form button,
+#allocationsContainer > div > p > button {
+    border-color: var(--danger);
+    background: var(--surface);
+    color: var(--danger);
+}
+.allocation-item-row button:hover, .delete-form button:hover,
+#allocationsContainer > div > p > button:hover {
+    border-color: var(--danger);
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+/* Tables scroll within their section, including on narrow screens. */
+.table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 20px 0;
+}
+table {
+    width: 100%;
+    border: 0;
+    border-collapse: collapse;
+    background: var(--surface);
+    font-size: 0.925rem;
+}
+th, td {
+    padding: 12px 16px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: middle;
+}
+th {
+    background: #e8eeee;
+    color: #3b5050;
+    font-weight: 650;
+    white-space: nowrap;
+}
+tbody tr:hover { background: #f3f7f6; }
+td { min-width: 90px; }
+td:last-child { white-space: nowrap; }
+.page-list:not(.page-allocation) table { min-width: 620px; }
+.page-allocation table { min-width: 360px; }
+.page-allocation th:nth-child(n+2), .page-allocation td:nth-child(n+2) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.page-list > p > a:not(.button-primary) {
+    display: inline-block;
+    padding: 6px 0;
+}
+
+.allocation-record, #allocationsContainer > div {
+    margin-top: 24px;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    overflow-x: auto;
+}
+.allocation-record > hr, #allocationsContainer > div > hr { display: none; }
+.allocation-record > h2, #allocationsContainer > div > h2 { margin-top: 0; }
+.allocation-actions, #allocationsContainer > div > p:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0 0;
+}
+.delete-form { margin: 0; }
+
+/* Keep the original error headings and lists; emphasis is not colour-only. */
+.error-message {
+    margin: 0 0 24px;
+    padding: 18px 20px;
+    border: 1px solid var(--danger);
+    border-left-width: 5px;
+    border-radius: var(--radius);
+    background: var(--danger-bg);
+    color: #782222;
+}
+.error-message strong { font-weight: 700; }
+.error-message ul { margin: 8px 0 0; padding-left: 22px; }
+.error-message li + li { margin-top: 5px; }
+
+/* These existing status elements also carry load errors: keep all text prominent. */
+#status:not(:empty) {
+    padding: 16px 20px;
+    border: 1px solid #879c9a;
+    border-left-width: 5px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 600;
+}
+
+@media (max-width: 760px) {
+    body { padding: 24px 16px 40px; }
+    .app-nav { align-items: flex-start; flex-direction: column; gap: 10px; }
+    .app-nav__brand { white-space: normal; }
+    .page-form form { padding: 20px; }
+    .allocation-item-row { grid-template-columns: 1fr 1fr; }
+    .allocation-item-row > div:last-of-type { padding-top: 30px; }
+    .allocation-record, #allocationsContainer > div { padding: 18px; }
+}
+@media (max-width: 480px) {
+    .allocation-item-row { grid-template-columns: 1fr; gap: 14px; }
+    .allocation-item-row > div:last-of-type { padding-top: 0; }
+    th, td { padding: 10px 12px; }
+    .page-form form > a { margin-left: 0; }
+    .page-form form > button[type="submit"], .page-form form > a {
+        width: 100%;
+        margin-top: 10px;
+    }
+}

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Customers</title>
+</head>
+
+<body class="page-list">
+
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="/customers">Taro Allocation System</a>
+        <div class="app-nav__links">
+            <a href="/customers" aria-current="page">Customer Service</a>
+            <a href="http://localhost:8082/allocations">Allocation Service</a>
+        </div>
+    </nav>
+
+    <h1>Customers (Server-rendered)</h1>
+
+    <p>
+        <a href="/customers-client.html">
+            Client-rendered customer page
+        </a>
+    </p>
+
+    <form action="/customers" method="get" class="search-form">
+        <div class="search-box">
+            <input type="search" id="search" name="search" th:value="${search}" placeholder="Search customers">
+
+            <button type="submit">
+                Search
+            </button>
+
+            <a href="/customers" class="search-clear">
+                Clear
+            </a>
+        </div>
+    </form>
+
+    <p>
+        <a class="button-primary" href="/customers/new">
+            Add Customer
+        </a>
+    </p>
+
+
+    <p th:if="${#lists.isEmpty(customers)}">
+        No customers found.
+    </p>
+
+    <div class="table-scroll" role="region" aria-label="Data table" tabindex="0">
+        <table th:if="${!#lists.isEmpty(customers)}" border="1">
+
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Business Name</th>
+                    <th>Contact Name</th>
+                    <th>Phone</th>
+                    <th>Active</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                <tr th:each="customer : ${customers}">
+
+                    <td th:text="${customer.id}">
+                        1
+                    </td>
+
+                    <td th:text="${customer.name}">
+                        Island Foods
+                    </td>
+
+                    <td th:text="${customer.contactName}">
+                        John
+                    </td>
+
+                    <td th:text="${customer.phone}">
+                        0211234567
+                    </td>
+
+                    <td th:text="${customer.active ? 'Yes' : 'No'}">
+                        Yes
+                    </td>
+
+                    <td>
+                        <a th:href="@{/customers/{id}/edit(id=${customer.id})}">
+                            Edit
+                        </a>
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+    </div>
+
+    <p>
+        <a href="/taro-types">
+            Taro Types
+        </a>
+    </p>
+
+</body>
+
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Edit Weekly Allocation</title>
+</head>
+
+<body class="page-form page-allocation">
+
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="/allocations">Taro Allocation System</a>
+        <div class="app-nav__links">
+            <a href="http://localhost:8081/customers">Customer Service</a>
+            <a href="/allocations" aria-current="page">Allocation Service</a>
+        </div>
+    </nav>
+
+    <h1>Edit Weekly Allocation (Server-rendered)</h1>
+
+    <div class="error-message" role="alert" th:if="${errors != null && !errors.isEmpty()}">
+
+        <strong>Unable to update allocation:</strong>
+
+        <ul>
+            <li th:each="error : ${errors}" th:text="${error}">
+                Error message
+            </li>
+        </ul>
+
+    </div>
+
+    <form th:action="@{/allocations/{id}/edit(id=${allocationId})}" method="post">
+
+        <div>
+
+            <label for="customerId">
+                Customer
+            </label>
+
+            <select id="customerId" name="customerId" required>
+
+                <option value="">
+                    Select Customer
+                </option>
+
+                <option th:each="customer : ${customers}" th:value="${customer.id}" th:text="${customer.name}"
+                    th:selected="${selectedCustomerId != null
+                        and customer.id == selectedCustomerId}">
+                    Island Foods
+                </option>
+
+            </select>
+
+        </div>
+
+        <br>
+
+        <div>
+
+            <label for="weekStart">
+                Week
+            </label>
+
+            <input type="date" id="weekStart" name="weekStart" th:value="${weekStart}" required>
+
+            <small>
+                Any date in the week may be selected.
+                It will be stored as the Monday of that week.
+            </small>
+
+        </div>
+
+        <hr>
+
+        <h2>Allocation Items</h2>
+
+        <div id="allocationItems">
+
+            <div class="allocation-item-row" th:each="row : ${allocationRows}">
+
+                <div>
+
+                    <label>
+                        Taro Type
+                    </label>
+
+                    <select name="taroTypeId" required>
+
+                        <option value="">
+                            Select Taro Type
+                        </option>
+
+                        <option th:each="taroType : ${taroTypes}" th:value="${taroType.id}" th:text="${taroType.name}"
+                            th:selected="${row.taroTypeId != null
+                                and taroType.id == row.taroTypeId}">
+                            Samoan Taro
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div>
+
+                    <label>
+                        Quantity
+                    </label>
+
+                    <input type="number" name="quantity" step="any" th:value="${row.quantity}" required>
+
+                </div>
+
+                <div>
+
+                    <label>
+                        Price per kg
+                    </label>
+
+                    <input type="number" name="pricePerKg" step="0.01" th:value="${row.pricePerKg}">
+
+                    <small>
+                        Leave blank to use the standard price.
+                    </small>
+
+                </div>
+
+                <div>
+
+                    <button type="button" onclick="removeAllocationItem(this)">
+                        Remove
+                    </button>
+
+                </div>
+
+                <br>
+
+            </div>
+
+        </div>
+
+        <button type="button" onclick="addAllocationItem()">
+            Add Another Taro Type
+        </button>
+
+        <br>
+        <br>
+
+        <button type="submit">
+            Save Changes
+        </button>
+
+        <a href="/allocations">
+            Cancel
+        </a>
+
+    </form>
+
+    <script>
+
+        function addAllocationItem() {
+
+            const container =
+                document.getElementById(
+                    "allocationItems");
+
+            const firstRow =
+                container.querySelector(
+                    ".allocation-item-row");
+
+            const newRow =
+                firstRow.cloneNode(true);
+
+            const select =
+                newRow.querySelector(
+                    'select[name="taroTypeId"]');
+
+            const quantity =
+                newRow.querySelector(
+                    'input[name="quantity"]');
+
+            const price =
+                newRow.querySelector(
+                    'input[name="pricePerKg"]');
+
+            select.selectedIndex = 0;
+            quantity.value = "";
+            price.value = "";
+
+            container.appendChild(newRow);
+        }
+
+        function removeAllocationItem(button) {
+
+            const container =
+                document.getElementById(
+                    "allocationItems");
+
+            const rows =
+                container.querySelectorAll(
+                    ".allocation-item-row");
+
+            // keep at least one allocation row
+            if (rows.length <= 1) {
+                return;
+            }
+
+            button.closest(
+                ".allocation-item-row")
+                .remove();
+        }
+
+    </script>
+
+</body>
+
+</html>

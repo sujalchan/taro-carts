@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Customers - API Client</title>
+</head>
+
+<body class="page-list">
+
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="/customers">Taro Allocation System</a>
+        <div class="app-nav__links">
+            <a href="/customers" aria-current="page">Customer Service</a>
+            <a href="http://localhost:8082/allocations">Allocation Service</a>
+        </div>
+    </nav>
+    <h1>Customers (JSON API)</h1>
+
+    <p>
+        <a href="/customers">
+            Server-rendered customer page
+        </a>
+    </p>
+
+    <form id="searchForm" class="search-form">
+        <div class="search-box">
+            <input type="search" id="search" placeholder="Search customers">
+
+            <button type="submit">
+                Search
+            </button>
+
+            <button type="button" id="clearSearch">
+                Clear
+            </button>
+        </div>
+    </form>
+
+    <p>
+        <a class="button-primary" href="/customer-new-client.html">
+            Add Customer
+        </a>
+    </p>
+
+    <p id="status" role="status" aria-live="polite">
+        Loading customers...
+    </p>
+
+    <div class="table-scroll" role="region" aria-label="Data table" tabindex="0">
+        <table id="customerTable" border="1" hidden>
+            <thead>
+                <tr>
+                    <th>Business Name</th>
+                    <th>Contact Name</th>
+                    <th>Phone</th>
+                    <th>Active</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody id="customerTableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <p>
+        <a href="/taro-types-client.html">
+            Taro Types
+        </a>
+    </p>
+
+    <script src="js/customers-client.js"></script>
+</body>
+
+</html>

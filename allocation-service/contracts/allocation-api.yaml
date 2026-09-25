@@ -1,0 +1,557 @@
+openapi: 3.0.3
+
+info:
+  title: Taro Allocation API
+  version: 1.0.0
+  description: >
+    REST API for managing weekly taro allocations.
+    The allocation service communicates with customer-service to validate
+    customers and taro types and to enrich responses with their names.
+
+servers:
+  - url: http://localhost:8082
+    description: Local allocation service
+
+paths:
+  /api/v1/allocations:
+    get:
+      summary: Get all weekly allocations
+      operationId: getAllWeeklyAllocations
+
+      responses:
+        "200":
+          description: Weekly allocations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeeklyAllocationResponse"
+
+        "503":
+          description: Customer service is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: CUSTOMER_SERVICE_UNAVAILABLE
+                message: Customer service is currently unavailable
+                path: /api/v1/allocations
+
+        "500":
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: INTERNAL_SERVER_ERROR
+                message: An unexpected error occurred
+                path: /api/v1/allocations
+
+    post:
+      summary: Create a weekly allocation
+      operationId: createWeeklyAllocation
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WeeklyAllocationRequest"
+            example:
+              customerId: 1
+              weekStart: "2026-09-14"
+              allocationItems:
+                - taroTypeId: 1
+                  quantity: 100
+                - taroTypeId: 2
+                  quantity: 50
+                  pricePerKg: 42.50
+
+      responses:
+        "201":
+          description: Weekly allocation created successfully
+          headers:
+            Location:
+              description: URI of the created weekly allocation
+              schema:
+                type: string
+              example: /api/v1/allocations/1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyAllocationResponse"
+              example:
+                id: 1
+                customerId: 1
+                customerName: Island Foods
+                weekStart: "2026-09-14"
+                allocationItems:
+                  - id: 1
+                    taroTypeId: 1
+                    taroTypeName: Samoan Taro
+                    quantity: 100
+                    pricePerKg: 50.00
+                  - id: 2
+                    taroTypeId: 2
+                    taroTypeName: Fiji Taro
+                    quantity: 50
+                    pricePerKg: 42.50
+
+        "400":
+          description: Invalid allocation request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                validationError:
+                  summary: Validation error
+                  value:
+                    code: VALIDATION_ERROR
+                    message: At least one allocation item is required
+                    path: /api/v1/allocations
+
+                invalidQuantity:
+                  summary: Invalid quantity
+                  value:
+                    code: INVALID_QUANTITY
+                    message: Quantity must be a positive whole number
+                    path: /api/v1/allocations
+
+                duplicateTaroType:
+                  summary: Duplicate taro type
+                  value:
+                    code: DUPLICATE_TARO_TYPE
+                    message: Samoan Taro cannot appear more than once in an allocation
+                    path: /api/v1/allocations
+
+        "404":
+          description: Referenced customer or taro type was not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                customerNotFound:
+                  summary: Customer not found
+                  value:
+                    code: CUSTOMER_NOT_FOUND
+                    message: "Customer not found with id: 999"
+                    path: /api/v1/allocations
+
+                taroTypeNotFound:
+                  summary: Taro type not found
+                  value:
+                    code: TARO_TYPE_NOT_FOUND
+                    message: "Taro type not found with id: 999"
+                    path: /api/v1/allocations
+
+        "409":
+          description: Weekly allocation already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: WEEKLY_ALLOCATION_ALREADY_EXISTS
+                message: Weekly allocation already exists for Island Foods for week starting 2026-09-14
+                path: /api/v1/allocations
+
+        "503":
+          description: Customer service is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: CUSTOMER_SERVICE_UNAVAILABLE
+                message: Customer service is currently unavailable
+                path: /api/v1/allocations
+
+        "500":
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: INTERNAL_SERVER_ERROR
+                message: An unexpected error occurred
+                path: /api/v1/allocations
+
+  /api/v1/allocations/{id}:
+    get:
+      summary: Get a weekly allocation by ID
+      operationId: getWeeklyAllocationById
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Weekly allocation ID
+          schema:
+            type: integer
+            format: int64
+
+      responses:
+        "200":
+          description: Weekly allocation retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyAllocationResponse"
+              example:
+                id: 1
+                customerId: 1
+                customerName: Island Foods
+                weekStart: "2026-09-14"
+                allocationItems:
+                  - id: 1
+                    taroTypeId: 1
+                    taroTypeName: Samoan Taro
+                    quantity: 100
+                    pricePerKg: 50.00
+
+        "404":
+          description: Weekly allocation was not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: WEEKLY_ALLOCATION_NOT_FOUND
+                message: "Weekly allocation not found with id: 999"
+                path: /api/v1/allocations/999
+
+        "503":
+          description: Customer service is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: CUSTOMER_SERVICE_UNAVAILABLE
+                message: Customer service is currently unavailable
+                path: /api/v1/allocations/1
+
+        "500":
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: INTERNAL_SERVER_ERROR
+                message: An unexpected error occurred
+                path: /api/v1/allocations/1
+
+    put:
+      summary: Update a weekly allocation
+      operationId: updateWeeklyAllocation
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Weekly allocation ID
+          schema:
+            type: integer
+            format: int64
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WeeklyAllocationRequest"
+            example:
+              customerId: 1
+              weekStart: "2026-09-14"
+              allocationItems:
+                - taroTypeId: 1
+                  quantity: 150
+                  pricePerKg: 48.00
+                - taroTypeId: 2
+                  quantity: 30
+
+      responses:
+        "200":
+          description: Weekly allocation updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyAllocationResponse"
+              example:
+                id: 1
+                customerId: 1
+                customerName: Island Foods
+                weekStart: "2026-09-14"
+                allocationItems:
+                  - id: 5
+                    taroTypeId: 1
+                    taroTypeName: Samoan Taro
+                    quantity: 150
+                    pricePerKg: 48.00
+                  - id: 6
+                    taroTypeId: 2
+                    taroTypeName: Fiji Taro
+                    quantity: 30
+                    pricePerKg: 45.00
+
+        "400":
+          description: Invalid allocation update request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                validationError:
+                  summary: Validation error
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Invalid allocation request
+                    path: /api/v1/allocations/1
+
+                invalidQuantity:
+                  summary: Invalid quantity
+                  value:
+                    code: INVALID_QUANTITY
+                    message: Quantity must be a positive whole number
+                    path: /api/v1/allocations/1
+
+                duplicateTaroType:
+                  summary: Duplicate taro type
+                  value:
+                    code: DUPLICATE_TARO_TYPE
+                    message: Samoan Taro cannot appear more than once in an allocation
+                    path: /api/v1/allocations/1
+
+        "404":
+          description: Allocation, customer, or taro type was not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                allocationNotFound:
+                  summary: Weekly allocation not found
+                  value:
+                    code: WEEKLY_ALLOCATION_NOT_FOUND
+                    message: "Weekly allocation not found with id: 999"
+                    path: /api/v1/allocations/999
+
+                customerNotFound:
+                  summary: Customer not found
+                  value:
+                    code: CUSTOMER_NOT_FOUND
+                    message: "Customer not found with id: 999"
+                    path: /api/v1/allocations/1
+
+                taroTypeNotFound:
+                  summary: Taro type not found
+                  value:
+                    code: TARO_TYPE_NOT_FOUND
+                    message: "Taro type not found with id: 999"
+                    path: /api/v1/allocations/1
+
+        "409":
+          description: Another weekly allocation already exists for the customer and week
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: WEEKLY_ALLOCATION_ALREADY_EXISTS
+                message: Weekly allocation already exists for Island Foods for week starting 2026-09-21
+                path: /api/v1/allocations/1
+
+        "503":
+          description: Customer service is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: CUSTOMER_SERVICE_UNAVAILABLE
+                message: Customer service is currently unavailable
+                path: /api/v1/allocations/1
+
+        "500":
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: INTERNAL_SERVER_ERROR
+                message: An unexpected error occurred
+                path: /api/v1/allocations/1
+
+    delete:
+      summary: Delete a weekly allocation
+      operationId: deleteWeeklyAllocation
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Weekly allocation ID
+          schema:
+            type: integer
+            format: int64
+
+      responses:
+        "204":
+          description: Weekly allocation deleted successfully
+
+        "404":
+          description: Weekly allocation was not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: WEEKLY_ALLOCATION_NOT_FOUND
+                message: "Weekly allocation not found with id: 999"
+                path: /api/v1/allocations/999
+
+        "500":
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: INTERNAL_SERVER_ERROR
+                message: An unexpected error occurred
+                path: /api/v1/allocations/1
+components:
+  schemas:
+    WeeklyAllocationRequest:
+      type: object
+      required:
+        - customerId
+        - weekStart
+        - allocationItems
+
+      properties:
+        customerId:
+          type: integer
+          format: int64
+          example: 1
+
+        weekStart:
+          type: string
+          format: date
+          example: "2026-09-14"
+          description: >
+            A date identifying the allocation week.
+            The service normalizes the supplied date to the Monday
+            of that week before storing it.
+
+        allocationItems:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/AllocationItemRequest"
+
+    AllocationItemRequest:
+      type: object
+      required:
+        - taroTypeId
+        - quantity
+
+      properties:
+        taroTypeId:
+          type: integer
+          format: int64
+          example: 1
+
+        quantity:
+          type: integer
+          minimum: 1
+          example: 100
+          description: Quantity must be a positive whole number.
+
+        pricePerKg:
+          type: number
+          minimum: 0
+          nullable: true
+          example: 45.50
+          description: >
+            Optional price per kg for this allocation item.
+            If omitted, the current standard price of the taro type
+            from customer-service is used.
+
+    WeeklyAllocationResponse:
+      type: object
+
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+
+        customerId:
+          type: integer
+          format: int64
+          example: 1
+
+        customerName:
+          type: string
+          example: Island Foods
+
+        weekStart:
+          type: string
+          format: date
+          example: "2026-09-14"
+
+        allocationItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/AllocationItemResponse"
+
+    AllocationItemResponse:
+      type: object
+
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+
+        taroTypeId:
+          type: integer
+          format: int64
+          example: 1
+
+        taroTypeName:
+          type: string
+          example: Samoan Taro
+
+        quantity:
+          type: integer
+          example: 100
+
+        pricePerKg:
+          type: number
+          example: 50.00
+
+    ApiError:
+      type: object
+
+      properties:
+        code:
+          type: string
+          example: VALIDATION_ERROR
+
+        message:
+          type: string
+          example: Invalid request
+
+        path:
+          type: string
+          example: /api/v1/allocations

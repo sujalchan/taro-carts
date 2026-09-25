@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Edit Customer</title>
+</head>
+
+<body class="page-form">
+
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="/customers">Taro Allocation System</a>
+        <div class="app-nav__links">
+            <a href="/customers" aria-current="page">Customer Service</a>
+            <a href="http://localhost:8082/allocations">Allocation Service</a>
+        </div>
+    </nav>
+
+    <h1>Edit Customer (Server-rendered)</h1>
+
+    <div class="error-message" role="alert" th:if="${errors != null && !errors.isEmpty()}">
+
+        <strong>Unable to update customer:</strong>
+
+        <ul>
+            <li th:each="error : ${errors}" th:text="${error}">
+                Error message
+            </li>
+        </ul>
+
+    </div>
+
+    <form th:action="@{/customers/{id}/edit(id=${customerId})}" method="post">
+
+        <div>
+            <label for="name">
+                Business Name
+            </label>
+
+            <input type="text" id="name" name="name" th:value="${name}" required>
+        </div>
+
+        <br>
+
+        <div>
+            <label for="contactName">
+                Contact Name
+            </label>
+
+            <input type="text" id="contactName" name="contactName" th:value="${contactName}">
+        </div>
+
+        <br>
+
+        <div>
+            <label for="phone">
+                Phone
+            </label>
+
+            <input type="text" id="phone" name="phone" th:value="${phone}">
+        </div>
+
+        <br>
+
+        <div>
+            <label for="active">
+                Active
+            </label>
+
+            <input type="checkbox" id="active" name="active" value="true" th:checked="${active}">
+        </div>
+
+        <br>
+
+        <button type="submit">
+            Update Customer
+        </button>
+
+        <a href="/customers">
+            Cancel
+        </a>
+
+    </form>
+
+</body>
+
+</html>

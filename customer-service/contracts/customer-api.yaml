@@ -1,0 +1,507 @@
+openapi: 3.0.3
+
+info:
+  title: Customer Service API
+  version: 1.0.0
+  description: >
+    REST API for managing customers and taro types in the Taro Allocation System.
+
+servers:
+  - url: http://localhost:8081
+    description: Local development server
+
+paths:
+  /api/v1/customers:
+    get:
+      summary: Retrieve all customers
+      operationId: getAllCustomers
+
+      responses:
+        "200":
+          description: Customers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomerResponse"
+
+    post:
+      summary: Create a customer
+      operationId: createCustomer
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerRequest"
+            example:
+              name: Island Foods
+              contactName: John
+              phone: "0211234567"
+              active: true
+
+      responses:
+        "201":
+          description: Customer created successfully
+          headers:
+            Location:
+              description: URI of the newly created customer
+              schema:
+                type: string
+                format: uri
+              example: http://localhost:8081/api/v1/customers/1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+              example:
+                id: 1
+                name: Island Foods
+                contactName: John
+                phone: "0211234567"
+                active: true
+
+        "400":
+          description: Invalid customer data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: Customer name is required
+                path: /api/v1/customers
+
+        "409":
+          description: Customer already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: CUSTOMER_ALREADY_EXISTS
+                message: Customer 'Island Foods' already exists.
+                path: /api/v1/customers
+
+  /api/v1/customers/{id}:
+    get:
+      summary: Retrieve a customer by ID
+      operationId: getCustomerById
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+
+      responses:
+        "200":
+          description: Customer retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+              example:
+                id: 1
+                name: Island Foods
+                contactName: John
+                phone: "0211234567"
+                active: true
+
+        "404":
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: CUSTOMER_NOT_FOUND
+                message: "Customer not found with id: 999"
+                path: /api/v1/customers/999
+
+    put:
+      summary: Update an existing customer
+      operationId: updateCustomer
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerRequest"
+            example:
+              name: Island Foods
+              contactName: James
+              phone: "0219999999"
+              active: true
+
+      responses:
+        "200":
+          description: Customer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+              example:
+                id: 1
+                name: Island Foods
+                contactName: James
+                phone: "0219999999"
+                active: true
+
+        "400":
+          description: Invalid customer data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: Customer name is required
+                path: /api/v1/customers/1
+
+        "404":
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: CUSTOMER_NOT_FOUND
+                message: "Customer not found with id: 999"
+                path: /api/v1/customers/999
+
+        "409":
+          description: Customer name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: CUSTOMER_ALREADY_EXISTS
+                message: Customer 'Island Foods' already exists.
+                path: /api/v1/customers/2
+
+  /api/v1/taro-types:
+    get:
+      summary: Retrieve all taro types
+      operationId: getAllTaroTypes
+
+      responses:
+        "200":
+          description: Taro types retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaroTypeResponse"
+
+    post:
+      summary: Create a taro type
+      operationId: createTaroType
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaroTypeRequest"
+            example:
+              name: Samoan Taro
+              description: Large premium taro
+              standardPrice: 50.00
+
+      responses:
+        "201":
+          description: Taro type created successfully
+          headers:
+            Location:
+              description: URI of the newly created taro type
+              schema:
+                type: string
+                format: uri
+              example: http://localhost:8081/api/v1/taro-types/1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaroTypeResponse"
+              example:
+                id: 1
+                name: Samoan Taro
+                description: Large premium taro
+                standardPrice: 50.00
+
+        "400":
+          description: Invalid taro type data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: Taro type name is required
+                path: /api/v1/taro-types
+
+        "409":
+          description: Taro type already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: TARO_TYPE_ALREADY_EXISTS
+                message: Taro type 'Samoan Taro' already exists.
+                path: /api/v1/taro-types
+
+  /api/v1/taro-types/{id}:
+    get:
+      summary: Retrieve a taro type by ID
+      operationId: getTaroTypeById
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Taro type ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+
+      responses:
+        "200":
+          description: Taro type retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaroTypeResponse"
+              example:
+                id: 1
+                name: Samoan Taro
+                description: Large premium taro
+                standardPrice: 50.00
+
+        "404":
+          description: Taro type not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: TARO_TYPE_NOT_FOUND
+                message: "Taro type not found with id: 999"
+                path: /api/v1/taro-types/999
+
+    put:
+      summary: Update an existing taro type
+      operationId: updateTaroType
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Taro type ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaroTypeRequest"
+            example:
+              name: Samoan Taro
+              description: Updated premium Samoan taro
+              standardPrice: 55.00
+
+      responses:
+        "200":
+          description: Taro type updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaroTypeResponse"
+              example:
+                id: 1
+                name: Samoan Taro
+                description: Updated premium Samoan taro
+                standardPrice: 55.00
+
+        "400":
+          description: Invalid taro type data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: Standard price cannot be negative
+                path: /api/v1/taro-types/1
+
+        "404":
+          description: Taro type not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: TARO_TYPE_NOT_FOUND
+                message: "Taro type not found with id: 999"
+                path: /api/v1/taro-types/999
+
+        "409":
+          description: Taro type name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: TARO_TYPE_ALREADY_EXISTS
+                message: Taro type 'Samoan Taro' already exists.
+                path: /api/v1/taro-types/2
+components:
+  schemas:
+    CustomerRequest:
+      type: object
+
+      required:
+        - name
+
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: Island Foods
+
+        contactName:
+          type: string
+          example: John
+
+        phone:
+          type: string
+          description: Optional phone number containing 7 to 15 digits, optionally starting with +
+          pattern: '^\+?[0-9]{7,15}$'
+          example: "0211234567"
+
+        active:
+          type: boolean
+          default: true
+          example: true
+
+    CustomerResponse:
+      type: object
+
+      required:
+        - id
+        - name
+        - active
+
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+
+        name:
+          type: string
+          example: Island Foods
+
+        contactName:
+          type: string
+          example: John
+
+        phone:
+          type: string
+          example: "0211234567"
+
+        active:
+          type: boolean
+          example: true
+
+    TaroTypeRequest:
+      type: object
+      required:
+        - name
+        - standardPrice
+
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: Samoan Taro
+
+        description:
+          type: string
+          example: Large premium taro
+
+        standardPrice:
+          type: number
+          minimum: 0
+          example: 50.00
+
+    TaroTypeResponse:
+      type: object
+      required:
+        - id
+        - name
+        - standardPrice
+
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+
+        name:
+          type: string
+          example: Samoan Taro
+
+        description:
+          type: string
+          example: Large premium taro
+
+        standardPrice:
+          type: number
+          minimum: 0
+          example: 50.00
+
+    ApiError:
+      type: object
+
+      required:
+        - code
+        - message
+        - path
+
+      properties:
+        code:
+          type: string
+          example: CUSTOMER_NOT_FOUND
+
+        message:
+          type: string
+          example: "Customer not found with id: 999"
+
+        path:
+          type: string
+          example: /api/v1/customers/999

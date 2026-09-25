@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Weekly Allocations</title>
+</head>
+
+<body class="page-list page-allocation">
+
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="/allocations">Taro Allocation System</a>
+        <div class="app-nav__links">
+            <a href="http://localhost:8081/customers">Customer Service</a>
+            <a href="/allocations" aria-current="page">Allocation Service</a>
+        </div>
+    </nav>
+
+    <h1>Weekly Allocations (JSON API)</h1>
+
+    <p>
+        <a href="/allocations">
+            Server-rendered version
+        </a>
+    </p>
+
+    <p>
+        <a class="button-primary" href="/allocation-new-client.html">
+            Add Allocation
+        </a>
+    </p>
+
+
+
+    <div id="errorContainer" class="error-message" role="alert" hidden>
+        <strong>Unable to load allocations:</strong>
+
+        <ul id="errorList"></ul>
+    </div>
+
+    <p id="status" role="status" aria-live="polite">
+        Loading weekly allocations...
+    </p>
+
+    <div id="allocationsContainer"></div>
+
+    <script src="/js/allocations-client.js"></script>
+
+</body>
+
+</html>
