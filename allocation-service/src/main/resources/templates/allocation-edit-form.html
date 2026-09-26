@@ -78,6 +78,15 @@
 
         </div>
 
+        <div>
+            <label for="deliveryStatus">Delivery Status</label>
+            <select id="deliveryStatus" name="deliveryStatus" required>
+                <option th:each="status : ${deliveryStatuses}" th:value="${status}"
+                    th:text="${#strings.replace(status.name(), '_', ' ')}"
+                    th:selected="${status == deliveryStatus}">PENDING</option>
+            </select>
+        </div>
+
         <hr>
 
         <h2>Allocation Items</h2>

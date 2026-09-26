@@ -42,8 +42,7 @@ public class AllocationItem {
     @Column(name = "price_per_kg", nullable = false, precision = 10, scale = 2)
     private BigDecimal pricePerKg;
 
-    public AllocationItem() {
-    }
+    public AllocationItem() {}
 
     public Long getId() {
         return id;

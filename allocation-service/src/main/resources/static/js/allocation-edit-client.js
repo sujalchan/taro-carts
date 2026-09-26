@@ -2,6 +2,7 @@
 const allocationForm = document.getElementById("allocationForm");
 const customerSelect = document.getElementById("customerId");
 const weekStartInput = document.getElementById("weekStart");
+const deliveryStatusSelect = document.getElementById("deliveryStatus");
 const allocationItemsContainer = document.getElementById("allocationItems");
 const addItemButton = document.getElementById("addItemButton");
 const errorContainer = document.getElementById("errorContainer");
@@ -63,6 +64,8 @@ async function loadPage() {
 
         populateCustomers(customers, allocation.customerId);
         weekStartInput.value = allocation.weekStart;
+        // show the saved status when editing an existing allocation
+        deliveryStatusSelect.value = allocation.deliveryStatus;
 
         allocation.allocationItems.forEach(item => {
             addAllocationItem(item);
@@ -199,6 +202,8 @@ async function updateAllocation(event) {
     const requestBody = {
         customerId: Number(customerSelect.value),
         weekStart: weekStartInput.value,
+        // status changes are submitted with the allocation update
+        deliveryStatus: deliveryStatusSelect.value,
         allocationItems: allocationItems
     };
 

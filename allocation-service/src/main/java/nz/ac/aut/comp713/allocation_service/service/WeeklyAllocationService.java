@@ -27,9 +27,11 @@ import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationRequest;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationResponse;
 import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidQuantityException;
+import nz.ac.aut.comp713.allocation_service.exception.InvalidDeliveryStatusException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationAlreadyExistsException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationNotFoundException;
 import nz.ac.aut.comp713.allocation_service.model.AllocationItem;
+import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
 import nz.ac.aut.comp713.allocation_service.model.WeeklyAllocation;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
@@ -76,6 +78,11 @@ public class WeeklyAllocationService {
     public WeeklyAllocationResponse createWeeklyAllocation(
             WeeklyAllocationRequest request) {
 
+        // status can only be changed after the allocation has been created
+        if (request.deliveryStatus() != null) {
+            throw new InvalidDeliveryStatusException();
+        }
+
         // confirm the customer exists in customer-service
         CustomerResponse customer = customerClient.getCustomer(request.customerId());
 
@@ -116,6 +123,8 @@ public class WeeklyAllocationService {
 
         weeklyAllocation.setCustomerId(request.customerId());
         weeklyAllocation.setWeekStart(normalizedWeekStart);
+        // every new allocation begins in the pending state
+        weeklyAllocation.setDeliveryStatus(DeliveryStatus.PENDING);
 
         WeeklyAllocation savedAllocation;
 
@@ -194,6 +203,10 @@ public class WeeklyAllocationService {
         // update the weekly allocation
         weeklyAllocation.setCustomerId(request.customerId());
         weeklyAllocation.setWeekStart(normalizedWeekStart);
+        // keep the current status when an update does not supply one
+        if (request.deliveryStatus() != null) {
+            weeklyAllocation.setDeliveryStatus(request.deliveryStatus());
+        }
 
         WeeklyAllocation savedAllocation;
 
@@ -280,6 +293,7 @@ public class WeeklyAllocationService {
                 weeklyAllocation.getCustomerId(),
                 customer.name(),
                 weeklyAllocation.getWeekStart(),
+                weeklyAllocation.getDeliveryStatus(),
                 allocationItemResponses);
     }
 

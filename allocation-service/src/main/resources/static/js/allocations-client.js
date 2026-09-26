@@ -58,6 +58,11 @@ function createAllocationElement(allocation) {
     week.innerHTML = `<strong>Week Start:</strong> ${escapeHtml(allocation.weekStart)}`;
     wrapper.appendChild(week);
 
+    // display enum names with spaces for readers
+    const deliveryStatus = document.createElement("p");
+    deliveryStatus.innerHTML = `<strong>Delivery Status:</strong> ${escapeHtml(allocation.deliveryStatus.replaceAll("_", " "))}`;
+    wrapper.appendChild(deliveryStatus);
+
     const table = document.createElement("table");
     table.border = "1";
 

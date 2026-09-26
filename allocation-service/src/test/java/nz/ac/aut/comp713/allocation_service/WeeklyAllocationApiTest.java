@@ -2,11 +2,14 @@ package nz.ac.aut.comp713.allocation_service;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -104,7 +107,7 @@ class WeeklyAllocationApiTest {
 	}
 
 	@Test
-	// verifies that a new allocation uses the taro type's standard price by default
+	// verifies that a new allocation uses the standard price and pending status by default
 	void createAllocationUsesDefaultStandardPrice() throws Exception {
 
 		mockMvc.perform(post("/api/v1/allocations")
@@ -126,6 +129,7 @@ class WeeklyAllocationApiTest {
 				.andExpect(jsonPath("$.customerId").value(1))
 				.andExpect(jsonPath("$.customerName").value("Island Foods"))
 				.andExpect(jsonPath("$.weekStart").value("2026-09-14"))
+				.andExpect(jsonPath("$.deliveryStatus").value("PENDING"))
 				.andExpect(jsonPath("$.allocationItems", hasSize(1)))
 				.andExpect(jsonPath("$.allocationItems[0].taroTypeId").value(1))
 				.andExpect(jsonPath("$.allocationItems[0].taroTypeName")
@@ -632,6 +636,98 @@ class WeeklyAllocationApiTest {
 				.andExpect(jsonPath(
 						"$.allocationItems[*].pricePerKg",
 						containsInAnyOrder(48.00, 45.00)));
+	}
+
+	@Test
+	// verifies that status changes persist and omitted values preserve the current status
+	void deliveryStatusCanBeSetAndPreservedAcrossUpdates() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		String updateWithoutStatus = """
+				{
+				  "customerId": 1,
+				  "weekStart": "2026-09-14",
+				  "allocationItems": [{"taroTypeId": 1, "quantity": 150}]
+				}
+				""";
+
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(updateWithoutStatus.replace("\"allocationItems\"", "\"deliveryStatus\": \"IN_TRANSIT\", \"allocationItems\"")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.deliveryStatus").value("IN_TRANSIT"));
+
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(updateWithoutStatus))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.deliveryStatus").value("IN_TRANSIT"));
+
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(updateWithoutStatus.replace("\"allocationItems\"", "\"deliveryStatus\": \"DELIVERED\", \"allocationItems\"")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.deliveryStatus").value("DELIVERED"));
+
+		mockMvc.perform(get("/api/v1/allocations/{id}", id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.deliveryStatus").value("DELIVERED"));
+		mockMvc.perform(get("/api/v1/allocations"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].deliveryStatus").value("DELIVERED"));
+	}
+
+	@Test
+	// verifies that a create request cannot override the pending default
+	void deliveryStatusCannotBeSetWhenCreatingAllocation() throws Exception {
+		mockMvc.perform(post("/api/v1/allocations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "customerId": 1,
+						  "weekStart": "2026-09-14",
+						  "deliveryStatus": "DELIVERED",
+						  "allocationItems": [{"taroTypeId": 1, "quantity": 100}]
+						}
+						"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_DELIVERY_STATUS"));
+		assertTrue(weeklyAllocationRepository.findAll().isEmpty());
+	}
+
+	@Test
+	// verifies that an unknown status value returns a validation error
+	void invalidDeliveryStatusReturns400() throws Exception {
+		mockMvc.perform(post("/api/v1/allocations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "customerId": 1,
+						  "weekStart": "2026-09-14",
+						  "deliveryStatus": "UNKNOWN",
+						  "allocationItems": [{"taroTypeId": 1, "quantity": 100}]
+						}
+						"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
+	// verifies that status is shown on the list and edit pages but not the create page
+	void serverRenderedPagesShowDeliveryStatus() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+
+		mockMvc.perform(get("/allocations"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("Delivery Status:")))
+				.andExpect(content().string(containsString("PENDING")));
+		mockMvc.perform(get("/allocations/new"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(not(containsString("name=\"deliveryStatus\""))));
+		mockMvc.perform(get("/allocations/{id}/edit", id))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("name=\"deliveryStatus\"")));
 	}
 
 	@Test

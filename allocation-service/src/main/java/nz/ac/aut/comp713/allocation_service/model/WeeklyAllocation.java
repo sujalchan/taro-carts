@@ -4,6 +4,8 @@ import java.time.LocalDate;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -29,6 +31,11 @@ public class WeeklyAllocation {
     @Column(name = "week_start", nullable = false)
     private LocalDate weekStart;
 
+    // store the enum name and default new or migrated allocations to pending
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_status", nullable = false, columnDefinition = "varchar(255) default 'PENDING'")
+    private DeliveryStatus deliveryStatus = DeliveryStatus.PENDING;
+
     public WeeklyAllocation() {
     }
 
@@ -50,5 +57,13 @@ public class WeeklyAllocation {
 
     public void setWeekStart(LocalDate weekStart) {
         this.weekStart = weekStart;
+    }
+
+    public DeliveryStatus getDeliveryStatus() {
+        return deliveryStatus;
+    }
+
+    public void setDeliveryStatus(DeliveryStatus deliveryStatus) {
+        this.deliveryStatus = deliveryStatus;
     }
 }

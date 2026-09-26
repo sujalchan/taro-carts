@@ -73,6 +73,11 @@
             </span>
         </p>
 
+        <p>
+            <strong>Delivery Status:</strong>
+            <span th:text="${#strings.replace(allocation.deliveryStatus.name(), '_', ' ')}">PENDING</span>
+        </p>
+
         <div class="table-scroll" role="region" aria-label="Data table" tabindex="0">
     <table border="1">
             <thead>
