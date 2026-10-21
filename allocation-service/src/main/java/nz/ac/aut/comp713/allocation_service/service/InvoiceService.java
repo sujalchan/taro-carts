@@ -68,6 +68,10 @@ public class InvoiceService {
     private void refreshPdf(Invoice invoice) {
         WeeklyAllocation allocation = allocationRepository.findById(invoice.getAllocationId())
                 .orElseThrow(() -> new WeeklyAllocationNotFoundException(invoice.getAllocationId()));
+        refreshPdf(invoice, allocation);
+    }
+
+    private void refreshPdf(Invoice invoice, WeeklyAllocation allocation) {
         InvoicePdfGenerator.Document document = buildDocument(allocation,
                 invoice.getInvoiceNumber(), invoice.getIssuedOn());
         if (document.total().compareTo(invoice.getTotalAmount()) != 0
@@ -84,13 +88,19 @@ public class InvoiceService {
         invoiceRepository.saveAndFlush(invoice);
     }
 
+    public void refreshPaymentStatus(WeeklyAllocation allocation) {
+        invoiceRepository.findByAllocationId(allocation.getId())
+                .ifPresent(invoice -> refreshPdf(invoice, allocation));
+    }
+
     @Transactional
     public Invoice issueIfDelivered(WeeklyAllocation allocation) {
         if (allocation.getDeliveryStatus() != DeliveryStatus.DELIVERED) {
             throw new InvoiceNotAvailableException(allocation.getId());
         }
         Invoice existing = invoiceRepository.findByAllocationId(allocation.getId()).orElse(null);
-        if (existing != null) return existing;
+        if (existing != null)
+            return existing;
 
         String number = "INV-" + allocation.getId();
         LocalDate issuedOn = LocalDate.now(ZoneId.of("Pacific/Auckland"));
@@ -126,9 +136,19 @@ public class InvoiceService {
         BigDecimal gst = total.multiply(BigDecimal.valueOf(3))
                 .divide(BigDecimal.valueOf(23), 2, RoundingMode.HALF_UP);
         BigDecimal subtotal = total.subtract(gst);
-        return new InvoicePdfGenerator.Document(number, issuedOn, customer.name(), customer.phone(),
-                allocation.getWeekStart(), lines, subtotal, gst, total);
+        return new InvoicePdfGenerator.Document(
+                number,
+                issuedOn,
+                customer.name(),
+                customer.phone(),
+                allocation.getWeekStart(),
+                allocation.getPaymentStatus(),
+                lines,
+                subtotal,
+                gst,
+                total);
     }
 
-    public record Download(String filename, byte[] bytes) {}
+    public record Download(String filename, byte[] bytes) {
+    }
 }

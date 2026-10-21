@@ -24,11 +24,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import nz.ac.aut.comp713.allocation_service.exception.InvoiceGenerationException;
+import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 
 @Component
 public class InvoicePdfGenerator {
     // Increment when a PDF layout change should refresh previously issued invoices.
-    public static final int TEMPLATE_VERSION = 1;
+    public static final int TEMPLATE_VERSION = 2;
     private static final PDType1Font FONT = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
     private static final PDType1Font BOLD = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
     // Match the allocation site's CSS palette in static/css/style.css.
@@ -37,12 +38,10 @@ public class InvoicePdfGenerator {
     private static final Color ACCENT = new Color(0x17, 0x66, 0x5f);
     private static final Color PALE = new Color(0xf4, 0xf6, 0xf6);
     private static final Color RULE = new Color(0xd5, 0xde, 0xde);
-    private static final String WATERMARK = "EXAMPLE";
     private static final int WATERMARK_SIZE = 140;
-    private static final float WATERMARK_OPACITY = 0.1f;
+    private static final float WATERMARK_OPACITY = 0.10f;
     private static final String EXAMPLE_ADDRESS_LINE_1 = "Address: AUT City Campus";
-    private static final String EXAMPLE_ADDRESS_LINE_2 =
-            "55 Wellesley Street East, Auckland Central 1010";
+    private static final String EXAMPLE_ADDRESS_LINE_2 = "55 Wellesley Street East, Auckland Central 1010";
     private static final String EXAMPLE_GST_NUMBER = "000000000 (EXAMPLE ONLY)";
     private static final float LEFT = 48;
     private static final float RIGHT = 547;
@@ -62,17 +61,28 @@ public class InvoicePdfGenerator {
         this.supplierGstNumber = supplierGstNumber;
     }
 
-    public record Line(String productName, int quantity, BigDecimal pricePerKg, BigDecimal amount) {}
+    public record Line(String productName, int quantity, BigDecimal pricePerKg, BigDecimal amount) {
+    }
 
-    public record Document(String number, LocalDate issuedOn, String customerName,
-            String customerPhone, LocalDate weekStart, List<Line> lines,
-            BigDecimal subtotal, BigDecimal gst, BigDecimal total) {}
+    public record Document(
+            String number,
+            LocalDate issuedOn,
+            String customerName,
+            String customerPhone,
+            LocalDate weekStart,
+            PaymentStatus paymentStatus,
+            List<Line> lines,
+            BigDecimal subtotal,
+            BigDecimal gst,
+            BigDecimal total) {
+    }
 
     public byte[] render(Document invoice) {
         try (PDDocument pdf = new PDDocument(); PageWriter page = new PageWriter(pdf, invoice)) {
             page.drawFirstPageHeader();
             page.drawTableHeader();
-            for (Line item : invoice.lines()) page.drawItem(item);
+            for (Line item : invoice.lines())
+                page.drawItem(item);
             page.drawTotals();
             page.close();
             ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -203,7 +213,8 @@ public class InvoicePdfGenerator {
         }
 
         private void drawTotals() throws IOException {
-            if (y < 205) newPage();
+            if (y < 205)
+                newPage();
             y -= 28;
             write(LEFT, y, "Prices include 15% GST", 9, FONT, MUTED);
             right(452, y, "Subtotal (excl GST)", 9, FONT, MUTED);
@@ -220,9 +231,11 @@ public class InvoicePdfGenerator {
         }
 
         private void drawWatermark() throws IOException {
+            String watermark = invoice.paymentStatus().name();
+
             PDExtendedGraphicsState transparency = new PDExtendedGraphicsState();
             transparency.setNonStrokingAlphaConstant(WATERMARK_OPACITY);
-            float textWidth = BOLD.getStringWidth(WATERMARK) * WATERMARK_SIZE / 1000;
+            float textWidth = BOLD.getStringWidth(watermark) * WATERMARK_SIZE / 1000;
             float textHeight = WATERMARK_SIZE * 0.75f;
             double angle = Math.toRadians(45);
             float x = (float) ((PDRectangle.A4.getWidth()
@@ -236,7 +249,7 @@ public class InvoicePdfGenerator {
             stream.setNonStrokingColor(ACCENT);
             stream.setFont(BOLD, WATERMARK_SIZE);
             stream.setTextMatrix(Matrix.getRotateInstance(angle, x, y));
-            stream.showText(WATERMARK);
+            stream.showText(watermark);
             stream.endText();
             stream.restoreGraphicsState();
         }
@@ -247,15 +260,18 @@ public class InvoicePdfGenerator {
             List<String> lines = new ArrayList<>();
             while (!text.isEmpty()) {
                 int end = text.length();
-                while (end > 1 && font.getStringWidth(text.substring(0, end)) * size / 1000 > maxWidth) end--;
+                while (end > 1 && font.getStringWidth(text.substring(0, end)) * size / 1000 > maxWidth)
+                    end--;
                 if (end < text.length()) {
                     int space = text.lastIndexOf(' ', end);
-                    if (space > 0) end = space;
+                    if (space > 0)
+                        end = space;
                 }
                 lines.add(text.substring(0, end));
                 text = text.substring(end).stripLeading();
             }
-            if (lines.isEmpty()) lines.add("");
+            if (lines.isEmpty())
+                lines.add("");
             return lines;
         }
 
@@ -285,7 +301,8 @@ public class InvoicePdfGenerator {
         }
 
         private void finishPage() throws IOException {
-            if (stream == null) return;
+            if (stream == null)
+                return;
             rule(LEFT, 60, RIGHT, RULE);
             write(LEFT, 43, supplierName + " | " + invoice.number(), 8, FONT, MUTED);
             right(RIGHT, 43, "Page " + pageNumber, 8, FONT, MUTED);

@@ -280,7 +280,9 @@ public class WeeklyAllocationService {
                 .toList();
 
         allocationItemRepository.saveAllAndFlush(allocationItems);
-        if (savedAllocation.getDeliveryStatus() == DeliveryStatus.DELIVERED) {
+        if (invoiceIssued && request.paymentStatus() != null) {
+            invoiceService.refreshPaymentStatus(savedAllocation);
+        } else if (savedAllocation.getDeliveryStatus() == DeliveryStatus.DELIVERED) {
             invoiceService.issueIfDelivered(savedAllocation);
         }
         return toResponse(savedAllocation);
