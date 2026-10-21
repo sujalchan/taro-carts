@@ -30,6 +30,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
@@ -44,13 +45,16 @@ import org.springframework.security.oauth2.server.authorization.settings.ClientS
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.server.authorization.oidc.web.authentication.OidcLogoutAuthenticationSuccessHandler;
+import org.springframework.security.oauth2.server.authorization.oidc.authentication.OidcLogoutAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 
 @Configuration
@@ -60,7 +64,20 @@ public class SecurityConfig {
     SecurityFilterChain authorizationServer(HttpSecurity http) throws Exception {
         http.oauth2AuthorizationServer(server -> {
             http.securityMatcher(server.getEndpointsMatcher());
-            server.oidc(Customizer.withDefaults());
+            server.oidc(oidc -> oidc.logoutEndpoint(logout -> {
+                OidcLogoutAuthenticationSuccessHandler handler = new OidcLogoutAuthenticationSuccessHandler();
+                SecurityContextLogoutHandler sessionLogout = new SecurityContextLogoutHandler();
+                CookieClearingLogoutHandler cookieLogout = serviceSessionCookies();
+                handler.setLogoutHandler((request, response, authentication) -> {
+                    if (authentication instanceof OidcLogoutAuthenticationToken oidcToken
+                            && oidcToken.isPrincipalAuthenticated()
+                            && oidcToken.getPrincipal() instanceof Authentication principal) {
+                        sessionLogout.logout(request, response, principal);
+                    }
+                    cookieLogout.logout(request, response, authentication);
+                });
+                logout.logoutResponseHandler(handler);
+            }));
         });
         http.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
@@ -89,8 +106,15 @@ public class SecurityConfig {
                             }
                             requestCache.removeRequest(request, response);
                             response.sendRedirect("http://localhost:8082/allocations");
-                        }).permitAll());
+                        }).permitAll())
+                .logout(logout -> logout.addLogoutHandler(serviceSessionCookies()));
         return http.build();
+    }
+
+    private CookieClearingLogoutHandler serviceSessionCookies() {
+        return new CookieClearingLogoutHandler(
+                "TARO_AUTH_SESSION", "TARO_CUSTOMER_SESSION", "TARO_TARO_SESSION", "TARO_ALLOCATION_SESSION",
+                "TARO_CUSTOMER_XSRF_TOKEN", "TARO_TARO_XSRF_TOKEN", "TARO_ALLOCATION_XSRF_TOKEN", "XSRF-TOKEN");
     }
 
     @Bean
@@ -112,7 +136,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    RegisteredClientRepository registeredClients(@Value("${auth.service-client-secret}") String serviceSecret) {
+    RegisteredClientRepository registeredClients(
+            @Value("${auth.service-client-secret}") String serviceSecret,
+            @Value("${auth.issuer}") String issuer) {
         if (serviceSecret.length() < 24)
             throw new IllegalStateException("Configure auth.service-client-secret with at least 24 characters");
         ClientSettings publicClient = ClientSettings.builder()
@@ -132,6 +158,7 @@ public class SecurityConfig {
                 .redirectUri("http://localhost:8081/login/oauth2/code/taro-web")
                 .redirectUri("http://localhost:8082/login/oauth2/code/taro-web")
                 .redirectUri("http://localhost:8083/login/oauth2/code/taro-web")
+                .postLogoutRedirectUri(issuer + "/login?logout")
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
                 .clientSettings(publicClient)

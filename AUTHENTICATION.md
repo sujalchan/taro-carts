@@ -14,6 +14,8 @@ Open `http://localhost:8084/accounts` and sign in as the administrator to create
 
 Signing in directly at `http://localhost:8084/login` opens the Allocation Service at `http://localhost:8082/allocations`. After signing in, administrators can open `http://localhost:8084/accounts` to manage accounts. OAuth sign-ins started by another service return to that service.
 
+The **Log out** button on each web service clears the local browser session cookies for auth-service and all three web services, then opens the sign-in page. Logging out directly from auth-service clears the same cookies. Each web service uses its own CSRF cookie so forms remain valid when multiple services are open in the same browser.
+
 ## Access rules
 
 | Role | Access |

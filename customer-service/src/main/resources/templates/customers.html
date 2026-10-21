@@ -20,6 +20,10 @@
             <a href="/customers" aria-current="page">Customer Service</a>
             <a href="http://localhost:8083/taro-types">Taro Service</a>
             <a href="http://localhost:8082/allocations">Allocation Service</a>
+            <form class="logout-form" method="post" th:action="@{/logout}">
+                <input type="hidden" name="_csrf" th:value="${_csrf.token}">
+                <button type="submit">Log out</button>
+            </form>
         </div>
     </nav>
 

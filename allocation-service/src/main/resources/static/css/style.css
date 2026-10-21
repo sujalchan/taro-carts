@@ -65,6 +65,7 @@ body.page-form.page-allocation { max-width: 1080px; }
 }
 .app-nav__links {
     display: flex;
+    align-items: center;
     flex-wrap: nowrap;
     gap: 14px;
 }
@@ -73,6 +74,26 @@ body.page-form.page-allocation { max-width: 1080px; }
     border-radius: var(--radius);
 }
 .app-nav__links a:hover { background: #eaf0ef; }
+
+.app-nav__links .logout-form {
+    margin: 0;
+}
+
+.app-nav__links .logout-form button[type="submit"] {
+    padding: 7px 10px;
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.app-nav__links .logout-form button[type="submit"]:hover {
+    background: #eaf0ef;
+    color: var(--accent);
+}
 .app-nav__links a[aria-current="page"] {
     background: #dceae8;
     color: var(--accent-hover);
@@ -111,6 +132,7 @@ body.page-form.page-allocation { max-width: 1080px; }
 
     .app-nav__links {
         display: none;
+        align-items: stretch;
         grid-column: 1 / -1;
         flex-direction: column;
         gap: 4px;
@@ -125,6 +147,11 @@ body.page-form.page-allocation { max-width: 1080px; }
 
     .app-nav__links a {
         width: 100%;
+    }
+
+    .app-nav__links .logout-form button[type="submit"] {
+        width: 100%;
+        text-align: left;
     }
 }
 

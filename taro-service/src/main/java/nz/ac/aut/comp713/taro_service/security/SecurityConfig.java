@@ -26,7 +26,9 @@ import org.springframework.security.oauth2.client.registration.InMemoryClientReg
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -55,7 +57,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuer) throws Exception {
+        CookieCsrfTokenRepository csrfTokens = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        csrfTokens.setCookieName("TARO_TARO_XSRF_TOKEN");
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/v1/taro-types/**").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER", "SERVICE")
                         .requestMatchers("/api/v1/taro-types/**").hasRole("ADMIN")
@@ -64,10 +70,17 @@ public class SecurityConfig {
                 .oauth2Login(login -> login
                         .loginPage("/oauth2/authorization/taro-web")
                         .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(oidcRoles())))
+                .logout(logout -> logout
+                        .addLogoutHandler(new CookieClearingLogoutHandler(
+                                "TARO_AUTH_SESSION", "TARO_CUSTOMER_SESSION", "TARO_TARO_SESSION",
+                                "TARO_ALLOCATION_SESSION", "TARO_CUSTOMER_XSRF_TOKEN",
+                                "TARO_TARO_XSRF_TOKEN", "TARO_ALLOCATION_XSRF_TOKEN", "XSRF-TOKEN"))
+                        .logoutSuccessUrl(issuer + "/login?logout"))
                 .oauth2ResourceServer(resource -> resource.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokens)
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                         .ignoringRequestMatchers(request -> {
                             String authorization = request.getHeader("Authorization");
                             return authorization != null && authorization.startsWith("Bearer ");

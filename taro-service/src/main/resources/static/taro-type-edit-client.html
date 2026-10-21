@@ -21,6 +21,10 @@
             <a href="http://localhost:8081/customers">Customer Service</a>
             <a href="/taro-types" aria-current="page">Taro Service</a>
             <a href="http://localhost:8082/allocations">Allocation Service</a>
+            <form class="logout-form" method="post" action="/logout">
+                <input type="hidden" name="_csrf">
+                <button type="submit">Log out</button>
+            </form>
         </div>
     </nav>
     <h1>Edit Taro Type (JSON API)</h1>

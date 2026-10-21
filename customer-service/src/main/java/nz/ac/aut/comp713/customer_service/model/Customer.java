@@ -29,7 +29,7 @@ public class Customer {
     private String phone;
 
     // stable account ID issued by auth-service; may be empty until linked
-    @Column(name = "account_id", unique = true)
+    @Column(name = "account_id")
     private String accountId;
 
     // customers are active by default
