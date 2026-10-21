@@ -54,9 +54,12 @@
         </div>
 
         <div>
-            <label for="deliveryStatus">Delivery Status</label>
+            <label for="deliveryStatus">Order Status</label>
             <select id="deliveryStatus" required>
-                <option value="PENDING">PENDING</option>
+                <option value="REQUESTED_ALLOCATION">REQUESTED ALLOCATION</option>
+                <option value="APPROVED_ALLOCATION">APPROVED ALLOCATION</option>
+                <option value="PREPARING_ALLOCATION">PREPARING ALLOCATION</option>
+                <option value="AWAITING_DISPATCH">AWAITING DISPATCH</option>
                 <option value="IN_TRANSIT">IN TRANSIT</option>
                 <option value="DELIVERED">DELIVERED</option>
                 <option value="CANCELLED">CANCELLED</option>

@@ -107,7 +107,7 @@ class WeeklyAllocationApiTest {
 	}
 
 	@Test
-	// verifies that a new allocation uses the standard price and pending status by default
+	// verifies that a new allocation uses the standard price and requested status by default
 	void createAllocationUsesDefaultStandardPrice() throws Exception {
 
 		mockMvc.perform(post("/api/v1/allocations")
@@ -129,7 +129,7 @@ class WeeklyAllocationApiTest {
 				.andExpect(jsonPath("$.customerId").value(1))
 				.andExpect(jsonPath("$.customerName").value("Island Foods"))
 				.andExpect(jsonPath("$.weekStart").value("2026-09-14"))
-				.andExpect(jsonPath("$.deliveryStatus").value("PENDING"))
+				.andExpect(jsonPath("$.deliveryStatus").value("REQUESTED_ALLOCATION"))
 				.andExpect(jsonPath("$.allocationItems", hasSize(1)))
 				.andExpect(jsonPath("$.allocationItems[0].taroTypeId").value(1))
 				.andExpect(jsonPath("$.allocationItems[0].taroTypeName")
@@ -678,7 +678,41 @@ class WeeklyAllocationApiTest {
 	}
 
 	@Test
-	// verifies that a create request cannot override the pending default
+	void allOrderStatusesCanBeSavedAndRead() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		String[] statuses = {
+				"REQUESTED_ALLOCATION",
+				"APPROVED_ALLOCATION",
+				"PREPARING_ALLOCATION",
+				"AWAITING_DISPATCH",
+				"IN_TRANSIT",
+				"DELIVERED",
+				"CANCELLED"
+		};
+
+		for (String orderStatus : statuses) {
+			mockMvc.perform(put("/api/v1/allocations/{id}", id)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "customerId": 1,
+							  "weekStart": "2026-09-14",
+							  "deliveryStatus": "%s",
+							  "allocationItems": [{"taroTypeId": 1, "quantity": 100}]
+							}
+							""".formatted(orderStatus)))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.deliveryStatus").value(orderStatus));
+
+			mockMvc.perform(get("/api/v1/allocations/{id}", id))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.deliveryStatus").value(orderStatus));
+		}
+	}
+
+	@Test
+	// verifies that a create request cannot override the requested default
 	void deliveryStatusCannotBeSetWhenCreatingAllocation() throws Exception {
 		mockMvc.perform(post("/api/v1/allocations")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -713,21 +747,47 @@ class WeeklyAllocationApiTest {
 	}
 
 	@Test
+	void legacyPendingStatusCannotBeSetOnUpdate() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+							{
+							  "customerId": 1,
+							  "weekStart": "2026-09-14",
+							  "deliveryStatus": "PENDING",
+							  "allocationItems": [{"taroTypeId": 1, "quantity": 100}]
+							}
+							"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+		mockMvc.perform(get("/api/v1/allocations/{id}", id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.deliveryStatus").value("REQUESTED_ALLOCATION"));
+	}
+
+	@Test
 	// verifies that status is shown on the list and edit pages but not the create page
-	void serverRenderedPagesShowDeliveryStatus() throws Exception {
+	void serverRenderedPagesShowOrderStatus() throws Exception {
 		createAllocation(1L, "2026-09-14", 1L, 100);
 		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
 
 		mockMvc.perform(get("/allocations"))
 				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("Delivery Status:")))
-				.andExpect(content().string(containsString("PENDING")));
+				.andExpect(content().string(containsString("Order Status:")))
+				.andExpect(content().string(containsString("REQUESTED ALLOCATION")));
 		mockMvc.perform(get("/allocations/new"))
 				.andExpect(status().isOk())
 				.andExpect(content().string(not(containsString("name=\"deliveryStatus\""))));
 		mockMvc.perform(get("/allocations/{id}/edit", id))
 				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("name=\"deliveryStatus\"")));
+				.andExpect(content().string(containsString("name=\"deliveryStatus\"")))
+				.andExpect(content().string(containsString("Order Status")))
+				.andExpect(content().string(containsString("value=\"APPROVED_ALLOCATION\"")))
+				.andExpect(content().string(containsString("value=\"AWAITING_DISPATCH\"")));
 	}
 
 	@Test

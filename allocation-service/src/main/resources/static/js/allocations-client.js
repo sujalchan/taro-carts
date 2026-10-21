@@ -60,7 +60,7 @@ function createAllocationElement(allocation) {
 
     // display enum names with spaces for readers
     const deliveryStatus = document.createElement("p");
-    deliveryStatus.innerHTML = `<strong>Delivery Status:</strong> ${escapeHtml(allocation.deliveryStatus.replaceAll("_", " "))}`;
+    deliveryStatus.innerHTML = `<strong>Order Status:</strong> ${escapeHtml(allocation.deliveryStatus.replaceAll("_", " "))}`;
     wrapper.appendChild(deliveryStatus);
 
     const table = document.createElement("table");

@@ -4,6 +4,6 @@ package nz.ac.aut.comp713.allocation_service.exception;
 public class InvalidDeliveryStatusException extends RuntimeException {
 
     public InvalidDeliveryStatusException() {
-        super("Delivery status can only be changed after an allocation is created");
+        super("Order status can only be changed after an allocation is created");
     }
 }

@@ -1,8 +1,11 @@
 package nz.ac.aut.comp713.allocation_service.model;
 
-// delivery states available for a weekly allocation
+// order states available for a weekly allocation
 public enum DeliveryStatus {
-    PENDING,
+    REQUESTED_ALLOCATION,
+    APPROVED_ALLOCATION,
+    PREPARING_ALLOCATION,
+    AWAITING_DISPATCH,
     IN_TRANSIT,
     DELIVERED,
     CANCELLED

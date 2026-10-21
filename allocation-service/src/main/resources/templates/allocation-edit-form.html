@@ -79,11 +79,11 @@
         </div>
 
         <div>
-            <label for="deliveryStatus">Delivery Status</label>
+            <label for="deliveryStatus">Order Status</label>
             <select id="deliveryStatus" name="deliveryStatus" required>
                 <option th:each="status : ${deliveryStatuses}" th:value="${status}"
                     th:text="${#strings.replace(status.name(), '_', ' ')}"
-                    th:selected="${status == deliveryStatus}">PENDING</option>
+                    th:selected="${status == deliveryStatus}">REQUESTED ALLOCATION</option>
             </select>
         </div>
 

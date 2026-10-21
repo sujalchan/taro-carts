@@ -31,10 +31,10 @@ public class WeeklyAllocation {
     @Column(name = "week_start", nullable = false)
     private LocalDate weekStart;
 
-    // store the enum name and default new or migrated allocations to pending
+    // store the enum name and default new allocations to requested
     @Enumerated(EnumType.STRING)
-    @Column(name = "delivery_status", nullable = false, columnDefinition = "varchar(255) default 'PENDING'")
-    private DeliveryStatus deliveryStatus = DeliveryStatus.PENDING;
+    @Column(name = "delivery_status", nullable = false, columnDefinition = "varchar(255) default 'REQUESTED_ALLOCATION'")
+    private DeliveryStatus deliveryStatus = DeliveryStatus.REQUESTED_ALLOCATION;
 
     public WeeklyAllocation() {
     }

@@ -123,8 +123,8 @@ public class WeeklyAllocationService {
 
         weeklyAllocation.setCustomerId(request.customerId());
         weeklyAllocation.setWeekStart(normalizedWeekStart);
-        // every new allocation begins in the pending state
-        weeklyAllocation.setDeliveryStatus(DeliveryStatus.PENDING);
+        // every new allocation begins in the requested state
+        weeklyAllocation.setDeliveryStatus(DeliveryStatus.REQUESTED_ALLOCATION);
 
         WeeklyAllocation savedAllocation;
 

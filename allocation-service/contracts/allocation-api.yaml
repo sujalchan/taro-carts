@@ -95,7 +95,7 @@ paths:
                 customerId: 1
                 customerName: Island Foods
                 weekStart: "2026-09-14"
-                deliveryStatus: PENDING
+                deliveryStatus: REQUESTED_ALLOCATION
                 allocationItems:
                   - id: 1
                     taroTypeId: 1
@@ -140,7 +140,7 @@ paths:
                   summary: Status can only change after creation
                   value:
                     code: INVALID_DELIVERY_STATUS
-                    message: Delivery status can only be changed after an allocation is created
+                    message: Order status can only be changed after an allocation is created
                     path: /api/v1/allocations
 
         "404":
@@ -230,7 +230,7 @@ paths:
                 customerId: 1
                 customerName: Island Foods
                 weekStart: "2026-09-14"
-                deliveryStatus: PENDING
+                deliveryStatus: REQUESTED_ALLOCATION
                 allocationItems:
                   - id: 1
                     taroTypeId: 1
@@ -471,7 +471,7 @@ components:
   schemas:
     WeeklyAllocationCreateRequest:
       type: object
-      description: New allocations always start with PENDING delivery status; supplying deliveryStatus is rejected.
+      description: New allocations always start with REQUESTED_ALLOCATION order status; supplying deliveryStatus is rejected.
       required:
         - customerId
         - weekStart
@@ -506,7 +506,7 @@ components:
             deliveryStatus:
               description: Optional. An omitted value preserves the current status.
               allOf:
-                - $ref: "#/components/schemas/DeliveryStatus"
+                - $ref: "#/components/schemas/OrderStatus"
 
     AllocationItemRequest:
       type: object
@@ -536,10 +536,10 @@ components:
             If omitted, the current standard price of the taro type
             from taro-service is used.
 
-    DeliveryStatus:
+    OrderStatus:
       type: string
-      enum: [PENDING, IN_TRANSIT, DELIVERED, CANCELLED]
-      example: PENDING
+      enum: [REQUESTED_ALLOCATION, APPROVED_ALLOCATION, PREPARING_ALLOCATION, AWAITING_DISPATCH, IN_TRANSIT, DELIVERED, CANCELLED]
+      example: REQUESTED_ALLOCATION
 
     WeeklyAllocationResponse:
       type: object
@@ -565,7 +565,7 @@ components:
           example: "2026-09-14"
 
         deliveryStatus:
-          $ref: "#/components/schemas/DeliveryStatus"
+          $ref: "#/components/schemas/OrderStatus"
 
         allocationItems:
           type: array
