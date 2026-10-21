@@ -31,6 +31,7 @@ import nz.ac.aut.comp713.allocation_service.model.WeeklyAllocation;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
 import nz.ac.aut.comp713.allocation_service.service.WeeklyAllocationService;
+import nz.ac.aut.comp713.allocation_service.service.InvoiceService;
 
 @ExtendWith(MockitoExtension.class)
 class WeeklyAllocationServiceTest {
@@ -46,6 +47,9 @@ class WeeklyAllocationServiceTest {
 
     @Mock
     TaroClient taroClient;
+
+    @Mock
+    InvoiceService invoiceService;
 
     @InjectMocks
     WeeklyAllocationService service;

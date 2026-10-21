@@ -112,11 +112,21 @@
     </div>
 
         <div class="allocation-actions">
+            <a th:if="${allocation.invoiceAvailable}"
+               th:href="@{/api/v1/allocations/{id}/invoice.pdf(id=${allocation.id},inline=true)}"
+               target="_blank" rel="noopener">
+                View Invoice PDF
+            </a>
+            <a th:if="${allocation.invoiceAvailable}"
+               th:href="@{/api/v1/allocations/{id}/invoice.pdf(id=${allocation.id})}">
+                Download Invoice PDF
+            </a>
             <a th:href="@{/allocations/{id}/edit(id=${allocation.id})}">
                 Edit Allocation
             </a>
 
-        <form th:action="@{/allocations/{id}/delete(id=${allocation.id})}" method="post" class="delete-form">
+        <form th:unless="${allocation.invoiceAvailable}"
+              th:action="@{/allocations/{id}/delete(id=${allocation.id})}" method="post" class="delete-form">
             <button type="submit" onclick="return confirm('Delete this weekly allocation?');">
                 Delete Allocation
             </button>

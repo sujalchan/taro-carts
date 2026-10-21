@@ -1,6 +1,7 @@
 package nz.ac.aut.comp713.allocation_service.exception;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -12,6 +13,19 @@ import nz.ac.aut.comp713.allocation_service.dto.ApiError;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+	@ExceptionHandler(IssuedInvoiceConflictException.class)
+	public ResponseEntity<ApiError> handleIssuedInvoiceConflict(
+			IssuedInvoiceConflictException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiError("ISSUED_INVOICE_CONFLICT", exception.getMessage(), request.getRequestURI()));
+	}
+	@ExceptionHandler(InvoiceNotAvailableException.class)
+	public ResponseEntity<ApiError> handleInvoiceNotAvailable(
+			InvoiceNotAvailableException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(new ApiError("INVOICE_NOT_AVAILABLE", exception.getMessage(), request.getRequestURI()));
+	}
 
 	// reject a delivery status supplied before the allocation exists
 	@ExceptionHandler(InvalidDeliveryStatusException.class)
@@ -75,6 +89,7 @@ public class GlobalExceptionHandler {
 
 		return ResponseEntity
 				.status(HttpStatus.NOT_FOUND)
+				.contentType(MediaType.APPLICATION_JSON)
 				.body(error);
 	}
 
@@ -91,6 +106,7 @@ public class GlobalExceptionHandler {
 
 		return ResponseEntity
 				.status(HttpStatus.NOT_FOUND)
+				.contentType(MediaType.APPLICATION_JSON)
 				.body(error);
 	}
 
@@ -107,6 +123,7 @@ public class GlobalExceptionHandler {
 
 		return ResponseEntity
 				.status(HttpStatus.NOT_FOUND)
+				.contentType(MediaType.APPLICATION_JSON)
 				.body(error);
 	}
 
@@ -155,6 +172,7 @@ public class GlobalExceptionHandler {
 
 		return ResponseEntity
 				.status(HttpStatus.SERVICE_UNAVAILABLE)
+				.contentType(MediaType.APPLICATION_JSON)
 				.body(error);
 	}
 
@@ -163,6 +181,7 @@ public class GlobalExceptionHandler {
 			TaroServiceUnavailableException exception,
 			HttpServletRequest request) {
 		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+				.contentType(MediaType.APPLICATION_JSON)
 				.body(new ApiError("TARO_SERVICE_UNAVAILABLE", exception.getMessage(), request.getRequestURI()));
 	}
 
@@ -195,6 +214,7 @@ public class GlobalExceptionHandler {
 
 		return ResponseEntity
 				.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.contentType(MediaType.APPLICATION_JSON)
 				.body(error);
 	}
 }

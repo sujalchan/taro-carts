@@ -13,5 +13,6 @@ public record WeeklyAllocationResponse(
 		LocalDate weekStart,
 		DeliveryStatus deliveryStatus,
 		PaymentStatus paymentStatus,
+		boolean invoiceAvailable,
 		List<AllocationItemResponse> allocationItems) {
 }

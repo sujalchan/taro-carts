@@ -100,6 +100,21 @@ function createAllocationElement(allocation) {
 
     const actions = document.createElement("p");
 
+    if (allocation.invoiceAvailable) {
+        const viewInvoiceLink = document.createElement("a");
+        viewInvoiceLink.href = `/api/v1/allocations/${allocation.id}/invoice.pdf?inline=true`;
+        viewInvoiceLink.target = "_blank";
+        viewInvoiceLink.rel = "noopener";
+        viewInvoiceLink.textContent = "View Invoice PDF";
+        actions.appendChild(viewInvoiceLink);
+
+        const invoiceLink = document.createElement("a");
+        invoiceLink.href = `/api/v1/allocations/${allocation.id}/invoice.pdf`;
+        invoiceLink.textContent = "Download Invoice PDF";
+        actions.appendChild(invoiceLink);
+        actions.appendChild(document.createTextNode(" "));
+    }
+
     const editLink = document.createElement("a");
     editLink.href = `/allocation-edit-client.html?id=${allocation.id}`;
     editLink.textContent = "Edit Allocation";
@@ -107,15 +122,17 @@ function createAllocationElement(allocation) {
 
     actions.appendChild(document.createTextNode(" "));
 
-    const deleteButton = document.createElement("button");
-    deleteButton.type = "button";
-    deleteButton.textContent = "Delete Allocation";
+    if (!allocation.invoiceAvailable) {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.textContent = "Delete Allocation";
 
-    deleteButton.addEventListener("click", () => {
-        deleteAllocation(allocation.id, allocation.customerName);
-    });
+        deleteButton.addEventListener("click", () => {
+            deleteAllocation(allocation.id, allocation.customerName);
+        });
 
-    actions.appendChild(deleteButton);
+        actions.appendChild(deleteButton);
+    }
     wrapper.appendChild(actions);
 
     return wrapper;

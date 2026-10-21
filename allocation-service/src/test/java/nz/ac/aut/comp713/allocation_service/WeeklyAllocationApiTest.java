@@ -37,6 +37,7 @@ import nz.ac.aut.comp713.allocation_service.exception.CustomerServiceUnavailable
 import nz.ac.aut.comp713.allocation_service.exception.TaroServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
+import nz.ac.aut.comp713.allocation_service.repository.InvoiceRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
 
 @SpringBootTest
@@ -52,6 +53,9 @@ class WeeklyAllocationApiTest {
 	@Autowired
 	private WeeklyAllocationRepository weeklyAllocationRepository;
 
+	@Autowired
+	private InvoiceRepository invoiceRepository;
+
 	@MockitoBean
 	private CustomerClient customerClient;
 
@@ -62,6 +66,7 @@ class WeeklyAllocationApiTest {
 	void setUp() {
 
 		// clear allocation data before each test
+		invoiceRepository.deleteAll();
 		allocationItemRepository.deleteAll();
 		weeklyAllocationRepository.deleteAll();
 

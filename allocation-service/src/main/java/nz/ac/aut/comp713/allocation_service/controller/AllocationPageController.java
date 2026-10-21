@@ -12,6 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +31,7 @@ import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException
 import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationAlreadyExistsException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidQuantityException;
+import nz.ac.aut.comp713.allocation_service.exception.IssuedInvoiceConflictException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationNotFoundException;
 
 import nz.ac.aut.comp713.allocation_service.service.WeeklyAllocationService;
@@ -290,6 +292,7 @@ public class AllocationPageController {
 				WeeklyAllocationAlreadyExistsException
 				| DuplicateTaroTypeException
 				| InvalidQuantityException
+				| IssuedInvoiceConflictException
 				| CustomerNotFoundException
 				| TaroTypeNotFoundException
 				| CustomerServiceUnavailableException
@@ -315,12 +318,15 @@ public class AllocationPageController {
 	// delete a weekly allocation
 	@PostMapping("/allocations/{id}/delete")
 	public String deleteAllocation(
-			@PathVariable Long id) {
+			@PathVariable Long id,
+			RedirectAttributes redirectAttributes) {
 
 		try {
 			weeklyAllocationService.deleteWeeklyAllocation(id);
 		} catch (WeeklyAllocationNotFoundException exception) {
 			// allocation may already have been deleted
+		} catch (IssuedInvoiceConflictException exception) {
+			redirectAttributes.addFlashAttribute("errors", List.of(exception.getMessage()));
 		}
 
 		return "redirect:/allocations";

@@ -97,6 +97,7 @@ paths:
                 weekStart: "2026-09-14"
                 deliveryStatus: REQUESTED_ALLOCATION
                 paymentStatus: UNPAID
+                invoiceAvailable: false
                 allocationItems:
                   - id: 1
                     taroTypeId: 1
@@ -240,6 +241,7 @@ paths:
                 weekStart: "2026-09-14"
                 deliveryStatus: REQUESTED_ALLOCATION
                 paymentStatus: UNPAID
+                invoiceAvailable: false
                 allocationItems:
                   - id: 1
                     taroTypeId: 1
@@ -311,6 +313,7 @@ paths:
               weekStart: "2026-09-14"
               deliveryStatus: DELIVERED
               paymentStatus: PAID
+              invoiceAvailable: true
               allocationItems:
                 - taroTypeId: 1
                   quantity: 150
@@ -332,6 +335,7 @@ paths:
                 weekStart: "2026-09-14"
                 deliveryStatus: DELIVERED
                 paymentStatus: PAID
+                invoiceAvailable: true
                 allocationItems:
                   - id: 5
                     taroTypeId: 1
@@ -401,15 +405,22 @@ paths:
                     path: /api/v1/allocations/1
 
         "409":
-          description: Another weekly allocation already exists for the customer and week
+          description: Another allocation exists for the week, or an issued invoice locks financial details
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
-              example:
-                code: WEEKLY_ALLOCATION_ALREADY_EXISTS
-                message: Weekly allocation already exists for Island Foods for week starting 2026-09-21
-                path: /api/v1/allocations/1
+              examples:
+                duplicateAllocation:
+                  value:
+                    code: WEEKLY_ALLOCATION_ALREADY_EXISTS
+                    message: Weekly allocation already exists for Island Foods for week starting 2026-09-21
+                    path: /api/v1/allocations/1
+                issuedInvoice:
+                  value:
+                    code: ISSUED_INVOICE_CONFLICT
+                    message: Customer, week, items, and prices cannot change after an invoice is issued
+                    path: /api/v1/allocations/1
 
         "503":
           description: Customer or taro service is unavailable
@@ -457,6 +468,13 @@ paths:
         "204":
           description: Weekly allocation deleted successfully
 
+        "409":
+          description: An issued invoice prevents deletion of the allocation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
         "404":
           description: Weekly allocation was not found
           content:
@@ -478,6 +496,58 @@ paths:
                 code: INTERNAL_SERVER_ERROR
                 message: An unexpected error occurred
                 path: /api/v1/allocations/1
+  /api/v1/allocations/{id}/invoice.pdf:
+    get:
+      summary: Download an issued allocation invoice as a PDF
+      description: >
+        An invoice is issued when an allocation becomes DELIVERED. A delivered
+        allocation created before invoice support is issued on its first download.
+        New invoices show an item table and a 15% GST breakdown extracted from
+        GST-inclusive saved prices. Existing issued PDFs remain unchanged.
+        Authentication and customer ownership checks will be added with the
+        authentication system; this endpoint currently follows the existing
+        unauthenticated allocation API.
+      operationId: downloadInvoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: inline
+          in: query
+          required: false
+          description: Set to true to view the PDF in the browser; omitted or false downloads it.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Invoice PDF
+          headers:
+            Content-Disposition:
+              description: Attachment by default, or inline when inline=true; includes the invoice filename.
+              schema:
+                type: string
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Allocation not found or invoice not yet available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Customer or taro service unavailable while issuing a legacy invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   schemas:
     WeeklyAllocationCreateRequest:
@@ -590,6 +660,11 @@ components:
 
         paymentStatus:
           $ref: "#/components/schemas/PaymentStatus"
+
+        invoiceAvailable:
+          type: boolean
+          description: True when an invoice exists or the allocation is delivered and can be issued on download.
+          example: false
 
         allocationItems:
           type: array

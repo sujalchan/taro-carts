@@ -29,6 +29,7 @@ import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException
 import nz.ac.aut.comp713.allocation_service.exception.InvalidQuantityException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidDeliveryStatusException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidPaymentStatusException;
+import nz.ac.aut.comp713.allocation_service.exception.IssuedInvoiceConflictException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationAlreadyExistsException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationNotFoundException;
 import nz.ac.aut.comp713.allocation_service.model.AllocationItem;
@@ -46,17 +47,20 @@ public class WeeklyAllocationService {
     private final AllocationItemRepository allocationItemRepository;
     private final CustomerClient customerClient;
     private final TaroClient taroClient;
+    private final InvoiceService invoiceService;
 
     public WeeklyAllocationService(
             WeeklyAllocationRepository weeklyAllocationRepository,
             AllocationItemRepository allocationItemRepository,
             CustomerClient customerClient,
-            TaroClient taroClient) {
+            TaroClient taroClient,
+            InvoiceService invoiceService) {
 
         this.weeklyAllocationRepository = weeklyAllocationRepository;
         this.allocationItemRepository = allocationItemRepository;
         this.customerClient = customerClient;
         this.taroClient = taroClient;
+        this.invoiceService = invoiceService;
     }
 
     // get all weekly allocations
@@ -175,6 +179,28 @@ public class WeeklyAllocationService {
         // normalize the supplied date to the monday of its week
         LocalDate normalizedWeekStart = normalizeWeekStart(request.weekStart());
 
+        boolean invoiceIssued = invoiceService.hasInvoice(id);
+        Map<Long, AllocationItem> invoicedItems = new HashMap<>();
+        if (invoiceIssued) {
+            if (!weeklyAllocation.getCustomerId().equals(request.customerId())
+                    || !weeklyAllocation.getWeekStart().equals(normalizedWeekStart)) {
+                throw new IssuedInvoiceConflictException();
+            }
+            allocationItemRepository.findByWeeklyAllocationId(id)
+                    .forEach(item -> invoicedItems.put(item.getTaroTypeId(), item));
+            if (invoicedItems.size() != request.allocationItems().size()) {
+                throw new IssuedInvoiceConflictException();
+            }
+            for (AllocationItemRequest item : request.allocationItems()) {
+                AllocationItem original = invoicedItems.get(item.taroTypeId());
+                if (original == null || !original.getQuantity().equals(validateQuantity(item.quantity()))
+                        || (item.pricePerKg() != null
+                                && item.pricePerKg().compareTo(original.getPricePerKg()) != 0)) {
+                    throw new IssuedInvoiceConflictException();
+                }
+            }
+        }
+
         // confirm the customer exists in customer-service
         CustomerResponse customer = customerClient.getCustomer(request.customerId());
 
@@ -246,11 +272,17 @@ public class WeeklyAllocationService {
                 .stream()
                 .map(itemRequest -> createAllocationItem(
                         savedAllocation,
-                        itemRequest,
+                        invoiceIssued && itemRequest.pricePerKg() == null
+                                ? new AllocationItemRequest(itemRequest.taroTypeId(), itemRequest.quantity(),
+                                        invoicedItems.get(itemRequest.taroTypeId()).getPricePerKg())
+                                : itemRequest,
                         taroTypes.get(itemRequest.taroTypeId())))
                 .toList();
 
         allocationItemRepository.saveAllAndFlush(allocationItems);
+        if (savedAllocation.getDeliveryStatus() == DeliveryStatus.DELIVERED) {
+            invoiceService.issueIfDelivered(savedAllocation);
+        }
         return toResponse(savedAllocation);
     }
 
@@ -261,6 +293,10 @@ public class WeeklyAllocationService {
         WeeklyAllocation weeklyAllocation = weeklyAllocationRepository.findById(id)
                 .orElseThrow(
                         () -> new WeeklyAllocationNotFoundException(id));
+
+        if (invoiceService.hasInvoice(id)) {
+            throw new IssuedInvoiceConflictException();
+        }
 
         // delete child allocation items first
         allocationItemRepository.deleteByWeeklyAllocationId(id);
@@ -310,6 +346,8 @@ public class WeeklyAllocationService {
                 weeklyAllocation.getWeekStart(),
                 weeklyAllocation.getDeliveryStatus(),
                 weeklyAllocation.getPaymentStatus(),
+                weeklyAllocation.getDeliveryStatus() == DeliveryStatus.DELIVERED
+                        || invoiceService.hasInvoice(weeklyAllocation.getId()),
                 allocationItemResponses);
     }
 
