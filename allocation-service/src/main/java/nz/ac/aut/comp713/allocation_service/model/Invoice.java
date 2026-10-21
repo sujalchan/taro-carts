@@ -22,6 +22,8 @@ import org.hibernate.type.SqlTypes;
 public class Invoice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(columnDefinition = "integer")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long id;
 
     @Column(name = "allocation_id", nullable = false)

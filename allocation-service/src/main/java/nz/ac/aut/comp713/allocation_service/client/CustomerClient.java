@@ -6,9 +6,8 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import nz.ac.aut.comp713.allocation_service.exception.CustomerNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerServiceUnavailableException;
@@ -42,7 +41,7 @@ public class CustomerClient {
             }
             return Arrays.asList(customers);
 
-        } catch (ResourceAccessException | HttpServerErrorException e) {
+        } catch (RestClientException e) {
             // translate connection failures into an application-specific service exception
             throw new CustomerServiceUnavailableException();
         }
@@ -51,16 +50,20 @@ public class CustomerClient {
     // retrieve a customer from customer-service by ID
     public CustomerResponse getCustomer(Long customerId) {
         try {
-            return restClient.get()
+            CustomerResponse customer = restClient.get()
                     .uri("/api/v1/customers/{id}", customerId)
                     .retrieve()
                     .body(CustomerResponse.class);
+            if (customer == null) {
+                throw new CustomerServiceUnavailableException();
+            }
+            return customer;
 
         } catch (HttpClientErrorException.NotFound e) {
             // translate a remote 404 into the allocation-service customer exception
             throw new CustomerNotFoundException(customerId);
 
-        } catch (ResourceAccessException | HttpServerErrorException e) {
+        } catch (RestClientException e) {
             // handle cases where customer-service cannot be reached
             throw new CustomerServiceUnavailableException();
         }

@@ -5,6 +5,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.orm.jpa.JpaSystemException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -13,6 +19,8 @@ import nz.ac.aut.comp713.allocation_service.dto.ApiError;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
 	@ExceptionHandler(IssuedInvoiceConflictException.class)
 	public ResponseEntity<ApiError> handleIssuedInvoiceConflict(
 			IssuedInvoiceConflictException exception, HttpServletRequest request) {
@@ -201,11 +209,35 @@ public class GlobalExceptionHandler {
 				.body(error);
 	}
 
+	// Database constraints are the final guard against concurrent or bypassed writes.
+	@ExceptionHandler({ DataIntegrityViolationException.class, JpaSystemException.class })
+	public ResponseEntity<ApiError> handleDataIntegrityViolation(
+			DataAccessException exception,
+			HttpServletRequest request) {
+		LOGGER.warn("Database constraint rejected request to {}", request.getRequestURI());
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiError("DATA_INTEGRITY_VIOLATION",
+						"The request conflicts with stored allocation data",
+						request.getRequestURI()));
+	}
+
+	@ExceptionHandler(CannotAcquireLockException.class)
+	public ResponseEntity<ApiError> handleDatabaseBusy(
+			CannotAcquireLockException exception,
+			HttpServletRequest request) {
+		LOGGER.warn("Database was busy while handling {}", request.getRequestURI());
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+				.body(new ApiError("DATABASE_BUSY",
+						"The database is temporarily busy; retry the request",
+						request.getRequestURI()));
+	}
+
 	// handle any unexpected errors
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleUnexpectedException(
 			Exception exception,
 			HttpServletRequest request) {
+		LOGGER.error("Unexpected error while handling {}", request.getRequestURI(), exception);
 
 		ApiError error = new ApiError(
 				"INTERNAL_SERVER_ERROR",

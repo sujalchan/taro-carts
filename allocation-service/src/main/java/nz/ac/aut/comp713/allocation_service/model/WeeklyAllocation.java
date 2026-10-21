@@ -21,6 +21,7 @@ public class WeeklyAllocation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(columnDefinition = "integer")
     private Long id;
 
     // stores only the customer ID because customers are owned by customer-service

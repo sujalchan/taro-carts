@@ -6,9 +6,8 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroServiceUnavailableException;
@@ -43,7 +42,7 @@ public class TaroClient {
 
             return Arrays.asList(taroTypes);
 
-        } catch (ResourceAccessException | HttpServerErrorException e) {
+        } catch (RestClientException e) {
             throw new TaroServiceUnavailableException();
         }
     }
@@ -51,16 +50,20 @@ public class TaroClient {
     // retrieve a taro type from taro-service by ID
     public TaroTypeResponse getTaroType(Long taroTypeId) {
         try {
-            return restClient.get()
+            TaroTypeResponse taroType = restClient.get()
                     .uri("/api/v1/taro-types/{id}", taroTypeId)
                     .retrieve()
                     .body(TaroTypeResponse.class);
+            if (taroType == null) {
+                throw new TaroServiceUnavailableException();
+            }
+            return taroType;
 
         } catch (HttpClientErrorException.NotFound e) {
             // translate a remote 404 into the allocation-service taro type exception
             throw new TaroTypeNotFoundException(taroTypeId);
 
-        } catch (ResourceAccessException | HttpServerErrorException e) {
+        } catch (RestClientException e) {
             throw new TaroServiceUnavailableException();
         }
     }

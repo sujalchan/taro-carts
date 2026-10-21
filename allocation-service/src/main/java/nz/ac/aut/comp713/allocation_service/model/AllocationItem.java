@@ -3,6 +3,7 @@ package nz.ac.aut.comp713.allocation_service.model;
 import java.math.BigDecimal;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CheckConstraint;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -12,6 +13,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 // JPA entity representing one taro item within a weekly allocation
 @Entity
@@ -23,6 +26,8 @@ public class AllocationItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false, columnDefinition = "integer")
+    @JdbcTypeCode(SqlTypes.INTEGER)
     private Long id;
 
     // many allocation items can belong to the same weekly allocation
@@ -34,12 +39,15 @@ public class AllocationItem {
     @Column(name = "taro_type_id", nullable = false)
     private Long taroTypeId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, check = @CheckConstraint(
+            name = "check_allocation_item_quantity", constraint = "quantity > 0"))
     private Integer quantity;
 
     // price used for this allocation, allowing the price to vary between customers
     // and weeks
-    @Column(name = "price_per_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "price_per_kg", nullable = false, precision = 10, scale = 2,
+            check = @CheckConstraint(name = "check_allocation_item_price",
+                    constraint = "price_per_kg >= 0"))
     private BigDecimal pricePerKg;
 
     public AllocationItem() {}

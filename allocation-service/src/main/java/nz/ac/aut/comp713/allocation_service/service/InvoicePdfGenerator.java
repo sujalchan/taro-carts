@@ -172,7 +172,7 @@ public class InvoicePdfGenerator {
             write(LEFT, detailsRule - 39, invoice.issuedOn().format(DATE), 10, BOLD, TEXT);
             write(235, detailsRule - 22, "ALLOCATION WEEK", 8, BOLD, MUTED);
             write(235, detailsRule - 39, invoice.weekStart().format(DATE), 10, BOLD, TEXT);
-            right(RIGHT, detailsRule - 39, "NZD", 10, BOLD, TEXT);
+            right(RIGHT, detailsRule - 39, "ALL AMOUNTS IN NZD", 10, BOLD, TEXT);
             y = detailsRule - 65;
         }
 

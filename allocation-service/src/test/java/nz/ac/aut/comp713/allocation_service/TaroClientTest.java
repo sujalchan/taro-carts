@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withResourceNotFound;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -54,6 +55,30 @@ class TaroClientTest {
         server.expect(once(), requestTo("http://localhost:8083/api/v1/taro-types"))
                 .andRespond(withServerError());
         assertThrows(TaroServiceUnavailableException.class, () -> client.getTaroTypes());
+        server.verify();
+    }
+
+    @Test
+    void mapsUnexpectedClientErrorToOwnUnavailableException() {
+        server.expect(once(), requestTo("http://localhost:8083/api/v1/taro-types/7"))
+                .andRespond(withBadRequest());
+        assertThrows(TaroServiceUnavailableException.class, () -> client.getTaroType(7L));
+        server.verify();
+    }
+
+    @Test
+    void mapsEmptySingleResponseToOwnUnavailableException() {
+        server.expect(once(), requestTo("http://localhost:8083/api/v1/taro-types/7"))
+                .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+        assertThrows(TaroServiceUnavailableException.class, () -> client.getTaroType(7L));
+        server.verify();
+    }
+
+    @Test
+    void mapsMalformedJsonToOwnUnavailableException() {
+        server.expect(once(), requestTo("http://localhost:8083/api/v1/taro-types/7"))
+                .andRespond(withSuccess("{not-json", MediaType.APPLICATION_JSON));
+        assertThrows(TaroServiceUnavailableException.class, () -> client.getTaroType(7L));
         server.verify();
     }
 }

@@ -289,7 +289,7 @@ class InvoiceApiTest {
             boolean hasExpectedOpacity = false;
             for (var name : page.getResources().getExtGStateNames()) {
                 var alpha = page.getResources().getExtGState(name).getNonStrokingAlphaConstant();
-                if (alpha != null && Math.abs(alpha - 0.05f) < 0.0001f) {
+                if (alpha != null && Math.abs(alpha - 0.10f) < 0.0001f) {
                     hasExpectedOpacity = true;
                 }
             }
