@@ -22,6 +22,14 @@ public class GlobalExceptionHandler {
 				.body(new ApiError("INVALID_DELIVERY_STATUS", exception.getMessage(), request.getRequestURI()));
 	}
 
+	@ExceptionHandler(InvalidPaymentStatusException.class)
+	public ResponseEntity<ApiError> handleInvalidPaymentStatus(
+			InvalidPaymentStatusException exception,
+			HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiError("INVALID_PAYMENT_STATUS", exception.getMessage(), request.getRequestURI()));
+	}
+
 	// return a validation error for malformed JSON or an unknown enum value
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	public ResponseEntity<ApiError> handleUnreadableRequest(

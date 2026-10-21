@@ -26,6 +26,7 @@ import nz.ac.aut.comp713.allocation_service.dto.AllocationItemRequest;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationRequest;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidDeliveryStatusException;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
+import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 import nz.ac.aut.comp713.allocation_service.model.WeeklyAllocation;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
@@ -63,7 +64,9 @@ class WeeklyAllocationServiceTest {
         ArgumentCaptor<WeeklyAllocation> saved = ArgumentCaptor.forClass(WeeklyAllocation.class);
         verify(weeklyAllocationRepository).saveAndFlush(saved.capture());
         assertThat(saved.getValue().getDeliveryStatus()).isEqualTo(DeliveryStatus.REQUESTED_ALLOCATION);
+        assertThat(saved.getValue().getPaymentStatus()).isEqualTo(PaymentStatus.UNPAID);
         assertThat(response.deliveryStatus()).isEqualTo(DeliveryStatus.REQUESTED_ALLOCATION);
+        assertThat(response.paymentStatus()).isEqualTo(PaymentStatus.UNPAID);
     }
 
     @Test
@@ -79,6 +82,7 @@ class WeeklyAllocationServiceTest {
                 1L,
                 LocalDate.of(2026, 9, 14),
                 List.of(new AllocationItemRequest(1L, BigDecimal.valueOf(100), null)),
-                status);
+                status,
+                null);
     }
 }

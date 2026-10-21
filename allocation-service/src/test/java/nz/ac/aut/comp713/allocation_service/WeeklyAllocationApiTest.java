@@ -130,6 +130,7 @@ class WeeklyAllocationApiTest {
 				.andExpect(jsonPath("$.customerName").value("Island Foods"))
 				.andExpect(jsonPath("$.weekStart").value("2026-09-14"))
 				.andExpect(jsonPath("$.deliveryStatus").value("REQUESTED_ALLOCATION"))
+				.andExpect(jsonPath("$.paymentStatus").value("UNPAID"))
 				.andExpect(jsonPath("$.allocationItems", hasSize(1)))
 				.andExpect(jsonPath("$.allocationItems[0].taroTypeId").value(1))
 				.andExpect(jsonPath("$.allocationItems[0].taroTypeName")
@@ -678,6 +679,76 @@ class WeeklyAllocationApiTest {
 	}
 
 	@Test
+	void paymentStatusCanBeSetAndPreservedAcrossUpdates() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		String update = """
+				{
+				  "customerId": 1,
+				  "weekStart": "2026-09-14",
+				  "allocationItems": [{"taroTypeId": 1, "quantity": 100}]
+				}
+				""";
+
+		for (String paymentStatus : new String[] { "PAID", "UNPAID", "OVERDUE" }) {
+			mockMvc.perform(put("/api/v1/allocations/{id}", id)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(update.replace("\"allocationItems\"",
+							"\"paymentStatus\": \"" + paymentStatus + "\", \"allocationItems\"")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.paymentStatus").value(paymentStatus));
+
+			mockMvc.perform(get("/api/v1/allocations/{id}", id))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.paymentStatus").value(paymentStatus));
+		}
+
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(update))
+				.andExpect(status().isOk())
+			.andExpect(jsonPath("$.paymentStatus").value("OVERDUE"));
+		mockMvc.perform(get("/api/v1/allocations"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].paymentStatus").value("OVERDUE"));
+	}
+
+	@Test
+	void paymentStatusCannotBeSetWhenCreatingAllocation() throws Exception {
+		mockMvc.perform(post("/api/v1/allocations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "customerId": 1,
+						  "weekStart": "2026-09-14",
+						  "paymentStatus": "PAID",
+						  "allocationItems": [{"taroTypeId": 1, "quantity": 100}]
+						}
+						"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_PAYMENT_STATUS"));
+		assertTrue(weeklyAllocationRepository.findAll().isEmpty());
+	}
+
+	@Test
+	void invalidPaymentStatusReturns400() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "customerId": 1,
+						  "weekStart": "2026-09-14",
+						  "paymentStatus": "UNKNOWN",
+						  "allocationItems": [{"taroTypeId": 1, "quantity": 100}]
+						}
+						"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
 	void allOrderStatusesCanBeSavedAndRead() throws Exception {
 		createAllocation(1L, "2026-09-14", 1L, 100);
 		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
@@ -778,16 +849,41 @@ class WeeklyAllocationApiTest {
 		mockMvc.perform(get("/allocations"))
 				.andExpect(status().isOk())
 				.andExpect(content().string(containsString("Order Status:")))
-				.andExpect(content().string(containsString("REQUESTED ALLOCATION")));
+				.andExpect(content().string(containsString("REQUESTED ALLOCATION")))
+				.andExpect(content().string(containsString("Payment Status:")))
+				.andExpect(content().string(containsString("UNPAID")));
 		mockMvc.perform(get("/allocations/new"))
 				.andExpect(status().isOk())
-				.andExpect(content().string(not(containsString("name=\"deliveryStatus\""))));
+				.andExpect(content().string(not(containsString("name=\"deliveryStatus\""))))
+				.andExpect(content().string(not(containsString("name=\"paymentStatus\""))));
 		mockMvc.perform(get("/allocations/{id}/edit", id))
 				.andExpect(status().isOk())
 				.andExpect(content().string(containsString("name=\"deliveryStatus\"")))
 				.andExpect(content().string(containsString("Order Status")))
 				.andExpect(content().string(containsString("value=\"APPROVED_ALLOCATION\"")))
-				.andExpect(content().string(containsString("value=\"AWAITING_DISPATCH\"")));
+				.andExpect(content().string(containsString("value=\"AWAITING_DISPATCH\"")))
+				.andExpect(content().string(containsString("name=\"paymentStatus\"")))
+				.andExpect(content().string(containsString("value=\"OVERDUE\"")));
+	}
+
+	@Test
+	void serverRenderedEditCanChangePaymentStatus() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+
+		mockMvc.perform(post("/allocations/{id}/edit", id)
+				.param("customerId", "1")
+				.param("weekStart", "2026-09-14")
+				.param("deliveryStatus", "REQUESTED_ALLOCATION")
+				.param("paymentStatus", "PAID")
+				.param("taroTypeId", "1")
+				.param("quantity", "100")
+				.param("pricePerKg", "50.00"))
+				.andExpect(status().is3xxRedirection());
+
+		mockMvc.perform(get("/api/v1/allocations/{id}", id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.paymentStatus").value("PAID"));
 	}
 
 	@Test

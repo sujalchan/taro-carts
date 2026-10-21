@@ -35,6 +35,7 @@ import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationNotFoundEx
 import nz.ac.aut.comp713.allocation_service.service.WeeklyAllocationService;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationResponse;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
+import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 
 // MVC controller for the server rendered weekly allocation pages
 @Controller
@@ -205,6 +206,7 @@ public class AllocationPageController {
 					allocation.customerId(),
 					allocation.weekStart(),
 					allocation.deliveryStatus(),
+					allocation.paymentStatus(),
 					allocationRows,
 					new ArrayList<>());
 
@@ -220,6 +222,7 @@ public class AllocationPageController {
 			@RequestParam(required = false) Long customerId,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
 			@RequestParam(required = false) DeliveryStatus deliveryStatus,
+			@RequestParam(required = false) PaymentStatus paymentStatus,
 			@RequestParam(name = "taroTypeId", required = false) List<Long> taroTypeIds,
 			@RequestParam(name = "quantity", required = false) List<BigDecimal> quantities,
 			@RequestParam(name = "pricePerKg", required = false) List<String> prices,
@@ -256,7 +259,8 @@ public class AllocationPageController {
 				customerId,
 				weekStart,
 				allocationItems,
-				deliveryStatus);
+				deliveryStatus,
+				paymentStatus);
 
 		// run the same validation rules used by the REST API
 		validator.validate(request)
@@ -271,6 +275,7 @@ public class AllocationPageController {
 					customerId,
 					weekStart,
 					deliveryStatus,
+					paymentStatus,
 					formRows,
 					errors);
 		}
@@ -299,6 +304,7 @@ public class AllocationPageController {
 					customerId,
 					weekStart,
 					deliveryStatus,
+					paymentStatus,
 					formRows,
 					errors);
 		}
@@ -382,6 +388,7 @@ public class AllocationPageController {
 			Long selectedCustomerId,
 			LocalDate weekStart,
 			DeliveryStatus deliveryStatus,
+			PaymentStatus paymentStatus,
 			List<AllocationFormRow> allocationRows,
 			List<String> errors) {
 
@@ -399,6 +406,8 @@ public class AllocationPageController {
 		// restore the selected status if the edit form has validation errors
 		model.addAttribute("deliveryStatus", deliveryStatus);
 		model.addAttribute("deliveryStatuses", DeliveryStatus.values());
+		model.addAttribute("paymentStatus", paymentStatus);
+		model.addAttribute("paymentStatuses", PaymentStatus.values());
 
 		model.addAttribute(
 				"allocationRows",

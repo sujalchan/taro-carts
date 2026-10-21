@@ -36,6 +36,11 @@ public class WeeklyAllocation {
     @Column(name = "delivery_status", nullable = false, columnDefinition = "varchar(255) default 'REQUESTED_ALLOCATION'")
     private DeliveryStatus deliveryStatus = DeliveryStatus.REQUESTED_ALLOCATION;
 
+    // store the enum name and default new allocations to unpaid
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, columnDefinition = "varchar(255) default 'UNPAID'")
+    private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
+
     public WeeklyAllocation() {
     }
 
@@ -65,5 +70,13 @@ public class WeeklyAllocation {
 
     public void setDeliveryStatus(DeliveryStatus deliveryStatus) {
         this.deliveryStatus = deliveryStatus;
+    }
+
+    public PaymentStatus getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(PaymentStatus paymentStatus) {
+        this.paymentStatus = paymentStatus;
     }
 }

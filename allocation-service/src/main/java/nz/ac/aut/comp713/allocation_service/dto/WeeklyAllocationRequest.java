@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
+import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 
 // request DTO used when creating or updating a weekly allocation
 public record WeeklyAllocationRequest(
@@ -18,11 +19,14 @@ public record WeeklyAllocationRequest(
 		@NotEmpty(message = "At least one allocation item is required") List<@Valid AllocationItemRequest> allocationItems,
 
 		// supplied only when updating an existing allocation
-		DeliveryStatus deliveryStatus) {
+		DeliveryStatus deliveryStatus,
+
+		// supplied only when updating an existing allocation
+		PaymentStatus paymentStatus) {
 
 	// creation requests leave the status unset so the service applies its default
 	public WeeklyAllocationRequest(Long customerId, LocalDate weekStart,
 			List<AllocationItemRequest> allocationItems) {
-		this(customerId, weekStart, allocationItems, null);
+		this(customerId, weekStart, allocationItems, null, null);
 	}
 }

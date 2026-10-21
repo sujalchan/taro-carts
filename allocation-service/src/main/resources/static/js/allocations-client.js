@@ -63,6 +63,10 @@ function createAllocationElement(allocation) {
     deliveryStatus.innerHTML = `<strong>Order Status:</strong> ${escapeHtml(allocation.deliveryStatus.replaceAll("_", " "))}`;
     wrapper.appendChild(deliveryStatus);
 
+    const paymentStatus = document.createElement("p");
+    paymentStatus.innerHTML = `<strong>Payment Status:</strong> ${escapeHtml(allocation.paymentStatus)}`;
+    wrapper.appendChild(paymentStatus);
+
     const table = document.createElement("table");
     table.border = "1";
 

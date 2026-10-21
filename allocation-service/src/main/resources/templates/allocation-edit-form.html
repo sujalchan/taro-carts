@@ -87,6 +87,15 @@
             </select>
         </div>
 
+        <div>
+            <label for="paymentStatus">Payment Status</label>
+            <select id="paymentStatus" name="paymentStatus" required>
+                <option th:each="status : ${paymentStatuses}" th:value="${status}"
+                    th:text="${status}"
+                    th:selected="${status == paymentStatus}">UNPAID</option>
+            </select>
+        </div>
+
         <hr>
 
         <h2>Allocation Items</h2>

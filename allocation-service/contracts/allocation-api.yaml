@@ -96,6 +96,7 @@ paths:
                 customerName: Island Foods
                 weekStart: "2026-09-14"
                 deliveryStatus: REQUESTED_ALLOCATION
+                paymentStatus: UNPAID
                 allocationItems:
                   - id: 1
                     taroTypeId: 1
@@ -141,6 +142,13 @@ paths:
                   value:
                     code: INVALID_DELIVERY_STATUS
                     message: Order status can only be changed after an allocation is created
+                    path: /api/v1/allocations
+
+                invalidPaymentStatus:
+                  summary: Payment status can only change after creation
+                  value:
+                    code: INVALID_PAYMENT_STATUS
+                    message: Payment status can only be changed after an allocation is created
                     path: /api/v1/allocations
 
         "404":
@@ -231,6 +239,7 @@ paths:
                 customerName: Island Foods
                 weekStart: "2026-09-14"
                 deliveryStatus: REQUESTED_ALLOCATION
+                paymentStatus: UNPAID
                 allocationItems:
                   - id: 1
                     taroTypeId: 1
@@ -301,6 +310,7 @@ paths:
               customerId: 1
               weekStart: "2026-09-14"
               deliveryStatus: DELIVERED
+              paymentStatus: PAID
               allocationItems:
                 - taroTypeId: 1
                   quantity: 150
@@ -321,6 +331,7 @@ paths:
                 customerName: Island Foods
                 weekStart: "2026-09-14"
                 deliveryStatus: DELIVERED
+                paymentStatus: PAID
                 allocationItems:
                   - id: 5
                     taroTypeId: 1
@@ -471,7 +482,7 @@ components:
   schemas:
     WeeklyAllocationCreateRequest:
       type: object
-      description: New allocations always start with REQUESTED_ALLOCATION order status; supplying deliveryStatus is rejected.
+      description: New allocations start with REQUESTED_ALLOCATION order status and UNPAID payment status; supplying either status is rejected.
       required:
         - customerId
         - weekStart
@@ -508,6 +519,11 @@ components:
               allOf:
                 - $ref: "#/components/schemas/OrderStatus"
 
+            paymentStatus:
+              description: Optional. An omitted value preserves the current payment status.
+              allOf:
+                - $ref: "#/components/schemas/PaymentStatus"
+
     AllocationItemRequest:
       type: object
       required:
@@ -541,6 +557,11 @@ components:
       enum: [REQUESTED_ALLOCATION, APPROVED_ALLOCATION, PREPARING_ALLOCATION, AWAITING_DISPATCH, IN_TRANSIT, DELIVERED, CANCELLED]
       example: REQUESTED_ALLOCATION
 
+    PaymentStatus:
+      type: string
+      enum: [PAID, UNPAID, OVERDUE]
+      example: UNPAID
+
     WeeklyAllocationResponse:
       type: object
 
@@ -566,6 +587,9 @@ components:
 
         deliveryStatus:
           $ref: "#/components/schemas/OrderStatus"
+
+        paymentStatus:
+          $ref: "#/components/schemas/PaymentStatus"
 
         allocationItems:
           type: array

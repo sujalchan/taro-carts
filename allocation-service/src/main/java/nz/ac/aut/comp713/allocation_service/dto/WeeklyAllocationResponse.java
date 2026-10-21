@@ -3,6 +3,7 @@ package nz.ac.aut.comp713.allocation_service.dto;
 import java.time.LocalDate;
 import java.util.List;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
+import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 
 // response DTO returned when weekly allocation data is sent to clients
 public record WeeklyAllocationResponse(
@@ -11,5 +12,6 @@ public record WeeklyAllocationResponse(
 		String customerName,
 		LocalDate weekStart,
 		DeliveryStatus deliveryStatus,
+		PaymentStatus paymentStatus,
 		List<AllocationItemResponse> allocationItems) {
 }
