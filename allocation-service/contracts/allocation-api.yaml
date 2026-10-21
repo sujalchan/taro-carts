@@ -502,8 +502,10 @@ paths:
       description: >
         An invoice is issued when an allocation becomes DELIVERED. A delivered
         allocation created before invoice support is issued on its first download.
-        New invoices show an item table and a 15% GST breakdown extracted from
-        GST-inclusive saved prices. Existing issued PDFs remain unchanged.
+        PDFs show an item table and a 15% GST breakdown extracted from
+        GST-inclusive saved prices. An older stored PDF is refreshed to the
+        current template on its next request while preserving its invoice
+        number, issue date, customer ID, and total.
         Authentication and customer ownership checks will be added with the
         authentication system; this endpoint currently follows the existing
         unauthenticated allocation API.
@@ -542,7 +544,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "503":
-          description: Customer or taro service unavailable while issuing a legacy invoice
+          description: Customer or taro service unavailable while issuing or refreshing an invoice
           content:
             application/json:
               schema:

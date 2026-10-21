@@ -12,11 +12,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.stream.IntStream;
 
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -117,8 +121,8 @@ class InvoiceApiTest {
                     "DESCRIPTION", "QTY (KG)", "RATE", "AMOUNT", "GST (15%)",
                     "Subtotal (excl GST)", "$4,347.83", "$652.17", "TOTAL (NZD)", "$5,000.00",
                     "AUT City Campus", "55 Wellesley Street East", "Auckland Central 1010",
-                    "GST number: 000000000 (EXAMPLE ONLY)",
-                    "EXAMPLE FORMAT - NOT TO BE USED AS BILLABLE INVOICE");
+                    "GST number: 000000000 (EXAMPLE ONLY)");
+            assertExampleWatermark(pdf);
         }
 
         // The issued document remains unchanged after the live allocation is edited.
@@ -170,6 +174,55 @@ class InvoiceApiTest {
     }
 
     @Test
+    void olderStoredPdfIsUpgradedOnceWhenDownloaded() throws Exception {
+        Long id = createAllocation();
+        mockMvc.perform(put("/api/v1/allocations/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(update("DELIVERED", 100)))
+                .andExpect(status().isOk());
+
+        var invoice = invoiceRepository.findByAllocationId(id).orElseThrow();
+        String originalNumber = invoice.getInvoiceNumber();
+        LocalDate originalDate = invoice.getIssuedOn();
+        byte[] oldPdf;
+        try (var pdf = new PDDocument(); var output = new ByteArrayOutputStream()) {
+            pdf.addPage(new PDPage());
+            pdf.save(output);
+            oldPdf = output.toByteArray();
+        }
+        invoice.setPdfBytes(oldPdf);
+        invoice.setPdfTemplateVersion(null);
+        invoiceRepository.saveAndFlush(invoice);
+
+        // A previously issued invoice can still be viewed after delivery status changes.
+        var allocation = allocationRepository.findById(id).orElseThrow();
+        allocation.setDeliveryStatus(DeliveryStatus.CANCELLED);
+        allocationRepository.saveAndFlush(allocation);
+
+        byte[] refreshed = mockMvc.perform(get("/api/v1/allocations/{id}/invoice.pdf", id))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+        try (var pdf = Loader.loadPDF(refreshed)) {
+            assertThat(new PDFTextStripper().getText(pdf))
+                    .contains(originalNumber, "Samoan Taro", "GST (15%)", "$5,000.00");
+            assertExampleWatermark(pdf);
+        }
+        var upgraded = invoiceRepository.findByAllocationId(id).orElseThrow();
+        assertThat(upgraded.getPdfTemplateVersion()).isEqualTo(InvoicePdfGenerator.TEMPLATE_VERSION);
+        assertThat(upgraded.getInvoiceNumber()).isEqualTo(originalNumber);
+        assertThat(upgraded.getIssuedOn()).isEqualTo(originalDate);
+        assertThat(upgraded.getTotalAmount()).isEqualByComparingTo("5000.00");
+        assertArrayEquals(oldPdf, upgraded.getOriginalPdfBytes());
+        assertArrayEquals(refreshed, upgraded.getPdfBytes());
+        assertThat(invoiceRepository.count()).isEqualTo(1);
+
+        byte[] repeated = mockMvc.perform(get("/api/v1/allocations/{id}/invoice.pdf", id))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+        assertArrayEquals(refreshed, repeated);
+    }
+
+    @Test
     void longInvoiceContinuesTableOnAnotherPage() throws Exception {
         var lines = IntStream.range(0, 30)
                 .mapToObj(index -> new InvoicePdfGenerator.Line("Samoan Taro batch " + index,
@@ -184,6 +237,25 @@ class InvoiceApiTest {
             assertThat(pdf.getNumberOfPages()).isGreaterThan(1);
             assertThat(text).contains("Page 2", "Samoan Taro batch 29", "TOTAL (NZD)", "$300.00");
             assertThat(text.split("DESCRIPTION", -1).length).isGreaterThan(2);
+            assertExampleWatermark(pdf);
+        }
+    }
+
+    private void assertExampleWatermark(PDDocument pdf) throws Exception {
+        for (int pageIndex = 0; pageIndex < pdf.getNumberOfPages(); pageIndex++) {
+            var page = pdf.getPage(pageIndex);
+            try (var content = page.getContents()) {
+                assertThat(new String(content.readAllBytes(), StandardCharsets.US_ASCII))
+                        .contains("(EXAMPLE) Tj");
+            }
+            boolean hasTenPercentOpacity = false;
+            for (var name : page.getResources().getExtGStateNames()) {
+                var alpha = page.getResources().getExtGState(name).getNonStrokingAlphaConstant();
+                if (alpha != null && Math.abs(alpha - 0.1f) < 0.0001f) {
+                    hasTenPercentOpacity = true;
+                }
+            }
+            assertThat(hasTenPercentOpacity).isTrue();
         }
     }
 

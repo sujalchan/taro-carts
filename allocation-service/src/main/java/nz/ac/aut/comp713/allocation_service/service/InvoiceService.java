@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;
+import nz.ac.aut.comp713.allocation_service.exception.InvoiceGenerationException;
 import nz.ac.aut.comp713.allocation_service.exception.InvoiceNotAvailableException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationNotFoundException;
 import nz.ac.aut.comp713.allocation_service.model.AllocationItem;
@@ -58,7 +59,29 @@ public class InvoiceService {
                     }
                     return issueIfDelivered(allocation);
                 });
+        if (!Integer.valueOf(InvoicePdfGenerator.TEMPLATE_VERSION).equals(invoice.getPdfTemplateVersion())) {
+            refreshPdf(invoice);
+        }
         return new Download("invoice-" + invoice.getInvoiceNumber() + ".pdf", invoice.getPdfBytes());
+    }
+
+    private void refreshPdf(Invoice invoice) {
+        WeeklyAllocation allocation = allocationRepository.findById(invoice.getAllocationId())
+                .orElseThrow(() -> new WeeklyAllocationNotFoundException(invoice.getAllocationId()));
+        InvoicePdfGenerator.Document document = buildDocument(allocation,
+                invoice.getInvoiceNumber(), invoice.getIssuedOn());
+        if (document.total().compareTo(invoice.getTotalAmount()) != 0
+                || !allocation.getCustomerId().equals(invoice.getCustomerId())) {
+            throw new InvoiceGenerationException(new IllegalStateException(
+                    "Saved invoice total or customer no longer matches the allocation"));
+        }
+        byte[] refreshedPdf = pdfGenerator.render(document);
+        if (invoice.getOriginalPdfBytes() == null) {
+            invoice.setOriginalPdfBytes(invoice.getPdfBytes());
+        }
+        invoice.setPdfBytes(refreshedPdf);
+        invoice.setPdfTemplateVersion(InvoicePdfGenerator.TEMPLATE_VERSION);
+        invoiceRepository.saveAndFlush(invoice);
     }
 
     @Transactional
@@ -69,6 +92,23 @@ public class InvoiceService {
         Invoice existing = invoiceRepository.findByAllocationId(allocation.getId()).orElse(null);
         if (existing != null) return existing;
 
+        String number = "INV-" + allocation.getId();
+        LocalDate issuedOn = LocalDate.now(ZoneId.of("Pacific/Auckland"));
+        InvoicePdfGenerator.Document document = buildDocument(allocation, number, issuedOn);
+
+        Invoice invoice = new Invoice();
+        invoice.setAllocationId(allocation.getId());
+        invoice.setCustomerId(allocation.getCustomerId());
+        invoice.setInvoiceNumber(number);
+        invoice.setIssuedOn(issuedOn);
+        invoice.setTotalAmount(document.total());
+        invoice.setPdfBytes(pdfGenerator.render(document));
+        invoice.setPdfTemplateVersion(InvoicePdfGenerator.TEMPLATE_VERSION);
+        return invoiceRepository.saveAndFlush(invoice);
+    }
+
+    private InvoicePdfGenerator.Document buildDocument(WeeklyAllocation allocation,
+            String number, LocalDate issuedOn) {
         var customer = customerClient.getCustomer(allocation.getCustomerId());
         List<InvoicePdfGenerator.Line> lines = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO.setScale(2);
@@ -82,23 +122,12 @@ public class InvoiceService {
             total = total.add(amount);
         }
 
-        String number = "INV-" + allocation.getId();
-        LocalDate issuedOn = LocalDate.now(ZoneId.of("Pacific/Auckland"));
         // Saved prices include GST. The tax fraction of a GST-inclusive total is 3/23.
         BigDecimal gst = total.multiply(BigDecimal.valueOf(3))
                 .divide(BigDecimal.valueOf(23), 2, RoundingMode.HALF_UP);
         BigDecimal subtotal = total.subtract(gst);
-        byte[] pdf = pdfGenerator.render(new InvoicePdfGenerator.Document(number, issuedOn,
-                customer.name(), customer.phone(), allocation.getWeekStart(), lines, subtotal, gst, total));
-
-        Invoice invoice = new Invoice();
-        invoice.setAllocationId(allocation.getId());
-        invoice.setCustomerId(allocation.getCustomerId());
-        invoice.setInvoiceNumber(number);
-        invoice.setIssuedOn(issuedOn);
-        invoice.setTotalAmount(total);
-        invoice.setPdfBytes(pdf);
-        return invoiceRepository.saveAndFlush(invoice);
+        return new InvoicePdfGenerator.Document(number, issuedOn, customer.name(), customer.phone(),
+                allocation.getWeekStart(), lines, subtotal, gst, total);
     }
 
     public record Download(String filename, byte[] bytes) {}

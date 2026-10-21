@@ -13,7 +13,7 @@ import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-// The saved PDF is the immutable invoice snapshot for an allocation.
+// Invoice identity and financial total stay fixed; older PDF layouts can be upgraded.
 @Entity
 @Table(name = "invoice", uniqueConstraints = {
         @UniqueConstraint(name = "unique_invoice_allocation", columnNames = "allocation_id"),
@@ -43,6 +43,15 @@ public class Invoice {
     @Column(name = "pdf_bytes", nullable = false, columnDefinition = "BLOB")
     private byte[] pdfBytes;
 
+    // Null identifies invoices saved before PDF template versioning was introduced.
+    @Column(name = "pdf_template_version")
+    private Integer pdfTemplateVersion;
+
+    // Preserve the first issued PDF when replacing an older presentation layout.
+    @JdbcTypeCode(SqlTypes.VARBINARY)
+    @Column(name = "original_pdf_bytes", columnDefinition = "BLOB")
+    private byte[] originalPdfBytes;
+
     public Long getId() { return id; }
     public Long getAllocationId() { return allocationId; }
     public void setAllocationId(Long allocationId) { this.allocationId = allocationId; }
@@ -56,4 +65,8 @@ public class Invoice {
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
     public byte[] getPdfBytes() { return pdfBytes; }
     public void setPdfBytes(byte[] pdfBytes) { this.pdfBytes = pdfBytes; }
+    public Integer getPdfTemplateVersion() { return pdfTemplateVersion; }
+    public void setPdfTemplateVersion(Integer pdfTemplateVersion) { this.pdfTemplateVersion = pdfTemplateVersion; }
+    public byte[] getOriginalPdfBytes() { return originalPdfBytes; }
+    public void setOriginalPdfBytes(byte[] originalPdfBytes) { this.originalPdfBytes = originalPdfBytes; }
 }

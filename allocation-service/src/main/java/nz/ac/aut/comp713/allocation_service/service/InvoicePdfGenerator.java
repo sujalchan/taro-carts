@@ -18,6 +18,8 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
+import org.apache.pdfbox.util.Matrix;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +27,8 @@ import nz.ac.aut.comp713.allocation_service.exception.InvoiceGenerationException
 
 @Component
 public class InvoicePdfGenerator {
+    // Increment when a PDF layout change should refresh previously issued invoices.
+    public static final int TEMPLATE_VERSION = 1;
     private static final PDType1Font FONT = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
     private static final PDType1Font BOLD = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
     // Match the allocation site's CSS palette in static/css/style.css.
@@ -33,14 +37,13 @@ public class InvoicePdfGenerator {
     private static final Color ACCENT = new Color(0x17, 0x66, 0x5f);
     private static final Color PALE = new Color(0xf4, 0xf6, 0xf6);
     private static final Color RULE = new Color(0xd5, 0xde, 0xde);
-    private static final Color EXAMPLE_BACKGROUND = new Color(0xff, 0xf3, 0xf2);
-    private static final Color EXAMPLE_TEXT = new Color(0xa5, 0x28, 0x28);
+    private static final String WATERMARK = "EXAMPLE";
+    private static final int WATERMARK_SIZE = 140;
+    private static final float WATERMARK_OPACITY = 0.1f;
     private static final String EXAMPLE_ADDRESS_LINE_1 = "Address: AUT City Campus";
     private static final String EXAMPLE_ADDRESS_LINE_2 =
             "55 Wellesley Street East, Auckland Central 1010";
     private static final String EXAMPLE_GST_NUMBER = "000000000 (EXAMPLE ONLY)";
-    private static final String EXAMPLE_NOTICE =
-            "EXAMPLE FORMAT - NOT TO BE USED AS BILLABLE INVOICE";
     private static final float LEFT = 48;
     private static final float RIGHT = 547;
     private static final float TABLE_WIDTH = RIGHT - LEFT;
@@ -214,11 +217,28 @@ public class InvoicePdfGenerator {
             right(452, y, "TOTAL (NZD)", 11, BOLD, ACCENT);
             right(RIGHT - 9, y, money(invoice.total()), 13, BOLD, ACCENT);
 
-            y -= 41;
-            stream.setNonStrokingColor(EXAMPLE_BACKGROUND);
-            stream.addRect(LEFT, y - 10, TABLE_WIDTH, 28);
-            stream.fill();
-            write(LEFT + 10, y, EXAMPLE_NOTICE, 10, BOLD, EXAMPLE_TEXT);
+        }
+
+        private void drawWatermark() throws IOException {
+            PDExtendedGraphicsState transparency = new PDExtendedGraphicsState();
+            transparency.setNonStrokingAlphaConstant(WATERMARK_OPACITY);
+            float textWidth = BOLD.getStringWidth(WATERMARK) * WATERMARK_SIZE / 1000;
+            float textHeight = WATERMARK_SIZE * 0.75f;
+            double angle = Math.toRadians(45);
+            float x = (float) ((PDRectangle.A4.getWidth()
+                    - textWidth * Math.cos(angle) + textHeight * Math.sin(angle)) / 2);
+            float y = (float) ((PDRectangle.A4.getHeight()
+                    - textWidth * Math.sin(angle) - textHeight * Math.cos(angle)) / 2);
+
+            stream.saveGraphicsState();
+            stream.setGraphicsStateParameters(transparency);
+            stream.beginText();
+            stream.setNonStrokingColor(ACCENT);
+            stream.setFont(BOLD, WATERMARK_SIZE);
+            stream.setTextMatrix(Matrix.getRotateInstance(angle, x, y));
+            stream.showText(WATERMARK);
+            stream.endText();
+            stream.restoreGraphicsState();
         }
 
         private List<String> wrap(String value, float maxWidth, PDType1Font font, int size)
@@ -269,6 +289,7 @@ public class InvoicePdfGenerator {
             rule(LEFT, 60, RIGHT, RULE);
             write(LEFT, 43, supplierName + " | " + invoice.number(), 8, FONT, MUTED);
             right(RIGHT, 43, "Page " + pageNumber, 8, FONT, MUTED);
+            drawWatermark();
             stream.close();
             stream = null;
         }
