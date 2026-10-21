@@ -6,4 +6,6 @@ import nz.ac.aut.comp713.customer_service.model.Customer;
 
 // provides database access and standard CRUD operations for Customer entities
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
+    boolean existsByAccountId(String accountId);
+    boolean existsByAccountIdAndIdNot(String accountId, Long id);
 }

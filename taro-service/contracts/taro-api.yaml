@@ -9,6 +9,9 @@ servers:
   - url: http://localhost:8083
     description: Local development server
 
+security:
+  - bearerAuth: []
+
 paths:
   /api/v1/taro-types:
     get:
@@ -199,6 +202,11 @@ paths:
                 message: Taro type 'Samoan Taro' already exists.
                 path: /api/v1/taro-types/2
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     TaroTypeRequest:
       type: object

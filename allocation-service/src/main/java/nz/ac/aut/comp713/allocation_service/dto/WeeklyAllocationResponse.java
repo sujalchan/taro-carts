@@ -13,5 +13,6 @@ public record WeeklyAllocationResponse(
 		LocalDate weekStart,
 		DeliveryStatus deliveryStatus,
 		PaymentStatus paymentStatus,
+		String dispatcherAccountId,
 		List<AllocationItemResponse> allocationItems) {
 }

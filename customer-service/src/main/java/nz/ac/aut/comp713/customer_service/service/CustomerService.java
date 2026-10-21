@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import nz.ac.aut.comp713.customer_service.dto.CustomerRequest;
 import nz.ac.aut.comp713.customer_service.dto.CustomerResponse;
 import nz.ac.aut.comp713.customer_service.exception.CustomerAlreadyExistsException;
+import nz.ac.aut.comp713.customer_service.exception.AccountAlreadyLinkedException;
 import nz.ac.aut.comp713.customer_service.exception.CustomerNotFoundException;
 import nz.ac.aut.comp713.customer_service.model.Customer;
 import nz.ac.aut.comp713.customer_service.repository.CustomerRepository;
@@ -53,6 +54,10 @@ public class CustomerService {
         customer.setNormalizedName(normalizedName);
         customer.setContactName(request.contactName());
         customer.setPhone(request.phone());
+        customer.setAccountId(normalizeAccountId(request.accountId()));
+        if (customer.getAccountId() != null && customerRepository.existsByAccountId(customer.getAccountId())) {
+            throw new AccountAlreadyLinkedException();
+        }
 
         // set the active status if provided in the request
         if (request.active() != null) {
@@ -82,6 +87,13 @@ public class CustomerService {
         customer.setNormalizedName(normalizedName);
         customer.setContactName(request.contactName());
         customer.setPhone(request.phone());
+        if (request.accountId() != null) {
+            customer.setAccountId(normalizeAccountId(request.accountId()));
+            if (customer.getAccountId() != null
+                    && customerRepository.existsByAccountIdAndIdNot(customer.getAccountId(), id)) {
+                throw new AccountAlreadyLinkedException();
+            }
+        }
 
         // set the active status if provided in the request
         if (request.active() != null) {
@@ -104,7 +116,12 @@ public class CustomerService {
                 customer.getName(),
                 customer.getContactName(),
                 customer.getPhone(),
-                customer.isActive());
+                customer.isActive(),
+                customer.getAccountId());
+    }
+
+    private String normalizeAccountId(String accountId) {
+        return accountId == null || accountId.isBlank() ? null : accountId.trim();
     }
 
     // match the search query against customer name, contact name, or phone

@@ -13,6 +13,12 @@ import nz.ac.aut.comp713.customer_service.dto.ApiError;
 // converts exceptions thrown by the REST API into consistent JSON error responses
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+	@ExceptionHandler(AccountAlreadyLinkedException.class)
+	public ResponseEntity<ApiError> handleAccountAlreadyLinked(
+			AccountAlreadyLinkedException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiError("ACCOUNT_ALREADY_LINKED", exception.getMessage(), request.getRequestURI()));
+	}
 
 	// return 404 when a requested customer does not exist
 	@ExceptionHandler(CustomerNotFoundException.class)

@@ -10,6 +10,9 @@ servers:
   - url: http://localhost:8081
     description: Local development server
 
+security:
+  - bearerAuth: []
+
 paths:
   /api/v1/customers:
     get:
@@ -199,6 +202,11 @@ paths:
                 path: /api/v1/customers/2
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     CustomerRequest:
       type: object
@@ -226,6 +234,12 @@ components:
           type: boolean
           default: true
           example: true
+
+        accountId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Account ID from auth-service; administrator supplied.
 
     CustomerResponse:
       type: object
@@ -256,6 +270,11 @@ components:
         active:
           type: boolean
           example: true
+
+        accountId:
+          type: string
+          format: uuid
+          nullable: true
 
     ApiError:
       type: object

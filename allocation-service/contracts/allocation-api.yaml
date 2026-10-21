@@ -12,6 +12,9 @@ servers:
   - url: http://localhost:8082
     description: Local allocation service
 
+security:
+  - bearerAuth: []
+
 paths:
   /api/v1/allocations:
     get:
@@ -478,7 +481,61 @@ paths:
                 code: INTERNAL_SERVER_ERROR
                 message: An unexpected error occurred
                 path: /api/v1/allocations/1
+  /api/v1/allocations/{id}/dispatcher:
+    put:
+      summary: Assign a dispatcher (administrator)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountId]
+              properties:
+                accountId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Dispatcher assigned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WeeklyAllocationResponse" }
+
+  /api/v1/allocations/{id}/status:
+    patch:
+      summary: Change an order status when the role and current status permit it
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: "#/components/schemas/OrderStatus" }
+      responses:
+        "200":
+          description: Status changed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WeeklyAllocationResponse" }
+        "403": { description: Role, ownership, assignment, or transition denied }
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     WeeklyAllocationCreateRequest:
       type: object
@@ -590,6 +647,11 @@ components:
 
         paymentStatus:
           $ref: "#/components/schemas/PaymentStatus"
+
+        dispatcherAccountId:
+          type: string
+          format: uuid
+          nullable: true
 
         allocationItems:
           type: array

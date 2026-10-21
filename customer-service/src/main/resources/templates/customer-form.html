@@ -37,7 +37,7 @@
 
     </div>
 
-    <form action="/customers/new" method="post">
+    <form th:action="@{/customers/new}" method="post">
 
         <div>
             <label for="name">
@@ -65,6 +65,15 @@
             </label>
 
             <input type="text" id="phone" name="phone" th:value="${phone}">
+        </div>
+
+        <br>
+
+        <div>
+            <label for="accountId">
+                Auth Account ID
+            </label>
+            <input type="text" id="accountId" name="accountId" th:value="${accountId}" placeholder="From authentication service">
         </div>
 
         <br>

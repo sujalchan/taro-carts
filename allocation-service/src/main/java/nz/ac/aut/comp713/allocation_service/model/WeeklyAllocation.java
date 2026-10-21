@@ -27,6 +27,9 @@ public class WeeklyAllocation {
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
+    @Column(name = "dispatcher_account_id")
+    private String dispatcherAccountId;
+
     // normalized to the Monday of the allocation week by the service layer
     @Column(name = "week_start", nullable = false)
     private LocalDate weekStart;
@@ -55,6 +58,9 @@ public class WeeklyAllocation {
     public void setCustomerId(Long customerId) {
         this.customerId = customerId;
     }
+
+    public String getDispatcherAccountId() { return dispatcherAccountId; }
+    public void setDispatcherAccountId(String dispatcherAccountId) { this.dispatcherAccountId = dispatcherAccountId; }
 
     public LocalDate getWeekStart() {
         return weekStart;

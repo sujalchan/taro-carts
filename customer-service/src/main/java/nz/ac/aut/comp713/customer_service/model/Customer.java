@@ -28,6 +28,10 @@ public class Customer {
     private String contactName;
     private String phone;
 
+    // stable account ID issued by auth-service; may be empty until linked
+    @Column(name = "account_id", unique = true)
+    private String accountId;
+
     // customers are active by default
     private boolean active = true;
 
@@ -81,6 +85,9 @@ public class Customer {
     public void setPhone(String phone) {
         this.phone = phone;
     }
+
+    public String getAccountId() { return accountId; }
+    public void setAccountId(String accountId) { this.accountId = accountId; }
 
     public boolean isActive() {
         return active;

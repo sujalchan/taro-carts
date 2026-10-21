@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;
@@ -309,6 +312,28 @@ public class AllocationPageController {
 					errors);
 		}
 
+		return "redirect:/allocations";
+	}
+
+	@PostMapping("/allocations/{id}/approve")
+	public String approveAllocation(@PathVariable Long id, Authentication actor,
+			RedirectAttributes redirect) {
+		try {
+			weeklyAllocationService.updateOrderStatus(id, DeliveryStatus.APPROVED_ALLOCATION, actor);
+		} catch (AccessDeniedException exception) {
+			redirect.addFlashAttribute("errors", List.of(exception.getMessage()));
+		}
+		return "redirect:/allocations";
+	}
+
+	@PostMapping("/allocations/{id}/dispatcher")
+	public String assignDispatcher(@PathVariable Long id, @RequestParam String accountId,
+			RedirectAttributes redirect) {
+		try {
+			weeklyAllocationService.assignDispatcher(id, accountId);
+		} catch (IllegalArgumentException exception) {
+			redirect.addFlashAttribute("errors", List.of(exception.getMessage()));
+		}
 		return "redirect:/allocations";
 	}
 

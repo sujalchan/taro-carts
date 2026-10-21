@@ -1,0 +1,4 @@
+/auth.db
+/auth.db-*
+/signing-key.pk8
+/target/

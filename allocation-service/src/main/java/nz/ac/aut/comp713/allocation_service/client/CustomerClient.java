@@ -18,13 +18,16 @@ import nz.ac.aut.comp713.allocation_service.exception.CustomerServiceUnavailable
 public class CustomerClient {
 
     private final RestClient restClient;
+    private final ServiceTokenProvider tokens;
 
     // build a RestClient using the configured customer-service base URL
     public CustomerClient(
             RestClient.Builder builder,
-            @Value("${customer.service.url}") String baseUrl) {
+            @Value("${customer.service.url}") String baseUrl,
+            ServiceTokenProvider tokens) {
 
         this.restClient = builder.baseUrl(baseUrl).build();
+        this.tokens = tokens;
     }
 
     // retrieve all customers from customer-service
@@ -33,6 +36,7 @@ public class CustomerClient {
             // call the customer-service REST API and deserialize the JSON response
             CustomerResponse[] customers = restClient.get()
                     .uri("/api/v1/customers")
+                    .headers(headers -> headers.setBearerAuth(tokens.accessToken()))
                     .retrieve()
                     .body(CustomerResponse[].class);
 
@@ -42,7 +46,8 @@ public class CustomerClient {
             }
             return Arrays.asList(customers);
 
-        } catch (ResourceAccessException | HttpServerErrorException e) {
+        } catch (ResourceAccessException | HttpServerErrorException
+                | HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden e) {
             // translate connection failures into an application-specific service exception
             throw new CustomerServiceUnavailableException();
         }
@@ -53,6 +58,7 @@ public class CustomerClient {
         try {
             return restClient.get()
                     .uri("/api/v1/customers/{id}", customerId)
+                    .headers(headers -> headers.setBearerAuth(tokens.accessToken()))
                     .retrieve()
                     .body(CustomerResponse.class);
 
@@ -60,7 +66,8 @@ public class CustomerClient {
             // translate a remote 404 into the allocation-service customer exception
             throw new CustomerNotFoundException(customerId);
 
-        } catch (ResourceAccessException | HttpServerErrorException e) {
+        } catch (ResourceAccessException | HttpServerErrorException
+                | HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden e) {
             // handle cases where customer-service cannot be reached
             throw new CustomerServiceUnavailableException();
         }

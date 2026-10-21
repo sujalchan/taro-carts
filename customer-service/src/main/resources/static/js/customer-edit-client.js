@@ -12,7 +12,7 @@ async function loadCustomer() {
     }
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `/api/v1/customers/${customerId}`
         );
 
@@ -33,6 +33,8 @@ async function loadCustomer() {
         document.getElementById("phone").value =
             customer.phone ?? "";
 
+        document.getElementById("accountId").value = customer.accountId ?? "";
+
         document.getElementById("active").checked =
             customer.active;
 
@@ -50,11 +52,12 @@ form.addEventListener("submit", async function (event) {
         name: document.getElementById("name").value,
         contactName: document.getElementById("contactName").value,
         phone: document.getElementById("phone").value,
+        accountId: document.getElementById("accountId").value,
         active: document.getElementById("active").checked
     };
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `/api/v1/customers/${customerId}`,
             {
                 method: "PUT",

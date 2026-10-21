@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Accounts | Taro Allocation System</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/auth.css}">
+    <script defer th:src="@{/js/service-navigation.js}"></script>
+</head>
+<body class="page-list page-accounts">
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="http://localhost:8082/allocations">Taro Allocation System</a>
+        <button class="app-nav__toggle" type="button" aria-expanded="false" aria-controls="service-navigation">
+            <span aria-hidden="true">&#9776;</span> Menu
+        </button>
+        <div class="app-nav__links" id="service-navigation">
+            <a href="http://localhost:8081/customers">Customer Service</a>
+            <a href="http://localhost:8083/taro-types">Taro Service</a>
+            <a href="http://localhost:8082/allocations">Allocation Service</a>
+            <a href="/accounts" aria-current="page">Accounts</a>
+        </div>
+    </nav>
+
+    <header class="page-heading">
+        <div>
+            <h1>Accounts</h1>
+            <p>Create accounts for the people who request, approve, and deliver allocations.</p>
+        </div>
+        <form class="logout-form" method="post" th:action="@{/logout}">
+            <button type="submit">Sign out</button>
+        </form>
+    </header>
+
+    <div class="error-message" role="alert" th:if="${error}" th:text="${error}"></div>
+
+    <main class="account-grid">
+        <section class="account-card" aria-labelledby="create-heading">
+            <h2 id="create-heading">Create account</h2>
+            <p class="section-intro">Choose a role that matches this person's work.</p>
+            <form method="post" th:action="@{/accounts}">
+                <div class="form-field">
+                    <label for="username">Username</label>
+                    <input id="username" name="username" autocomplete="off" required minlength="3" maxlength="100"
+                           th:value="${username}">
+                </div>
+                <div class="form-field">
+                    <label for="password">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="new-password"
+                           minlength="12" required>
+                    <small>At least 12 characters.</small>
+                </div>
+                <div class="form-field">
+                    <label for="role">Role</label>
+                    <select id="role" name="role" required>
+                        <option value="CUSTOMER" th:selected="${role == 'CUSTOMER'}">Customer</option>
+                        <option value="DISPATCHER" th:selected="${role == 'DISPATCHER'}">Dispatcher</option>
+                        <option value="ADMIN" th:selected="${role == 'ADMIN'}">Administrator</option>
+                    </select>
+                </div>
+                <button class="button-primary" type="submit">Create account</button>
+            </form>
+        </section>
+
+        <section class="account-card" aria-labelledby="existing-heading">
+            <h2 id="existing-heading">Existing accounts</h2>
+            <p class="section-intro">Use the account ID to link a customer or assign a dispatcher.</p>
+            <p class="empty-state" th:if="${#lists.isEmpty(accounts)}">No accounts yet.</p>
+            <div class="table-scroll" tabindex="0" aria-label="Existing accounts" th:unless="${#lists.isEmpty(accounts)}">
+                <table>
+                    <thead>
+                        <tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Account ID</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="account : ${accounts}">
+                            <td th:text="${account.username}"></td>
+                            <td><span class="role-badge" th:text="${account.role}"></span></td>
+                            <td class="account-id" th:text="${account.id}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

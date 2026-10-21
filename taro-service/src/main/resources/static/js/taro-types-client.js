@@ -18,7 +18,7 @@ async function loadTaroTypes(search = "") {
             url += `?search=${encodeURIComponent(search.trim())}`;
         }
 
-        const response = await fetch(url);
+        const response = await apiFetch(url);
 
         if (!response.ok) {
             throw new Error(

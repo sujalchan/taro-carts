@@ -35,6 +35,8 @@ import nz.ac.aut.comp713.allocation_service.model.AllocationItem;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
 import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 import nz.ac.aut.comp713.allocation_service.model.WeeklyAllocation;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
 
@@ -73,6 +75,47 @@ public class WeeklyAllocationService {
                 .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
 
         return toResponse(weeklyAllocation);
+    }
+
+    @Transactional
+    public WeeklyAllocationResponse assignDispatcher(Long id, String accountId) {
+        WeeklyAllocation allocation = weeklyAllocationRepository.findById(id)
+                .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        if (accountId == null || accountId.isBlank())
+            throw new IllegalArgumentException("Dispatcher account ID is required");
+        try {
+            java.util.UUID.fromString(accountId.trim());
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("Dispatcher account ID must be a UUID");
+        }
+        allocation.setDispatcherAccountId(accountId.trim());
+        return toResponse(weeklyAllocationRepository.saveAndFlush(allocation));
+    }
+
+    @Transactional
+    public WeeklyAllocationResponse updateOrderStatus(Long id, DeliveryStatus next, Authentication actor) {
+        WeeklyAllocation allocation = weeklyAllocationRepository.findById(id)
+                .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        DeliveryStatus current = allocation.getDeliveryStatus();
+        boolean admin = actor.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean dispatcher = actor.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_DISPATCHER"))
+                && actor.getName().equals(allocation.getDispatcherAccountId());
+        boolean customer = actor.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CUSTOMER"))
+                && actor.getName().equals(customerClient.getCustomer(allocation.getCustomerId()).accountId());
+
+        boolean permitted = switch (next) {
+            case APPROVED_ALLOCATION -> admin && current == DeliveryStatus.REQUESTED_ALLOCATION;
+            case PREPARING_ALLOCATION -> dispatcher && current == DeliveryStatus.APPROVED_ALLOCATION;
+            case AWAITING_DISPATCH -> dispatcher && current == DeliveryStatus.PREPARING_ALLOCATION;
+            case IN_TRANSIT -> dispatcher && current == DeliveryStatus.AWAITING_DISPATCH;
+            case DELIVERED -> dispatcher && current == DeliveryStatus.IN_TRANSIT;
+            case CANCELLED -> (admin && current != DeliveryStatus.DELIVERED && current != DeliveryStatus.CANCELLED)
+                    || (customer && current == DeliveryStatus.REQUESTED_ALLOCATION);
+            default -> false;
+        };
+        if (!permitted) throw new AccessDeniedException("Status change is not allowed for this order and role");
+        allocation.setDeliveryStatus(next);
+        return toResponse(weeklyAllocationRepository.saveAndFlush(allocation));
     }
 
     // create a new weekly allocation
@@ -310,6 +353,7 @@ public class WeeklyAllocationService {
                 weeklyAllocation.getWeekStart(),
                 weeklyAllocation.getDeliveryStatus(),
                 weeklyAllocation.getPaymentStatus(),
+                weeklyAllocation.getDispatcherAccountId(),
                 allocationItemResponses);
     }
 

@@ -2,6 +2,14 @@ package nz.ac.aut.comp713.allocation_service.controller;
 
 import java.net.URI;
 import java.util.List;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PatchMapping;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
+import nz.ac.aut.comp713.allocation_service.security.AllocationAccess;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,10 +40,12 @@ import nz.ac.aut.comp713.allocation_service.dto.ApiError;
 public class WeeklyAllocationController {
 
 	private final WeeklyAllocationService weeklyAllocationService;
+	private final AllocationAccess access;
 
 	// inject the service containing weekly allocation business logic
-	public WeeklyAllocationController(WeeklyAllocationService weeklyAllocationService) {
+	public WeeklyAllocationController(WeeklyAllocationService weeklyAllocationService, AllocationAccess access) {
 		this.weeklyAllocationService = weeklyAllocationService;
+		this.access = access;
 	}
 
 	@Operation(summary = "Retrieve all weekly allocations")
@@ -45,8 +55,9 @@ public class WeeklyAllocationController {
 	})
 	// return all weekly allocations, including customer and taro type details
 	@GetMapping
-	public ResponseEntity<List<WeeklyAllocationResponse>> getAllWeeklyAllocations() {
-		return ResponseEntity.ok(weeklyAllocationService.getAllWeeklyAllocations());
+	public ResponseEntity<List<WeeklyAllocationResponse>> getAllWeeklyAllocations(Authentication actor) {
+		return ResponseEntity.ok(weeklyAllocationService.getAllWeeklyAllocations().stream()
+				.filter(allocation -> access.canRead(allocation, actor)).toList());
 	}
 
 	@Operation(summary = "Retrieve a weekly allocation by ID")
@@ -57,8 +68,10 @@ public class WeeklyAllocationController {
 	})
 	// retrieve one weekly allocation using the ID from the request path
 	@GetMapping("/{id}")
-	public ResponseEntity<WeeklyAllocationResponse> getWeeklyAllocationById(@PathVariable Long id) {
-		return ResponseEntity.ok(weeklyAllocationService.getWeeklyAllocationById(id));
+	public ResponseEntity<WeeklyAllocationResponse> getWeeklyAllocationById(@PathVariable Long id, Authentication actor) {
+		WeeklyAllocationResponse allocation = weeklyAllocationService.getWeeklyAllocationById(id);
+		access.requireRead(allocation, actor);
+		return ResponseEntity.ok(allocation);
 	}
 
 	@Operation(summary = "Create a weekly allocation")
@@ -72,7 +85,9 @@ public class WeeklyAllocationController {
 	// validate the request body before creating a new weekly allocation
 	@PostMapping
 	public ResponseEntity<WeeklyAllocationResponse> createWeeklyAllocation(
-			@Valid @RequestBody WeeklyAllocationRequest request) {
+			@Valid @RequestBody WeeklyAllocationRequest request,
+			Authentication actor) {
+		access.requireCreate(request.customerId(), actor);
 
 		WeeklyAllocationResponse response = weeklyAllocationService.createWeeklyAllocation(request);
 
@@ -112,5 +127,23 @@ public class WeeklyAllocationController {
 
 		// return 204 No Content because deletion has no response body
 		return ResponseEntity.noContent().build();
+	}
+
+	public record StatusChange(@NotNull DeliveryStatus status) {}
+	public record DispatcherAssignment(@NotBlank
+			@Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+				message = "Dispatcher account ID must be a UUID") String accountId) {}
+
+	@PatchMapping("/{id}/status")
+	public ResponseEntity<WeeklyAllocationResponse> changeStatus(@PathVariable Long id,
+			@Valid @RequestBody StatusChange request, Authentication actor) {
+		return ResponseEntity.ok(weeklyAllocationService.updateOrderStatus(id, request.status(), actor));
+	}
+
+	@PutMapping("/{id}/dispatcher")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<WeeklyAllocationResponse> assignDispatcher(@PathVariable Long id,
+			@Valid @RequestBody DispatcherAssignment request) {
+		return ResponseEntity.ok(weeklyAllocationService.assignDispatcher(id, request.accountId()));
 	}
 }

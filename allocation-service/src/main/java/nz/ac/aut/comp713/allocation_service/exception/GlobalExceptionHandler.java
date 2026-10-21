@@ -9,9 +9,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.servlet.http.HttpServletRequest;
 import nz.ac.aut.comp713.allocation_service.dto.ApiError;
+import org.springframework.security.access.AccessDeniedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<ApiError> handleForbidden(AccessDeniedException exception,
+			HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(new ApiError("FORBIDDEN", exception.getMessage(), request.getRequestURI()));
+	}
 
 	// reject a delivery status supplied before the allocation exists
 	@ExceptionHandler(InvalidDeliveryStatusException.class)

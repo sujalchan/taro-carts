@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/css/style.css">
     <title>Add Customer</title>
+    <script src="/js/csrf-fetch.js"></script>
     <script defer src="/js/service-navigation.js"></script>
 </head>
 
@@ -52,6 +53,12 @@
                 Phone
             </label>
             <input type="text" id="phone" name="phone">
+        </div>
+
+        <br>
+        <div>
+            <label for="accountId">Auth Account ID</label>
+            <input type="text" id="accountId" name="accountId" placeholder="From authentication service">
         </div>
 
         <br>

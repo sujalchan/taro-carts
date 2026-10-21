@@ -10,11 +10,12 @@ form.addEventListener("submit", async function (event) {
         name: document.getElementById("name").value,
         contactName: document.getElementById("contactName").value,
         phone: document.getElementById("phone").value,
+        accountId: document.getElementById("accountId").value,
         active: document.getElementById("active").checked
     };
 
     try {
-        const response = await fetch("/api/v1/customers", {
+        const response = await apiFetch("/api/v1/customers", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"

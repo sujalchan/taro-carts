@@ -5,9 +5,9 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static nz.ac.aut.comp713.allocation_service.TestRequests.get;
+import static nz.ac.aut.comp713.allocation_service.TestRequests.post;
+import static nz.ac.aut.comp713.allocation_service.TestRequests.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -26,7 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static nz.ac.aut.comp713.allocation_service.TestRequests.delete;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;

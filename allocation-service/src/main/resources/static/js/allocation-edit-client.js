@@ -41,9 +41,9 @@ async function loadPage() {
 
     try {
         const [allocationResponse, customerResponse, taroResponse] = await Promise.all([
-            fetch(`/api/v1/allocations/${allocationId}`),
-            fetch("/api/v1/customer-service-reference/customers"),
-            fetch("/api/v1/taro-service-reference/taro-types")
+            apiFetch(`/api/v1/allocations/${allocationId}`),
+            apiFetch("/api/v1/customer-service-reference/customers"),
+            apiFetch("/api/v1/taro-service-reference/taro-types")
         ]);
 
         if (!allocationResponse.ok) {
@@ -211,7 +211,7 @@ async function updateAllocation(event) {
     };
 
     try {
-        const response = await fetch(`/api/v1/allocations/${allocationId}`, {
+        const response = await apiFetch(`/api/v1/allocations/${allocationId}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json"

@@ -30,8 +30,8 @@ async function loadReferenceData() {
 
     try {
         const [customerResponse, taroResponse] = await Promise.all([
-            fetch("/api/v1/customer-service-reference/customers"),
-            fetch("/api/v1/taro-service-reference/taro-types")
+            apiFetch("/api/v1/customer-service-reference/customers"),
+            apiFetch("/api/v1/taro-service-reference/taro-types")
         ]);
 
         if (!customerResponse.ok || !taroResponse.ok) {
@@ -140,7 +140,7 @@ async function createAllocation(event) {
     };
 
     try {
-        const response = await fetch("/api/v1/allocations", {
+        const response = await apiFetch("/api/v1/allocations", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"

@@ -18,13 +18,16 @@ import nz.ac.aut.comp713.allocation_service.exception.TaroServiceUnavailableExce
 public class TaroClient {
 
     private final RestClient restClient;
+    private final ServiceTokenProvider tokens;
 
     // build a RestClient using the configured taro-service base URL
     public TaroClient(
             RestClient.Builder builder,
-            @Value("${taro.service.url}") String baseUrl) {
+            @Value("${taro.service.url}") String baseUrl,
+            ServiceTokenProvider tokens) {
 
         this.restClient = builder.baseUrl(baseUrl).build();
+        this.tokens = tokens;
     }
 
     // retrieve all taro types from taro-service
@@ -34,6 +37,7 @@ public class TaroClient {
             // response
             TaroTypeResponse[] taroTypes = restClient.get()
                     .uri("/api/v1/taro-types")
+                    .headers(headers -> headers.setBearerAuth(tokens.accessToken()))
                     .retrieve()
                     .body(TaroTypeResponse[].class);
 
@@ -43,7 +47,8 @@ public class TaroClient {
 
             return Arrays.asList(taroTypes);
 
-        } catch (ResourceAccessException | HttpServerErrorException e) {
+        } catch (ResourceAccessException | HttpServerErrorException
+                | HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden e) {
             throw new TaroServiceUnavailableException();
         }
     }
@@ -53,6 +58,7 @@ public class TaroClient {
         try {
             return restClient.get()
                     .uri("/api/v1/taro-types/{id}", taroTypeId)
+                    .headers(headers -> headers.setBearerAuth(tokens.accessToken()))
                     .retrieve()
                     .body(TaroTypeResponse.class);
 
@@ -60,7 +66,8 @@ public class TaroClient {
             // translate a remote 404 into the allocation-service taro type exception
             throw new TaroTypeNotFoundException(taroTypeId);
 
-        } catch (ResourceAccessException | HttpServerErrorException e) {
+        } catch (ResourceAccessException | HttpServerErrorException
+                | HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden e) {
             throw new TaroServiceUnavailableException();
         }
     }

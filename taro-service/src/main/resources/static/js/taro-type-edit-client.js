@@ -13,7 +13,7 @@ async function loadTaroType() {
     }
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `/api/v1/taro-types/${taroTypeId}`
         );
 
@@ -54,7 +54,7 @@ form.addEventListener("submit", async function (event) {
     };
 
     try {
-        const response = await fetch(
+        const response = await apiFetch(
             `/api/v1/taro-types/${taroTypeId}`,
             {
                 method: "PUT",

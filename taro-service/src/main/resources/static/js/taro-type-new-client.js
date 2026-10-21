@@ -14,7 +14,7 @@ form.addEventListener("submit", async function (event) {
     };
 
     try {
-        const response = await fetch("/api/v1/taro-types", {
+        const response = await apiFetch("/api/v1/taro-types", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"

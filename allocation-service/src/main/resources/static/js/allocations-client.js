@@ -14,7 +14,7 @@ async function loadAllocations() {
     allocationsContainer.innerHTML = "";
 
     try {
-        const response = await fetch("/api/v1/allocations");
+        const response = await apiFetch("/api/v1/allocations");
 
         if (!response.ok) {
             const error = await readError(response);
@@ -132,7 +132,7 @@ async function deleteAllocation(allocationId, customerName) {
     clearErrors();
 
     try {
-        const response = await fetch(`/api/v1/allocations/${allocationId}`, {
+        const response = await apiFetch(`/api/v1/allocations/${allocationId}`, {
             method: "DELETE"
         });
 

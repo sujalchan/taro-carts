@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import nz.ac.aut.comp713.customer_service.dto.CustomerRequest;
 import nz.ac.aut.comp713.customer_service.exception.CustomerAlreadyExistsException;
+import nz.ac.aut.comp713.customer_service.exception.AccountAlreadyLinkedException;
 import nz.ac.aut.comp713.customer_service.service.CustomerService;
 
 // MVC controller for the server rendered customer pages
@@ -50,6 +51,7 @@ public class CustomerPageController {
             @RequestParam String name,
             @RequestParam(required = false) String contactName,
             @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String accountId,
             @RequestParam(defaultValue = "false") boolean active,
             Model model) {
 
@@ -57,7 +59,8 @@ public class CustomerPageController {
                 name,
                 contactName,
                 phone,
-                active);
+                active,
+                accountId);
 
         // run the same validation rules used by the API
         var violations = validator.validate(request);
@@ -73,6 +76,7 @@ public class CustomerPageController {
                     name,
                     contactName,
                     phone,
+                    accountId,
                     active);
 
             model.addAttribute("errors", errors);
@@ -82,13 +86,14 @@ public class CustomerPageController {
         // show the duplicate customer error without losing the entered form data
         try {
             customerService.createCustomer(request);
-        } catch (CustomerAlreadyExistsException exception) {
+        } catch (CustomerAlreadyExistsException | AccountAlreadyLinkedException exception) {
 
             addFormValues(
                     model,
                     name,
                     contactName,
                     phone,
+                    accountId,
                     active);
 
             model.addAttribute("errors", List.of(exception.getMessage()));
@@ -104,11 +109,13 @@ public class CustomerPageController {
             String name,
             String contactName,
             String phone,
+            String accountId,
             boolean active) {
 
         model.addAttribute("name", name);
         model.addAttribute("contactName", contactName);
         model.addAttribute("phone", phone);
+        model.addAttribute("accountId", accountId);
         model.addAttribute("active", active);
     }
 
@@ -124,6 +131,7 @@ public class CustomerPageController {
         model.addAttribute("name", customer.name());
         model.addAttribute("contactName", customer.contactName());
         model.addAttribute("phone", customer.phone());
+        model.addAttribute("accountId", customer.accountId());
         model.addAttribute("active", customer.active());
 
         return "customer-edit-form";
@@ -136,6 +144,7 @@ public class CustomerPageController {
             @RequestParam String name,
             @RequestParam(required = false) String contactName,
             @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String accountId,
             @RequestParam(defaultValue = "false") boolean active,
             Model model) {
 
@@ -143,7 +152,8 @@ public class CustomerPageController {
                 name,
                 contactName,
                 phone,
-                active);
+                active,
+                accountId);
 
         var violations = validator.validate(request);
 
@@ -161,6 +171,7 @@ public class CustomerPageController {
                     name,
                     contactName,
                     phone,
+                    accountId,
                     active);
 
             model.addAttribute("errors", errors);
@@ -171,7 +182,7 @@ public class CustomerPageController {
         // show duplicate-name errors while preserving the attempted changes
         try {
             customerService.updateCustomer(id, request);
-        } catch (CustomerAlreadyExistsException exception) {
+        } catch (CustomerAlreadyExistsException | AccountAlreadyLinkedException exception) {
 
             addEditFormValues(
                     model,
@@ -179,6 +190,7 @@ public class CustomerPageController {
                     name,
                     contactName,
                     phone,
+                    accountId,
                     active);
 
             model.addAttribute(
@@ -198,12 +210,14 @@ public class CustomerPageController {
             String name,
             String contactName,
             String phone,
+            String accountId,
             boolean active) {
 
         model.addAttribute("customerId", customerId);
         model.addAttribute("name", name);
         model.addAttribute("contactName", contactName);
         model.addAttribute("phone", phone);
+        model.addAttribute("accountId", accountId);
         model.addAttribute("active", active);
     }
 }

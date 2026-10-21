@@ -64,24 +64,29 @@ Actions performed by one user can affect what the other user sees or can do.
 
 ## Architecture
 
-The project contains three independently running Spring Boot backend services and a native Android client.
+The project contains four independently running Spring Boot backend services and a native Android client.
 
 ```text
-Web manager / Android worker
-             |
-             v
- allocation-service :8082  →  allocation.db
-       |             |
-       | HTTP        | HTTP
-       v             v
-customer-service   taro-service
-     :8081             :8083
-       |                 |
-       v                 v
-  customer.db         taro.db
+          Web manager / future Android client
+                         |
+                         v
+                  auth-service :8084
+                     | auth.db
+                     | signed tokens
+          +----------+----------+
+          |          |          |
+          v          v          v
+   customer-service  taro-service  allocation-service
+       :8081             :8083           :8082
+   customer.db          taro.db       allocation.db
+          ^               ^
+          |  service API  |
+          +-------+-------+
+                  |
+          allocation-service
 ```
 
-Each backend service owns its own persistent data.
+Each backend service owns its own persistent data. `auth-service` runs on port `8084` and owns accounts and sign-in. See [Authentication and roles](AUTHENTICATION.md) for setup and access rules.
 
 `allocation-service` stores customer and taro type IDs only. It retrieves customer data from `customer-service` and taro type data from `taro-service` over HTTP; it does not access either database directly.
 
@@ -654,7 +659,7 @@ The Maven and Gradle wrappers included with the projects should be used where po
 
 ## Running the Backend
 
-All three backend services should be running for the complete system to operate.
+Start `auth-service` first, then the customer, taro, and allocation services. Local sign-in uses the documented admin account and needs no environment variables; see [Authentication and roles](AUTHENTICATION.md).
 
 ### 1. Start Customer Service
 
@@ -870,7 +875,7 @@ Current or expected limitations include:
 
 - Local development deployment
 - SQLite databases
-- No full production authentication or authorization system
+- Authentication grants are held in memory, so users must sign in again after an auth-service restart
 - Simple user-interface design
 - Limited scalability compared with a production database architecture
 - Local service configuration

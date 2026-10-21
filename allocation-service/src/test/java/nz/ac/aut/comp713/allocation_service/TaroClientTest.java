@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;
+import nz.ac.aut.comp713.allocation_service.client.ServiceTokenProvider;
 import nz.ac.aut.comp713.allocation_service.exception.TaroServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
 
@@ -26,7 +27,9 @@ class TaroClientTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new TaroClient(builder, "http://localhost:8083");
+        ServiceTokenProvider tokens = org.mockito.Mockito.mock(ServiceTokenProvider.class);
+        org.mockito.Mockito.when(tokens.accessToken()).thenReturn("test-token");
+        client = new TaroClient(builder, "http://localhost:8083", tokens);
     }
 
     @Test

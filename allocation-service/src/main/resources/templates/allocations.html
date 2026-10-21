@@ -83,6 +83,21 @@
             <span th:text="${allocation.paymentStatus}">UNPAID</span>
         </p>
 
+        <p><strong>Dispatcher Account ID:</strong>
+            <span th:text="${allocation.dispatcherAccountId ?: 'Unassigned'}">Unassigned</span></p>
+
+        <form th:if="${allocation.deliveryStatus.name() == 'REQUESTED_ALLOCATION'}"
+              th:action="@{/allocations/{id}/approve(id=${allocation.id})}" method="post">
+            <button type="submit">Approve Allocation</button>
+        </form>
+
+        <form th:action="@{/allocations/{id}/dispatcher(id=${allocation.id})}" method="post">
+            <label>Dispatcher Account ID
+                <input name="accountId" th:value="${allocation.dispatcherAccountId}" required>
+            </label>
+            <button type="submit">Assign Dispatcher</button>
+        </form>
+
         <div class="table-scroll" role="region" aria-label="Data table" tabindex="0">
     <table border="1">
             <thead>
