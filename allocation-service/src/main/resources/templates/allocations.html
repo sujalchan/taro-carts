@@ -36,6 +36,22 @@
         </a>
     </p>
 
+    <form method="get" action="/allocations">
+        <label for="customerId">Filter by customer</label>
+        <div class="allocation-filter-controls">
+            <select id="customerId" name="customerId">
+                <option value="" th:selected="${selectedCustomerId == null}">All customers</option>
+                <option th:each="customer : ${customers}"
+                        th:value="${customer.id}"
+                        th:text="${customer.name}"
+                        th:selected="${selectedCustomerId != null && selectedCustomerId.equals(customer.id)}">
+                    Island Foods
+                </option>
+            </select>
+            <button type="submit">Filter</button>
+        </div>
+    </form>
+
     <div class="error-message" role="alert" th:if="${errors != null && !errors.isEmpty()}">
         <strong>Unable to load allocations:</strong>
 

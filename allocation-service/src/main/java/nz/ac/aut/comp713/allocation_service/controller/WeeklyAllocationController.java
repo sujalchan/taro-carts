@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
@@ -19,12 +20,14 @@ import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationResponse;
 import nz.ac.aut.comp713.allocation_service.service.WeeklyAllocationService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import nz.ac.aut.comp713.allocation_service.dto.ApiError;
+import nz.ac.aut.comp713.allocation_service.exception.InvalidCustomerFilterException;
 
 // REST controller for weekly allocation API requests
 @RestController
@@ -38,15 +41,29 @@ public class WeeklyAllocationController {
 		this.weeklyAllocationService = weeklyAllocationService;
 	}
 
-	@Operation(summary = "Retrieve all weekly allocations")
+	@Operation(summary = "Retrieve weekly allocations", description = "Optionally filter allocations by customer ID.")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Weekly allocations retrieved successfully"),
+			@ApiResponse(responseCode = "400", description = "Customer ID filter must be a positive integer", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
 			@ApiResponse(responseCode = "503", description = "Customer or taro service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
 	})
 	// return all weekly allocations, including customer and taro type details
 	@GetMapping
-	public ResponseEntity<List<WeeklyAllocationResponse>> getAllWeeklyAllocations() {
-		return ResponseEntity.ok(weeklyAllocationService.getAllWeeklyAllocations());
+	public ResponseEntity<List<WeeklyAllocationResponse>> getAllWeeklyAllocations(
+			@Parameter(description = "Return only allocations for this customer. Must be a positive integer ID.", schema = @Schema(type = "integer", format = "int64", minimum = "1"))
+			@RequestParam(required = false) String customerId) {
+		Long parsedCustomerId = null;
+		if (customerId != null) {
+			try {
+				parsedCustomerId = Long.valueOf(customerId);
+				if (parsedCustomerId <= 0) {
+					throw new InvalidCustomerFilterException();
+				}
+			} catch (NumberFormatException exception) {
+				throw new InvalidCustomerFilterException();
+			}
+		}
+		return ResponseEntity.ok(weeklyAllocationService.getWeeklyAllocations(parsedCustomerId));
 	}
 
 	@Operation(summary = "Retrieve a weekly allocation by ID")

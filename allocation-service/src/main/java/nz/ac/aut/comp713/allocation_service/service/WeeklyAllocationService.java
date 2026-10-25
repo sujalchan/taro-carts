@@ -65,7 +65,16 @@ public class WeeklyAllocationService {
 
     // get all weekly allocations
     public List<WeeklyAllocationResponse> getAllWeeklyAllocations() {
-        return weeklyAllocationRepository.findAll()
+        return getWeeklyAllocations(null);
+    }
+
+    // get all weekly allocations, optionally limited to one customer
+    public List<WeeklyAllocationResponse> getWeeklyAllocations(Long customerId) {
+        List<WeeklyAllocation> allocations = customerId == null
+                ? weeklyAllocationRepository.findAll()
+                : weeklyAllocationRepository.findByCustomerId(customerId);
+
+        return allocations
                 .stream()
                 .map(this::toResponse)
                 .toList();

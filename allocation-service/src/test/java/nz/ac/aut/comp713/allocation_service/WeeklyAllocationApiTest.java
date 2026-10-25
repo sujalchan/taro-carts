@@ -112,6 +112,91 @@ class WeeklyAllocationApiTest {
 	}
 
 	@Test
+	void getAllocationsCanFilterByCustomerId() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		createAllocation(2L, "2026-09-14", 2L, 50);
+
+		mockMvc.perform(get("/api/v1/allocations").param("customerId", "2"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(1)))
+				.andExpect(jsonPath("$[0].customerId").value(2))
+				.andExpect(jsonPath("$[0].customerName").value("Fresh Choice"));
+	}
+
+	@Test
+	void getAllocationsRejectsNonPositiveCustomerIdFilter() throws Exception {
+		mockMvc.perform(get("/api/v1/allocations").param("customerId", "0"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_CUSTOMER_FILTER"))
+				.andExpect(jsonPath("$.path").value("/api/v1/allocations"));
+	}
+
+	@Test
+	void getAllocationsRejectsMalformedCustomerIdFilter() throws Exception {
+		mockMvc.perform(get("/api/v1/allocations").param("customerId", "not-a-number"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_CUSTOMER_FILTER"));
+	}
+
+	@Test
+	void getAllocationsReturnsEmptyListForUnknownCustomerId() throws Exception {
+		mockMvc.perform(get("/api/v1/allocations").param("customerId", "999"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(0)));
+	}
+
+	@Test
+	void serverRenderedAllocationsCanFilterByCustomerId() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		createAllocation(2L, "2026-09-14", 2L, 50);
+		when(customerClient.getCustomers()).thenReturn(java.util.List.of(
+				new CustomerResponse(1L, "Island Foods", "John", "0211234567", true),
+				new CustomerResponse(2L, "Fresh Choice", "Sarah", "0215555555", true)));
+
+		mockMvc.perform(get("/allocations").param("customerId", "2"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("Fresh Choice")))
+				.andExpect(content().string(not(containsString("<span>Island Foods</span>"))))
+				.andExpect(content().string(containsString("customerId")));
+	}
+
+	@Test
+	void serverRenderedAllocationsShowsCustomerServiceErrorWhenLoadingFilterOptionsFails() throws Exception {
+		when(customerClient.getCustomers()).thenThrow(new CustomerServiceUnavailableException());
+
+		mockMvc.perform(get("/allocations"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("Unable to load allocations")))
+				.andExpect(content().string(containsString("Customer service is currently unavailable")));
+	}
+
+	@Test
+	void serverRenderedAllocationsReportsInvalidCustomerFilter() throws Exception {
+		when(customerClient.getCustomers()).thenReturn(java.util.List.of());
+		mockMvc.perform(get("/allocations").param("customerId", "invalid"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("Customer filter must be a positive integer customer ID")));
+	}
+
+	@Test
+	void clientRenderedAllocationsPageIncludesCustomerFilter() throws Exception {
+		mockMvc.perform(get("/allocations-client.html"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("id=\"customerFilter\"")));
+	}
+
+	@Test
+	void customerFilterReferenceIncludesInactiveCustomers() throws Exception {
+		when(customerClient.getCustomers()).thenReturn(java.util.List.of(
+				new CustomerResponse(1L, "Island Foods", "John", "0211234567", true),
+				new CustomerResponse(2L, "Former Customer", "Sarah", "0215555555", false)));
+		mockMvc.perform(get("/api/v1/customer-service-reference/customers").param("includeInactive", "true"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(2)))
+				.andExpect(jsonPath("$[1].active").value(false));
+	}
+
+	@Test
 	// verifies that a new allocation uses the standard price and requested status by default
 	void createAllocationUsesDefaultStandardPrice() throws Exception {
 

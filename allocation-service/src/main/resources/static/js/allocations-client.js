@@ -3,9 +3,35 @@ const statusElement = document.getElementById("status");
 const allocationsContainer = document.getElementById("allocationsContainer");
 const errorContainer = document.getElementById("errorContainer");
 const errorList = document.getElementById("errorList");
+const customerFilter = document.getElementById("customerFilter");
+const filterStatus = document.getElementById("filterStatus");
 
 // loads the initial allocation list
-loadAllocations();
+loadCustomers().then(loadAllocations);
+
+customerFilter.addEventListener("change", loadAllocations);
+
+// loads customer options for the filter while leaving the allocation list usable on failure
+async function loadCustomers() {
+    try {
+        const response = await fetch("/api/v1/customer-service-reference/customers?includeInactive=true");
+        if (!response.ok) {
+            const error = await readError(response);
+            filterStatus.textContent = `Customer filters are unavailable: ${error.message}`;
+            return;
+        }
+
+        const customers = await response.json();
+        customers.forEach(customer => {
+            const option = document.createElement("option");
+            option.value = String(customer.id);
+            option.textContent = customer.name;
+            customerFilter.appendChild(option);
+        });
+    } catch (error) {
+        filterStatus.textContent = "Customer filters are unavailable. Unable to connect to the customer service.";
+    }
+}
 
 // retrieves allocations and renders their summary cards
 async function loadAllocations() {
@@ -14,7 +40,12 @@ async function loadAllocations() {
     allocationsContainer.innerHTML = "";
 
     try {
-        const response = await fetch("/api/v1/allocations");
+        const query = new URLSearchParams();
+        if (customerFilter.value) {
+            query.set("customerId", customerFilter.value);
+        }
+        const queryString = query.toString();
+        const response = await fetch(`/api/v1/allocations${queryString ? `?${queryString}` : ""}`);
 
         if (!response.ok) {
             const error = await readError(response);

@@ -63,21 +63,50 @@ public class AllocationPageController {
 
 	// show all weekly allocations
 	@GetMapping("/allocations")
-	public String getAllocationsPage(Model model) {
+	public String getAllocationsPage(
+			@RequestParam(required = false) String customerId,
+			Model model) {
+		Long parsedCustomerId = null;
+		boolean invalidCustomerFilter = false;
+		if (customerId != null && !customerId.isBlank()) {
+			try {
+				parsedCustomerId = Long.valueOf(customerId);
+				invalidCustomerFilter = parsedCustomerId <= 0;
+			} catch (NumberFormatException exception) {
+				invalidCustomerFilter = true;
+			}
+		}
+		model.addAttribute("selectedCustomerId", parsedCustomerId);
 
 		try {
 			model.addAttribute(
 					"allocations",
-					weeklyAllocationService.getAllWeeklyAllocations());
+					invalidCustomerFilter
+							? List.of()
+							: weeklyAllocationService.getWeeklyAllocations(parsedCustomerId));
+			List<String> errors = new ArrayList<>();
+			if (invalidCustomerFilter) {
+				errors.add("Customer filter must be a positive integer customer ID");
+			}
+			if (!errors.isEmpty()) {
+				model.addAttribute("errors", errors);
+			}
+			model.addAttribute("customers", customerClient.getCustomers());
 		} catch (CustomerServiceUnavailableException | TaroServiceUnavailableException exception) {
 			// show the unavailable service error
 			model.addAttribute(
 					"allocations",
 					List.of());
 
+			List<String> errors = new ArrayList<>();
+			if (invalidCustomerFilter) {
+				errors.add("Customer filter must be a positive integer customer ID");
+			}
+			errors.add(exception.getMessage());
 			model.addAttribute(
 					"errors",
-					List.of(exception.getMessage()));
+				errors);
+			model.addAttribute("customers", List.of());
 		}
 
 		return "allocations";

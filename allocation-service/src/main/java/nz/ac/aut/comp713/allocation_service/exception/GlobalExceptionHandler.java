@@ -21,6 +21,13 @@ import nz.ac.aut.comp713.allocation_service.dto.ApiError;
 public class GlobalExceptionHandler {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+	@ExceptionHandler(InvalidCustomerFilterException.class)
+	public ResponseEntity<ApiError> handleInvalidCustomerFilter(
+			InvalidCustomerFilterException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiError("INVALID_CUSTOMER_FILTER", exception.getMessage(), request.getRequestURI()));
+	}
+
 	@ExceptionHandler(IssuedInvoiceConflictException.class)
 	public ResponseEntity<ApiError> handleIssuedInvoiceConflict(
 			IssuedInvoiceConflictException exception, HttpServletRequest request) {

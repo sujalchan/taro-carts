@@ -317,6 +317,15 @@ td:last-child { white-space: nowrap; }
     display: inline-block;
     padding: 6px 0;
 }
+.allocation-filter-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.allocation-filter-controls select {
+    width: auto;
+    min-width: min(320px, 100%);
+}
 
 .allocation-record, #allocationsContainer > div {
     margin-top: 24px;
@@ -373,6 +382,8 @@ td:last-child { white-space: nowrap; }
     .allocation-item-row { grid-template-columns: 1fr; gap: 14px; }
     .allocation-item-row > div:last-of-type { padding-top: 0; }
     th, td { padding: 10px 12px; }
+    .allocation-filter-controls { align-items: stretch; }
+    .allocation-filter-controls select { flex: 1; min-width: 0; }
     .page-form form > a { margin-left: 0; }
     .page-form form > button[type="submit"], .page-form form > a {
         width: 100%;

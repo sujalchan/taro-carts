@@ -13,10 +13,49 @@ servers:
     description: Local allocation service
 
 paths:
+  /api/v1/customer-service-reference/customers:
+    get:
+      summary: Get customers for allocation forms and filters
+      operationId: getCustomerServiceReferenceCustomers
+      parameters:
+        - name: includeInactive
+          in: query
+          required: false
+          description: Include inactive customers, useful for filtering historical allocations. Defaults to false.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Customer reference data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomerReference"
+        "503":
+          description: Customer service is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
   /api/v1/allocations:
     get:
       summary: Get all weekly allocations
       operationId: getAllWeeklyAllocations
+
+      parameters:
+        - name: customerId
+          in: query
+          required: false
+          description: Return only allocations belonging to this customer. Must be a positive ID; an unknown ID returns an empty array.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 2
 
       responses:
         "200":
@@ -27,6 +66,17 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/WeeklyAllocationResponse"
+
+        "400":
+          description: Customer ID filter is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: INVALID_CUSTOMER_FILTER
+                message: Customer filter must be a positive integer customer ID
+                path: /api/v1/allocations
 
         "503":
           description: Customer or taro service is unavailable
@@ -552,6 +602,26 @@ paths:
 
 components:
   schemas:
+    CustomerReference:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: Island Foods
+        contactName:
+          type: string
+          example: John
+        phone:
+          type: string
+          example: "0211234567"
+        active:
+          type: boolean
+          example: true
+
     WeeklyAllocationCreateRequest:
       type: object
       description: New allocations start with REQUESTED_ALLOCATION order status and UNPAID payment status; supplying either status is rejected.

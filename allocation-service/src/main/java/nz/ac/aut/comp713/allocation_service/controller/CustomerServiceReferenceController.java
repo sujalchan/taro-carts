@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
@@ -26,9 +27,13 @@ public class CustomerServiceReferenceController {
 
     // return active customers for allocation form dropdowns
     @GetMapping("/customers")
-    public List<CustomerResponse> getCustomers() {
-        return customerClient.getCustomers()
-                .stream()
+    public List<CustomerResponse> getCustomers(
+            @RequestParam(defaultValue = "false") boolean includeInactive) {
+        List<CustomerResponse> customers = customerClient.getCustomers();
+        if (includeInactive) {
+            return customers;
+        }
+        return customers.stream()
                 .filter(customer -> Boolean.TRUE.equals(customer.active()))
                 .toList();
     }

@@ -1,6 +1,7 @@
 package nz.ac.aut.comp713.allocation_service.repository;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -8,6 +9,9 @@ import nz.ac.aut.comp713.allocation_service.model.WeeklyAllocation;
 
 // provides database access and CRUD operations for allocation items
 public interface WeeklyAllocationRepository extends JpaRepository<WeeklyAllocation, Long> {
+
+    // find weekly allocations for one customer
+    List<WeeklyAllocation> findByCustomerId(Long customerId);
 
     // find all taro items belonging to a specific weekly allocation
     boolean existsByCustomerIdAndWeekStart(Long customerId, LocalDate weekStart);
