@@ -34,4 +34,6 @@ Thumbs.db
 # environment variables and secrets
 .env
 .env.*
+# Machine-specific Android Gradle settings
+/android-app/gradle.properties
 !.env.example
