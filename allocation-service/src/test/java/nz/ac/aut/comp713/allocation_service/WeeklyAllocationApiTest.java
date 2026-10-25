@@ -41,6 +41,7 @@ import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.InvoiceRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
+import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -1420,6 +1421,72 @@ class WeeklyAllocationApiTest {
 				.andExpect(jsonPath("$.code").value("CUSTOMER_ALLOCATION_FORBIDDEN"));
 
 		assertTrue(weeklyAllocationRepository.findById(id).isPresent());
+	}
+
+	@Test
+	void customerCanMarkUnpaidOrOverdueAllocationPaidAtEveryEligibleStage() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		var allocation = weeklyAllocationRepository.findAll().getFirst();
+		for (DeliveryStatus deliveryStatus : new DeliveryStatus[] {
+				DeliveryStatus.APPROVED_ALLOCATION,
+				DeliveryStatus.PREPARING_ALLOCATION,
+				DeliveryStatus.AWAITING_DISPATCH,
+				DeliveryStatus.IN_TRANSIT,
+				DeliveryStatus.DELIVERED }) {
+			allocation.setDeliveryStatus(deliveryStatus);
+			allocation.setPaymentStatus(deliveryStatus == DeliveryStatus.IN_TRANSIT
+					? PaymentStatus.OVERDUE : PaymentStatus.UNPAID);
+			weeklyAllocationRepository.saveAndFlush(allocation);
+
+			mockMvc.perform(post("/api/v1/allocations/{id}/pay", allocation.getId())
+					.param("customerId", "1"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.paymentStatus").value("PAID"))
+					.andExpect(jsonPath("$.deliveryStatus").value(deliveryStatus.name()));
+			assertEquals(PaymentStatus.PAID,
+					weeklyAllocationRepository.findById(allocation.getId()).orElseThrow().getPaymentStatus());
+		}
+	}
+
+	@Test
+	void customerCannotPayRequestedCancelledOrAlreadyPaidAllocation() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		var allocation = weeklyAllocationRepository.findAll().getFirst();
+		mockMvc.perform(post("/api/v1/allocations/{id}/pay", allocation.getId())
+				.param("customerId", "1"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("PAYMENT_NOT_ALLOWED"));
+
+		allocation.setDeliveryStatus(DeliveryStatus.CANCELLED);
+		weeklyAllocationRepository.saveAndFlush(allocation);
+		mockMvc.perform(post("/api/v1/allocations/{id}/pay", allocation.getId())
+				.param("customerId", "1"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("PAYMENT_NOT_ALLOWED"));
+
+		allocation.setDeliveryStatus(DeliveryStatus.APPROVED_ALLOCATION);
+		allocation.setPaymentStatus(PaymentStatus.PAID);
+		weeklyAllocationRepository.saveAndFlush(allocation);
+		mockMvc.perform(post("/api/v1/allocations/{id}/pay", allocation.getId())
+				.param("customerId", "1"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("ALLOCATION_ALREADY_PAID"));
+		assertEquals(PaymentStatus.PAID,
+				weeklyAllocationRepository.findById(allocation.getId()).orElseThrow().getPaymentStatus());
+	}
+
+	@Test
+	void customerCannotPayAnotherCustomersAllocation() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		var allocation = weeklyAllocationRepository.findAll().getFirst();
+		allocation.setDeliveryStatus(DeliveryStatus.APPROVED_ALLOCATION);
+		weeklyAllocationRepository.saveAndFlush(allocation);
+		mockMvc.perform(post("/api/v1/allocations/{id}/pay", allocation.getId())
+				.param("customerId", "2"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.code").value("CUSTOMER_PAYMENT_FORBIDDEN"));
+		assertEquals(PaymentStatus.UNPAID,
+				weeklyAllocationRepository.findById(allocation.getId()).orElseThrow().getPaymentStatus());
 	}
 
 	@Test

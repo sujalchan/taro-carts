@@ -771,6 +771,10 @@ still requested. The customer-request API checks requester, ownership, and statu
 again. Customer selection is not authentication; this is a development workflow
 until login is added.
 
+For a customer's unpaid or overdue allocation, the app shows **Pay** after the
+requested stage and before cancellation. Confirming records `PAID` through the
+allocation API and refreshes an existing invoice PDF. It does not collect money.
+
 When an allocation has an issued invoice, its card offers **View invoice PDF**.
 The invoice opens inside the app with page and zoom controls. On Android 17 and
 newer, allow the app's local network request so it can reach the emulator host.

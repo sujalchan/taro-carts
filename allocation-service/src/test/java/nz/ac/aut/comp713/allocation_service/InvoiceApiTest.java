@@ -81,6 +81,33 @@ class InvoiceApiTest {
     }
 
     @Test
+    void customerPaymentRefreshesIssuedInvoiceWithoutChangingItsTotal() throws Exception {
+        Long id = createAllocation();
+        mockMvc.perform(put("/api/v1/allocations/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(update("DELIVERED", 100)))
+                .andExpect(status().isOk());
+        var originalInvoice = invoiceRepository.findByAllocationId(id).orElseThrow();
+        String invoiceNumber = originalInvoice.getInvoiceNumber();
+        BigDecimal total = originalInvoice.getTotalAmount();
+
+        mockMvc.perform(post("/api/v1/allocations/{id}/pay", id)
+                .param("customerId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+
+        var paidInvoice = invoiceRepository.findByAllocationId(id).orElseThrow();
+        assertThat(paidInvoice.getInvoiceNumber()).isEqualTo(invoiceNumber);
+        assertThat(paidInvoice.getTotalAmount()).isEqualByComparingTo(total);
+        byte[] pdfBytes = mockMvc.perform(get("/api/v1/allocations/{id}/invoice.pdf", id))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+        try (var pdf = Loader.loadPDF(pdfBytes)) {
+            assertPaymentStatusWatermark(pdf, PaymentStatus.PAID);
+        }
+    }
+
+    @Test
     void missingAllocationReturns404() throws Exception {
         mockMvc.perform(get("/api/v1/allocations/999999/invoice.pdf")
                 .accept(MediaType.APPLICATION_PDF))

@@ -1,6 +1,7 @@
 package nz.ac.aut.comp713.tarocartmobile.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
@@ -61,6 +63,9 @@ fun AllocationsScreen() {
     var deleteTarget by remember { mutableStateOf<Allocation?>(null) }
     var deleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
+    var payTarget by remember { mutableStateOf<Allocation?>(null) }
+    var paying by remember { mutableStateOf(false) }
+    var paymentError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(customerRefreshKey) {
@@ -150,6 +155,35 @@ fun AllocationsScreen() {
         )
     }
 
+    payTarget?.let { allocation ->
+        AlertDialog(
+            onDismissRequest = { payTarget = null },
+            title = { Text("Mark this allocation as paid?") },
+            text = { Text("Allocation #${allocation.id} will be recorded as paid. The app does not collect money.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    payTarget = null
+                    paying = true
+                    paymentError = null
+                    scope.launch {
+                        try {
+                            AllocationApi.recordPayment(allocation.id, customer.id)
+                            refreshKey++
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (exception: Exception) {
+                            paymentError = exception.message ?: "Could not record payment."
+                            refreshKey++
+                        } finally {
+                            paying = false
+                        }
+                    }
+                }) { Text("Mark paid") }
+            },
+            dismissButton = { TextButton(onClick = { payTarget = null }) { Text("Cancel") } }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -178,6 +212,7 @@ fun AllocationsScreen() {
                             selectedCustomer = null
                             allocations = emptyList()
                             deleteError = null
+                            paymentError = null
                             customerRefreshKey++
                         }) { Text("Switch customer") }
                         OutlinedButton(onClick = { refreshKey++ }) { Text("Refresh") }
@@ -185,6 +220,14 @@ fun AllocationsScreen() {
                     Button(onClick = { requesting = true }) { Text("Request allocation") }
                 }
                 deleteError?.let {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+                paymentError?.let {
                     Text(
                         it,
                         color = MaterialTheme.colorScheme.error,
@@ -231,6 +274,8 @@ fun AllocationsScreen() {
                         actingCustomerId = customer.id,
                         deleting = deleting,
                         onDelete = { deleteTarget = allocation },
+                        paying = paying,
+                        onPay = { payTarget = allocation },
                         onViewInvoice = { viewedInvoiceId = it }
                     )
                 }
@@ -245,6 +290,8 @@ private fun AllocationCard(
     actingCustomerId: Long,
     deleting: Boolean,
     onDelete: () -> Unit,
+    paying: Boolean,
+    onPay: () -> Unit,
     onViewInvoice: (Long) -> Unit
 ) {
     Card(
@@ -258,7 +305,11 @@ private fun AllocationCard(
             InfoLine("Customer", allocation.customerName)
             InfoLine("Week Start", allocation.weekStart)
             InfoLine("Order Status", allocation.deliveryStatus.readableStatus())
-            InfoLine("Payment Status", allocation.paymentStatus.readableStatus())
+            InfoLine(
+                "Payment Status",
+                allocation.paymentStatus.readableStatus(),
+                paymentStatus = allocation.paymentStatus
+            )
 
             if (allocation.items.isEmpty()) {
                 Text("No items in this allocation.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -283,6 +334,12 @@ private fun AllocationCard(
                 }
             }
             if (allocation.customerId == actingCustomerId
+                && allocation.deliveryStatus != "REQUESTED_ALLOCATION"
+                && allocation.deliveryStatus != "CANCELLED"
+                && allocation.paymentStatus != "PAID") {
+                Button(onClick = onPay, enabled = !paying) { Text("Pay") }
+            }
+            if (allocation.customerId == actingCustomerId
                 && allocation.requestedByCustomerId == actingCustomerId
                 && allocation.deliveryStatus == "REQUESTED_ALLOCATION") {
                 TextButton(onClick = onDelete, enabled = !deleting) { Text("Delete request") }
@@ -292,10 +349,26 @@ private fun AllocationCard(
 }
 
 @Composable
-private fun InfoLine(label: String, value: String) {
+private fun InfoLine(label: String, value: String, paymentStatus: String? = null) {
+    val darkTheme = isSystemInDarkTheme()
+    val badgeColors = when (paymentStatus) {
+        "PAID" -> if (darkTheme) Color(0xFFB9F6CA) to Color(0xFF174B31)
+            else Color(0xFF1B5E20) to Color(0xFFE2F4E5)
+        "UNPAID" -> if (darkTheme) Color(0xFFFFB4AB) to Color(0xFF5C1D1B)
+            else Color(0xFFB3261E) to Color(0xFFFCE8E6)
+        else -> null
+    }
     Row(Modifier.fillMaxWidth()) {
         Text(label, Modifier.width(116.dp), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            value,
+            modifier = badgeColors?.let { (_, background) ->
+                Modifier.background(background, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            } ?: Modifier,
+            color = badgeColors?.first ?: MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (badgeColors != null) FontWeight.Bold else FontWeight.Normal
+        )
     }
 }
 

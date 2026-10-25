@@ -27,6 +27,9 @@ import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationRequest;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationResponse;
 import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerAllocationOwnershipException;
+import nz.ac.aut.comp713.allocation_service.exception.CustomerPaymentOwnershipException;
+import nz.ac.aut.comp713.allocation_service.exception.PaymentNotAllowedException;
+import nz.ac.aut.comp713.allocation_service.exception.AllocationAlreadyPaidException;
 import nz.ac.aut.comp713.allocation_service.exception.AllocationNotRequestedException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidQuantityException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidDeliveryStatusException;
@@ -88,6 +91,29 @@ public class WeeklyAllocationService {
                 .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
 
         return toResponse(weeklyAllocation);
+    }
+
+    @Transactional
+    public WeeklyAllocationResponse recordCustomerPayment(Long id, Long actingCustomerId) {
+        WeeklyAllocation allocation = weeklyAllocationRepository.findById(id)
+                .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        if (!allocation.getCustomerId().equals(actingCustomerId)) {
+            throw new CustomerPaymentOwnershipException();
+        }
+        if (allocation.getDeliveryStatus() == DeliveryStatus.REQUESTED_ALLOCATION
+                || allocation.getDeliveryStatus() == DeliveryStatus.CANCELLED) {
+            throw new PaymentNotAllowedException();
+        }
+        if (allocation.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new AllocationAlreadyPaidException();
+        }
+
+        allocation.setPaymentStatus(PaymentStatus.PAID);
+        WeeklyAllocation saved = weeklyAllocationRepository.saveAndFlush(allocation);
+        if (invoiceService.hasInvoice(id)) {
+            invoiceService.refreshPaymentStatus(saved);
+        }
+        return toResponse(saved);
     }
 
     // create a new weekly allocation

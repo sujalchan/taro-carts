@@ -574,6 +574,45 @@ paths:
         "409":
           description: An allocation already exists for this customer and week
 
+  /api/v1/allocations/{id}/pay:
+    post:
+      summary: Record the selected customer's allocation as paid
+      description: >
+        Updates paymentStatus to PAID without collecting money. Available after
+        REQUESTED_ALLOCATION and before CANCELLED while payment is UNPAID or OVERDUE.
+        The selected customer ID is a temporary acting identity until authentication
+        is available. If an invoice exists, its payment watermark is refreshed.
+      operationId: recordCustomerPayment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: customerId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Allocation marked as paid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyAllocationResponse"
+        "400":
+          description: Invalid selected customer ID
+        "403":
+          description: Allocation belongs to another customer
+        "404":
+          description: Allocation not found
+        "409":
+          description: Allocation is requested, cancelled, or already paid
+
   /api/v1/allocations/{id}/customer-request:
     delete:
       summary: Delete the selected customer's requested allocation

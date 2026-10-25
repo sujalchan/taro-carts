@@ -118,6 +118,10 @@ object AllocationApi {
         request("DELETE", "/api/v1/allocations/$allocationId/customer-request?customerId=$customerId")
     }
 
+    suspend fun recordPayment(allocationId: Long, customerId: Long) = withContext(Dispatchers.IO) {
+        request("POST", "/api/v1/allocations/$allocationId/pay?customerId=$customerId")
+    }
+
     private fun JSONObject.toAllocation(): Allocation {
         val allocationItems = optJSONArray("allocationItems") ?: JSONArray()
         return Allocation(

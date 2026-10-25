@@ -21,6 +21,27 @@ import nz.ac.aut.comp713.allocation_service.dto.ApiError;
 public class GlobalExceptionHandler {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+	@ExceptionHandler(CustomerPaymentOwnershipException.class)
+	public ResponseEntity<ApiError> handleCustomerPaymentOwnership(
+			CustomerPaymentOwnershipException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(new ApiError("CUSTOMER_PAYMENT_FORBIDDEN", exception.getMessage(), request.getRequestURI()));
+	}
+
+	@ExceptionHandler(PaymentNotAllowedException.class)
+	public ResponseEntity<ApiError> handlePaymentNotAllowed(
+			PaymentNotAllowedException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiError("PAYMENT_NOT_ALLOWED", exception.getMessage(), request.getRequestURI()));
+	}
+
+	@ExceptionHandler(AllocationAlreadyPaidException.class)
+	public ResponseEntity<ApiError> handleAllocationAlreadyPaid(
+			AllocationAlreadyPaidException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiError("ALLOCATION_ALREADY_PAID", exception.getMessage(), request.getRequestURI()));
+	}
+
 	@ExceptionHandler(InvalidActingCustomerException.class)
 	public ResponseEntity<ApiError> handleInvalidActingCustomer(
 			InvalidActingCustomerException exception, HttpServletRequest request) {

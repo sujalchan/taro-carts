@@ -79,6 +79,23 @@ public class WeeklyAllocationController {
 		return ResponseEntity.ok(weeklyAllocationService.getWeeklyAllocationById(id));
 	}
 
+	@Operation(summary = "Record a customer's allocation as paid")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Allocation marked as paid"),
+			@ApiResponse(responseCode = "400", description = "Invalid selected customer ID"),
+			@ApiResponse(responseCode = "403", description = "Allocation belongs to another customer"),
+			@ApiResponse(responseCode = "404", description = "Allocation not found"),
+			@ApiResponse(responseCode = "409", description = "Allocation cannot be paid in its current status or is already paid")
+	})
+	@PostMapping("/{id}/pay")
+	public ResponseEntity<WeeklyAllocationResponse> recordCustomerPayment(@PathVariable Long id,
+			@RequestParam Long customerId) {
+		if (customerId <= 0) {
+			throw new InvalidActingCustomerException();
+		}
+		return ResponseEntity.ok(weeklyAllocationService.recordCustomerPayment(id, customerId));
+	}
+
 	@Operation(summary = "Create a weekly allocation")
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "Weekly allocation created successfully"),
