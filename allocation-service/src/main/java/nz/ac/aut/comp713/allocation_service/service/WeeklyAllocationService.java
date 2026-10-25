@@ -79,9 +79,15 @@ public class WeeklyAllocationService {
                 ? weeklyAllocationRepository.findAll()
                 : weeklyAllocationRepository.findByCustomerId(customerId);
 
+        // Reuse reference data while enriching this list response. Customers and
+        // taro types commonly occur in several allocations, so each distinct ID
+        // should require at most one remote service call per request.
+        Map<Long, CustomerResponse> customers = new HashMap<>();
+        Map<Long, TaroTypeResponse> taroTypes = new HashMap<>();
+
         return allocations
                 .stream()
-                .map(this::toResponse)
+                .map(allocation -> toResponse(allocation, customers, taroTypes))
                 .toList();
     }
 
@@ -401,12 +407,22 @@ public class WeeklyAllocationService {
     private WeeklyAllocationResponse toResponse(
             WeeklyAllocation weeklyAllocation) {
 
-        CustomerResponse customer = customerClient.getCustomer(weeklyAllocation.getCustomerId());
+        return toResponse(weeklyAllocation, new HashMap<>(), new HashMap<>());
+    }
+
+    private WeeklyAllocationResponse toResponse(
+            WeeklyAllocation weeklyAllocation,
+            Map<Long, CustomerResponse> customers,
+            Map<Long, TaroTypeResponse> taroTypes) {
+
+        CustomerResponse customer = customers.computeIfAbsent(
+                weeklyAllocation.getCustomerId(),
+                customerClient::getCustomer);
 
         List<AllocationItemResponse> allocationItemResponses = allocationItemRepository
                 .findByWeeklyAllocationId(weeklyAllocation.getId())
                 .stream()
-                .map(this::toItemResponse)
+                .map(item -> toItemResponse(item, taroTypes))
                 .toList();
 
         return new WeeklyAllocationResponse(
@@ -424,9 +440,12 @@ public class WeeklyAllocationService {
 
     // convert an allocation item entity into an enriched response dto
     private AllocationItemResponse toItemResponse(
-            AllocationItem allocationItem) {
+            AllocationItem allocationItem,
+            Map<Long, TaroTypeResponse> taroTypes) {
 
-        TaroTypeResponse taroType = taroClient.getTaroType(allocationItem.getTaroTypeId());
+        TaroTypeResponse taroType = taroTypes.computeIfAbsent(
+                allocationItem.getTaroTypeId(),
+                taroClient::getTaroType);
 
         return new AllocationItemResponse(
                 allocationItem.getId(),
