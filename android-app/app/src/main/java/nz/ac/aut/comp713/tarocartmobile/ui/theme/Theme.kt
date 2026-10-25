@@ -12,12 +12,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+// defines the fallback palette used when the device is in dark mode
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
     secondary = PurpleGrey80,
     tertiary = Pink80
 )
 
+// defines the branded light palette used throughout the app
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFF17665F),
     secondary = Color(0xFF526464),
@@ -33,10 +35,11 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun TaroCartMobileTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
+    // dynamic color is available on android 12 and later
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    // prefers supported device colors before falling back to the app palettes
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
@@ -47,6 +50,7 @@ fun TaroCartMobileTheme(
         else -> LightColorScheme
     }
 
+    // supplies consistent colors and typography to every child composable
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,

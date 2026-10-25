@@ -9,9 +9,10 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
-// 10.0.2.2 maps to the development computer from the standard Android emulator.
+// 10.0.2.2 maps to the development computer from the standard android emulator
 private const val API_BASE_URL = "http://10.0.2.2:8082"
 
+// lightweight models used to exchange customer, product, and allocation data with the ui
 data class Customer(val id: Long, val name: String)
 
 data class TaroType(val id: Long, val name: String, val standardPrice: Double)
@@ -36,7 +37,9 @@ data class AllocationItem(
     val pricePerKg: Double
 )
 
+// centralizes allocation-service requests and keeps network work off the main thread
 object AllocationApi {
+    // downloads an invoice into the app cache and removes partial files after failures
     suspend fun downloadInvoice(cacheDir: File, allocationId: Long): File = withContext(Dispatchers.IO) {
         val connection = (URL("$API_BASE_URL/api/v1/allocations/$allocationId/invoice.pdf?inline=true")
             .openConnection() as HttpURLConnection).apply {
@@ -69,6 +72,7 @@ object AllocationApi {
         }
     }
 
+    // loads active customers exposed through the allocation-service reference endpoint
     suspend fun getCustomers(): List<Customer> = withContext(Dispatchers.IO) {
         val json = getJson("/api/v1/customer-service-reference/customers") as? JSONArray
             ?: throw IOException("The server returned an unexpected customer response.")
@@ -78,6 +82,7 @@ object AllocationApi {
         }
     }
 
+    // loads taro types used to populate allocation request choices
     suspend fun getTaroTypes(): List<TaroType> = withContext(Dispatchers.IO) {
         val json = getJson("/api/v1/taro-service-reference/taro-types") as? JSONArray
             ?: throw IOException("The server returned an unexpected taro type response.")
@@ -91,12 +96,14 @@ object AllocationApi {
         }
     }
 
+    // retrieves allocations belonging to the selected acting customer
     suspend fun getAllocations(customerId: Long): List<Allocation> = withContext(Dispatchers.IO) {
         val json = getJson("/api/v1/allocations?customerId=$customerId") as? JSONArray
             ?: throw IOException("The server returned an unexpected allocations response.")
         (0 until json.length()).map { index -> json.getJSONObject(index).toAllocation() }
     }
 
+    // converts a customer request into the json structure expected by the api
     suspend fun requestAllocation(customerId: Long, weekStart: String, items: List<RequestedItem>) =
         withContext(Dispatchers.IO) {
             val body = JSONObject().apply {
@@ -114,14 +121,17 @@ object AllocationApi {
             request("POST", "/api/v1/allocations/customer-request", body)
         }
 
+    // deletes a request while sending the acting customer for ownership validation
     suspend fun deleteCustomerRequest(allocationId: Long, customerId: Long) = withContext(Dispatchers.IO) {
         request("DELETE", "/api/v1/allocations/$allocationId/customer-request?customerId=$customerId")
     }
 
+    // records payment confirmation for an allocation owned by the acting customer
     suspend fun recordPayment(allocationId: Long, customerId: Long) = withContext(Dispatchers.IO) {
         request("POST", "/api/v1/allocations/$allocationId/pay?customerId=$customerId")
     }
 
+    // maps a nested allocation response into strongly typed app models
     private fun JSONObject.toAllocation(): Allocation {
         val allocationItems = optJSONArray("allocationItems") ?: JSONArray()
         return Allocation(
@@ -144,6 +154,7 @@ object AllocationApi {
         )
     }
 
+    // accepts either json object or array responses and rejects malformed content
     private fun getJson(path: String): Any {
         val body = request("GET", path)
         val trimmed = body.trimStart()
@@ -154,6 +165,7 @@ object AllocationApi {
         }
     }
 
+    // performs a shared http request and converts server errors into readable exceptions
     private fun request(method: String, path: String, payload: JSONObject? = null): String {
         val connection = (URL(API_BASE_URL + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method

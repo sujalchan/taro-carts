@@ -79,8 +79,8 @@ public class WeeklyAllocationService {
                 ? weeklyAllocationRepository.findAll()
                 : weeklyAllocationRepository.findByCustomerId(customerId);
 
-        // Reuse reference data while enriching this list response. Customers and
-        // taro types commonly occur in several allocations, so each distinct ID
+        // reuse reference data while enriching this list response; customers and
+        // taro types commonly occur in several allocations, so each distinct id
         // should require at most one remote service call per request.
         Map<Long, CustomerResponse> customers = new HashMap<>();
         Map<Long, TaroTypeResponse> taroTypes = new HashMap<>();
@@ -407,9 +407,11 @@ public class WeeklyAllocationService {
     private WeeklyAllocationResponse toResponse(
             WeeklyAllocation weeklyAllocation) {
 
+        // use fresh maps for single-allocation operations so caching stays request-scoped
         return toResponse(weeklyAllocation, new HashMap<>(), new HashMap<>());
     }
 
+    // enrich an allocation while reusing reference records already fetched for this request
     private WeeklyAllocationResponse toResponse(
             WeeklyAllocation weeklyAllocation,
             Map<Long, CustomerResponse> customers,

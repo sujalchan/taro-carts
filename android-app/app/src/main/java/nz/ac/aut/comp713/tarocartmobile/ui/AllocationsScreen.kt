@@ -20,23 +20,32 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -44,6 +53,8 @@ import nz.ac.aut.comp713.tarocartmobile.data.Allocation
 import nz.ac.aut.comp713.tarocartmobile.data.AllocationApi
 import nz.ac.aut.comp713.tarocartmobile.data.Customer
 import java.text.NumberFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
@@ -51,7 +62,9 @@ import java.util.Locale
 fun AllocationsScreen() {
     var customers by remember { mutableStateOf<List<Customer>>(emptyList()) }
     var allocations by remember { mutableStateOf<List<Allocation>>(emptyList()) }
-    var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
+    // saves the acting customer's basic details so rotation does not restart selection
+    var selectedCustomerId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var selectedCustomerName by rememberSaveable { mutableStateOf<String?>(null) }
     var loadingCustomers by remember { mutableStateOf(true) }
     var customersError by remember { mutableStateOf<String?>(null) }
     var allocationsError by remember { mutableStateOf<String?>(null) }
@@ -67,6 +80,8 @@ fun AllocationsScreen() {
     var paying by remember { mutableStateOf(false) }
     var paymentError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    // tracks whether the customer actions drawer is open or closed
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     LaunchedEffect(customerRefreshKey) {
         loadingCustomers = true
@@ -82,14 +97,22 @@ fun AllocationsScreen() {
         }
     }
 
-    val customer = selectedCustomer
+    // prefers refreshed customer data while retaining the saved name during loading
+    val customer = selectedCustomerId?.let { customerId ->
+        customers.firstOrNull { it.id == customerId }
+            ?: selectedCustomerName?.let { customerName -> Customer(customerId, customerName) }
+    }
     if (customer == null) {
         CustomerSelectionScreen(
             customers = customers,
             loading = loadingCustomers,
             error = customersError,
             onRetry = { customerRefreshKey++ },
-            onSelect = { selectedCustomer = it }
+            onSelect = {
+                // stores only saveable values rather than the complete customer object
+                selectedCustomerId = it.id
+                selectedCustomerName = it.name
+            }
         )
         return
     }
@@ -156,10 +179,23 @@ fun AllocationsScreen() {
     }
 
     payTarget?.let { allocation ->
+        // converts the api date into a readable date for the confirmation message
+        val formattedWeekStart = formatDisplayDate(allocation.weekStart)
         AlertDialog(
             onDismissRequest = { payTarget = null },
             title = { Text("Mark this allocation as paid?") },
-            text = { Text("Allocation #${allocation.id} will be recorded as paid. The app does not collect money.") },
+            text = {
+                Text(
+                    // applies emphasis only to the date within the surrounding message
+                    buildAnnotatedString {
+                        append("The allocation for the week starting ")
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(formattedWeekStart)
+                        }
+                        append(" will be recorded as paid. The app does not collect money.")
+                    }
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     payTarget = null
@@ -184,100 +220,131 @@ fun AllocationsScreen() {
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Taro Allocation System", style = MaterialTheme.typography.titleMedium)
-                        Text("Weekly Allocations", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            )
-        }
-    ) { contentPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(contentPadding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Acting as ${customer.name}", style = MaterialTheme.typography.titleMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = {
-                            selectedCustomer = null
+    // keeps secondary customer actions outside the main allocation content
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Text(
+                    "Customer menu",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(24.dp)
+                )
+                TextButton(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    onClick = {
+                        scope.launch {
+                            // closes the drawer and clears state before choosing another customer
+                            drawerState.close()
+                            selectedCustomerId = null
+                            selectedCustomerName = null
                             allocations = emptyList()
                             deleteError = null
                             paymentError = null
                             customerRefreshKey++
-                        }) { Text("Switch customer") }
-                        OutlinedButton(onClick = { refreshKey++ }) { Text("Refresh") }
-                    }
-                    Button(onClick = { requesting = true }) { Text("Request allocation") }
-                }
-                deleteError?.let {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-                }
-                paymentError?.let {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-                }
-            }
-
-            if (loading) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(24.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator()
-                        Spacer(Modifier.width(12.dp))
-                        Text("Loading allocations…")
-                    }
-                }
-            } else if (allocationsError != null) {
-                item {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                        Column(Modifier.padding(18.dp)) {
-                            Text("Unable to load allocations", fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(6.dp))
-                            Text(allocationsError.orEmpty())
-                            Spacer(Modifier.height(12.dp))
-                            Button(onClick = { refreshKey++ }) { Text("Try again") }
                         }
                     }
+                ) {
+                    Text("Switch customer")
                 }
-            } else if (allocations.isEmpty()) {
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    navigationIcon = {
+                        // opens the customer actions drawer from the app bar
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Text("☰", style = MaterialTheme.typography.headlineSmall)
+                        }
+                    },
+                    title = {
+                        Column {
+                            Text("Taro Allocation System", style = MaterialTheme.typography.titleMedium)
+                            Text("Weekly Allocations", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                )
+            }
+        ) { contentPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(contentPadding),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 item {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                        Text("No weekly allocations found.", Modifier.padding(18.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Acting as ${customer.name}", style = MaterialTheme.typography.titleMedium)
+                        // keeps only the two primary allocation actions on the main screen
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = { requesting = true }) { Text("Request allocation") }
+                            OutlinedButton(onClick = { refreshKey++ }) { Text("Refresh") }
+                        }
+                    }
+                    deleteError?.let {
+                        Text(
+                            it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                    }
+                    paymentError?.let {
+                        Text(
+                            it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
                     }
                 }
-            } else {
-                items(allocations, key = { it.id }) { allocation ->
-                    AllocationCard(
-                        allocation,
-                        actingCustomerId = customer.id,
-                        deleting = deleting,
-                        onDelete = { deleteTarget = allocation },
-                        paying = paying,
-                        onPay = { payTarget = allocation },
-                        onViewInvoice = { viewedInvoiceId = it }
-                    )
+
+                if (loading) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(Modifier.width(12.dp))
+                            Text("Loading allocations…")
+                        }
+                    }
+                } else if (allocationsError != null) {
+                    item {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                            Column(Modifier.padding(18.dp)) {
+                                Text("Unable to load allocations", fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(6.dp))
+                                Text(allocationsError.orEmpty())
+                                Spacer(Modifier.height(12.dp))
+                                Button(onClick = { refreshKey++ }) { Text("Try again") }
+                            }
+                        }
+                    }
+                } else if (allocations.isEmpty()) {
+                    item {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                            Text("No weekly allocations found.", Modifier.padding(18.dp))
+                        }
+                    }
+                } else {
+                    items(allocations, key = { it.id }) { allocation ->
+                        AllocationCard(
+                            allocation,
+                            actingCustomerId = customer.id,
+                            deleting = deleting,
+                            onDelete = { deleteTarget = allocation },
+                            paying = paying,
+                            onPay = { payTarget = allocation },
+                            onViewInvoice = { viewedInvoiceId = it }
+                        )
+                    }
                 }
             }
         }
@@ -301,8 +368,6 @@ private fun AllocationCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Allocation #${allocation.id}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            InfoLine("Customer", allocation.customerName)
             InfoLine("Week Start", allocation.weekStart)
             InfoLine("Order Status", allocation.deliveryStatus.readableStatus())
             InfoLine(
@@ -376,3 +441,21 @@ private fun String.readableStatus(): String = lowercase().replace('_', ' ').repl
 
 private fun formatPrice(amount: Double): String =
     NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-NZ")).format(amount)
+
+// formats an iso date with an ordinal day and falls back to the original value if invalid
+private fun formatDisplayDate(value: String): String = runCatching {
+    val date = LocalDate.parse(value)
+    val day = date.dayOfMonth
+    // handles the special teen values before applying the final-digit suffix rules
+    val suffix = if (day in 11..13) {
+        "th"
+    } else {
+        when (day % 10) {
+            1 -> "st"
+            2 -> "nd"
+            3 -> "rd"
+            else -> "th"
+        }
+    }
+    "$day$suffix ${date.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH))}"
+}.getOrDefault(value)

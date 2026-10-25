@@ -22,6 +22,7 @@ import nz.ac.aut.comp713.tarocartmobile.data.Customer
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
+// displays loading, error, empty, and selectable customer states in one screen
 fun CustomerSelectionScreen(
     customers: List<Customer>,
     loading: Boolean,
@@ -35,6 +36,7 @@ fun CustomerSelectionScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text("Select the customer you want to act as.", style = MaterialTheme.typography.bodyLarge)
+            // chooses the single state that should be visible for the current customer result
             when {
                 loading -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
                 error != null -> {
@@ -46,6 +48,7 @@ fun CustomerSelectionScreen(
                     Button(onClick = onRetry) { Text("Refresh customers") }
                 }
                 else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // uses stable customer ids so compose can preserve each list item correctly
                     items(customers, key = { it.id }) { customer ->
                         Button(onClick = { onSelect(customer) }, modifier = Modifier.fillMaxWidth()) {
                             Text(customer.name)

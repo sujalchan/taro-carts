@@ -48,6 +48,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+// represents one editable taro item before it is converted into an api request
 private data class ItemDraft(val key: Int, val taroTypeId: Long? = null, val quantity: String = "")
 
 @Composable
@@ -66,8 +67,10 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
     var submitting by remember { mutableStateOf(false) }
     var formError by remember { mutableStateOf<String?>(null) }
 
+    // returns to the allocation list when the system back action is used
     BackHandler(onBack = onBack)
 
+    // reloads taro choices on first display and whenever the user retries
     LaunchedEffect(typesRefreshKey) {
         loadingTypes = true
         typesError = null
@@ -100,6 +103,7 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Week starting", style = MaterialTheme.typography.labelLarge)
+                    // normalizes any date selected by the user to its monday
                     OutlinedButton(onClick = {
                         val selected = parseWeek(weekStart)
                         DatePickerDialog(
@@ -121,6 +125,7 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
                     }
                     taroTypes.isEmpty() -> Text("No taro types are available to request.")
                     else -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        // creates one product and quantity editor for every draft row
                         rows.forEachIndexed { index, row ->
                             val selected = taroTypes.firstOrNull { it.id == row.taroTypeId }
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -133,6 +138,7 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
                                         expanded = openMenuKey == row.key,
                                         onDismissRequest = { openMenuKey = null }
                                     ) {
+                                        // hides taro types already selected in another row
                                         taroTypes.filter { type ->
                                             type.id == row.taroTypeId || rows.none { it.taroTypeId == type.id }
                                         }.forEach { type ->
@@ -172,6 +178,7 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
                                 }
                             }
                         }
+                        // prevents adding more rows than there are distinct taro types
                         if (rows.size < taroTypes.size) {
                             OutlinedButton(onClick = {
                                 rows = rows + ItemDraft(nextRowKey)
@@ -189,6 +196,7 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
                     Button(
                         enabled = !submitting && !loadingTypes && typesError == null && taroTypes.isNotEmpty(),
                         onClick = {
+                            // validates every draft before starting the network request
                             val items = rows.mapNotNull { row ->
                                 val quantity = row.quantity.toIntOrNull()
                                 if (row.taroTypeId != null && quantity != null && quantity > 0) {
@@ -225,6 +233,7 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
     }
 }
 
+// selects the next future monday as the initial requested week
 private fun nextMonday(): String {
     val calendar = Calendar.getInstance()
     val daysAhead = (Calendar.MONDAY - calendar.get(Calendar.DAY_OF_WEEK) + 7) % 7
@@ -232,6 +241,7 @@ private fun nextMonday(): String {
     return formatWeek(calendar)
 }
 
+// converts a picked calendar date to the monday of the same week
 private fun mondayOf(year: Int, month: Int, day: Int): String {
     val calendar = Calendar.getInstance().apply { set(year, month, day) }
     val daysAfterMonday = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
@@ -239,12 +249,15 @@ private fun mondayOf(year: Int, month: Int, day: Int): String {
     return formatWeek(calendar)
 }
 
+// parses the api date format for use as the date picker's current value
 private fun parseWeek(value: String): Calendar = Calendar.getInstance().apply {
     time = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(value) ?: time
 }
 
+// formats a selected week in the iso date format expected by the api
 private fun formatWeek(calendar: Calendar): String =
     SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.time)
 
+// displays standard prices using new zealand currency formatting
 private fun formatPrice(amount: Double): String =
     NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-NZ")).format(amount)

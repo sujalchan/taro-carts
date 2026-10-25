@@ -52,6 +52,7 @@ import java.io.File
 import java.io.IOException
 import kotlin.math.roundToInt
 
+// keeps the temporary invoice file together with its discovered page count
 private data class InvoiceDocument(val file: File, val pageCount: Int)
 
 @Composable
@@ -69,8 +70,10 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
     val verticalScroll = rememberScrollState()
     val horizontalScroll = rememberScrollState()
 
+    // returns to the allocation list when the system back action is used
     BackHandler(onBack = onBack)
 
+    // downloads the invoice and reads its page count whenever a retry is requested
     LaunchedEffect(allocationId, retryKey) {
         document = null
         pageBitmap = null
@@ -97,11 +100,13 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
         }
     }
 
+    // removes the cached invoice when the viewer leaves composition or changes documents
     DisposableEffect(document) {
         val file = document?.file
         onDispose { file?.delete() }
     }
 
+    // renders the selected page at a resolution suitable for the current screen
     LaunchedEffect(document, pageIndex, screenWidthPx) {
         pageBitmap = null
         val current = document ?: return@LaunchedEffect
@@ -117,6 +122,7 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
         }
     }
 
+    // resets both scroll directions when moving to another page
     LaunchedEffect(pageIndex) {
         verticalScroll.scrollTo(0)
         horizontalScroll.scrollTo(0)
@@ -131,6 +137,7 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
         }
     ) { contentPadding ->
         Column(Modifier.fillMaxSize().padding(contentPadding)) {
+            // displays exactly one loading, error, or document state
             when {
                 loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -147,6 +154,7 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
                 }
                 document != null -> {
                     val current = requireNotNull(document)
+                    // provides page navigation without allowing movement beyond the document
                     Row(
                         Modifier.fillMaxWidth().padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -158,6 +166,7 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
                             Text("Next")
                         }
                     }
+                    // limits zoom to a practical range for bitmap memory and readability
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                         horizontalArrangement = Arrangement.Center,
@@ -198,6 +207,7 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
     }
 }
 
+// opens and safely closes the descriptor and renderer around a pdf operation
 private inline fun <T> withPdfRenderer(file: File, block: (PdfRenderer) -> T): T {
     val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     val renderer = try {
@@ -209,6 +219,7 @@ private inline fun <T> withPdfRenderer(file: File, block: (PdfRenderer) -> T): T
     return renderer.use(block)
 }
 
+// renders one white-backed pdf page while capping bitmap dimensions to control memory use
 internal fun renderPage(file: File, index: Int, targetWidth: Int): Bitmap =
     withPdfRenderer(file) { renderer ->
         renderer.openPage(index).use { page ->
