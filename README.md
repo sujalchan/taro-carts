@@ -749,6 +749,12 @@ The Android client should therefore use an API base URL similar to:
 http://10.0.2.2:8082/
 ```
 
+The Android app opens to the weekly allocation list. Its customer dropdown filters
+the list through the allocation API, and each allocation card shows its customer,
+week start, order and payment statuses, and item quantities and prices. Start the
+allocation, customer, and taro services before opening the list in the app. The API
+base URL is defined by `API_BASE_URL` in `android-app/app/src/main/java/nz/ac/aut/comp713/tarocartmobile/data/AllocationApi.kt`.
+
 A physical Android device will require the backend computer's reachable local network address instead.
 
 ---
