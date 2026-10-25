@@ -25,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -65,6 +66,9 @@ fun AllocationsScreen() {
     // saves the acting customer's basic details so rotation does not restart selection
     var selectedCustomerId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedCustomerName by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedCustomerContactName by rememberSaveable { mutableStateOf("") }
+    var selectedCustomerPhone by rememberSaveable { mutableStateOf("") }
+    var selectedCustomerActive by rememberSaveable { mutableStateOf(true) }
     var loadingCustomers by remember { mutableStateOf(true) }
     var customersError by remember { mutableStateOf<String?>(null) }
     var allocationsError by remember { mutableStateOf<String?>(null) }
@@ -73,6 +77,7 @@ fun AllocationsScreen() {
     var refreshKey by remember { mutableStateOf(0) }
     var viewedInvoiceId by remember { mutableStateOf<Long?>(null) }
     var requesting by remember { mutableStateOf(false) }
+    var editingCustomer by rememberSaveable { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<Allocation?>(null) }
     var deleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
@@ -100,7 +105,15 @@ fun AllocationsScreen() {
     // prefers refreshed customer data while retaining the saved name during loading
     val customer = selectedCustomerId?.let { customerId ->
         customers.firstOrNull { it.id == customerId }
-            ?: selectedCustomerName?.let { customerName -> Customer(customerId, customerName) }
+            ?: selectedCustomerName?.let { customerName ->
+                Customer(
+                    customerId,
+                    customerName,
+                    selectedCustomerContactName,
+                    selectedCustomerPhone,
+                    selectedCustomerActive
+                )
+            }
     }
     if (customer == null) {
         CustomerSelectionScreen(
@@ -112,6 +125,9 @@ fun AllocationsScreen() {
                 // stores only saveable values rather than the complete customer object
                 selectedCustomerId = it.id
                 selectedCustomerName = it.name
+                selectedCustomerContactName = it.contactName
+                selectedCustomerPhone = it.phone
+                selectedCustomerActive = it.active
             }
         )
         return
@@ -129,6 +145,24 @@ fun AllocationsScreen() {
             onCreated = {
                 requesting = false
                 refreshKey++
+            }
+        )
+        return
+    }
+
+    if (editingCustomer) {
+        EditCustomerScreen(
+            customer = customer,
+            onBack = { editingCustomer = false },
+            onSaved = { updatedCustomer ->
+                selectedCustomerName = updatedCustomer.name
+                selectedCustomerContactName = updatedCustomer.contactName
+                selectedCustomerPhone = updatedCustomer.phone
+                selectedCustomerActive = updatedCustomer.active
+                customers = customers.map {
+                    if (it.id == updatedCustomer.id) updatedCustomer else it
+                }
+                editingCustomer = false
             }
         )
         return
@@ -227,26 +261,41 @@ fun AllocationsScreen() {
             ModalDrawerSheet {
                 Text(
                     "Customer menu",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(24.dp)
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp)
                 )
-                TextButton(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                // uses standard material drawer rows with transparent unselected states
+                NavigationDrawerItem(
+                    label = { Text("Edit information") },
+                    selected = false,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            editingCustomer = true
+                        }
+                    }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Switch customer") },
+                    selected = false,
+                    modifier = Modifier.padding(horizontal = 12.dp),
                     onClick = {
                         scope.launch {
                             // closes the drawer and clears state before choosing another customer
                             drawerState.close()
                             selectedCustomerId = null
                             selectedCustomerName = null
+                            selectedCustomerContactName = ""
+                            selectedCustomerPhone = ""
+                            selectedCustomerActive = true
                             allocations = emptyList()
                             deleteError = null
                             paymentError = null
                             customerRefreshKey++
                         }
                     }
-                ) {
-                    Text("Switch customer")
-                }
+                )
             }
         }
     ) {
@@ -363,7 +412,7 @@ private fun AllocationCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {

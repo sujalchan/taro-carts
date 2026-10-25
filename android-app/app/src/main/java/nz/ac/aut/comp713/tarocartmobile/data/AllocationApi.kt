@@ -11,9 +11,16 @@ import java.net.URL
 
 // 10.0.2.2 maps to the development computer from the standard android emulator
 private const val API_BASE_URL = "http://10.0.2.2:8082"
+private const val CUSTOMER_API_BASE_URL = "http://10.0.2.2:8081"
 
 // lightweight models used to exchange customer, product, and allocation data with the ui
-data class Customer(val id: Long, val name: String)
+data class Customer(
+    val id: Long,
+    val name: String,
+    val contactName: String,
+    val phone: String,
+    val active: Boolean
+)
 
 data class TaroType(val id: Long, val name: String, val standardPrice: Double)
 
@@ -77,9 +84,25 @@ object AllocationApi {
         val json = getJson("/api/v1/customer-service-reference/customers") as? JSONArray
             ?: throw IOException("The server returned an unexpected customer response.")
         (0 until json.length()).map { index ->
-            val customer = json.getJSONObject(index)
-            Customer(customer.getLong("id"), customer.optString("name", "Customer"))
+            json.getJSONObject(index).toCustomer()
         }
+    }
+
+    // updates the selected customer's editable information in customer-service
+    suspend fun updateCustomer(customer: Customer): Customer = withContext(Dispatchers.IO) {
+        val body = JSONObject().apply {
+            put("name", customer.name)
+            put("contactName", customer.contactName)
+            put("phone", customer.phone)
+            put("active", customer.active)
+        }
+        val response = request(
+            method = "PUT",
+            path = "/api/v1/customers/${customer.id}",
+            payload = body,
+            baseUrl = CUSTOMER_API_BASE_URL
+        )
+        JSONObject(response).toCustomer()
     }
 
     // loads taro types used to populate allocation request choices
@@ -154,6 +177,15 @@ object AllocationApi {
         )
     }
 
+    // maps customer json while treating optional text fields as empty strings
+    private fun JSONObject.toCustomer(): Customer = Customer(
+        id = getLong("id"),
+        name = optString("name", "Customer"),
+        contactName = optString("contactName", ""),
+        phone = optString("phone", ""),
+        active = optBoolean("active", true)
+    )
+
     // accepts either json object or array responses and rejects malformed content
     private fun getJson(path: String): Any {
         val body = request("GET", path)
@@ -166,8 +198,13 @@ object AllocationApi {
     }
 
     // performs a shared http request and converts server errors into readable exceptions
-    private fun request(method: String, path: String, payload: JSONObject? = null): String {
-        val connection = (URL(API_BASE_URL + path).openConnection() as HttpURLConnection).apply {
+    private fun request(
+        method: String,
+        path: String,
+        payload: JSONObject? = null,
+        baseUrl: String = API_BASE_URL
+    ): String {
+        val connection = (URL(baseUrl + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = 10_000
             readTimeout = 10_000

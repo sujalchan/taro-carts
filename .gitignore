@@ -26,6 +26,9 @@ Thumbs.db
 # logs
 *.log
 
+# java heap dumps
+*.hprof
+
 # sqlite temporary files
 *.db-shm
 *.db-wal
