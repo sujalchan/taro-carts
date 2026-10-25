@@ -546,6 +546,69 @@ paths:
                 code: INTERNAL_SERVER_ERROR
                 message: An unexpected error occurred
                 path: /api/v1/allocations/1
+  /api/v1/allocations/customer-request:
+    post:
+      summary: Request an allocation as the selected customer
+      description: >
+        Creates an allocation in REQUESTED_ALLOCATION and UNPAID status and
+        records the customer as the requester. Customer selection is a
+        temporary acting identity until authentication is available.
+      operationId: createCustomerRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WeeklyAllocationCreateRequest"
+      responses:
+        "201":
+          description: Customer allocation request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyAllocationResponse"
+        "400":
+          description: Invalid allocation request
+        "404":
+          description: Customer or taro type not found
+        "409":
+          description: An allocation already exists for this customer and week
+
+  /api/v1/allocations/{id}/customer-request:
+    delete:
+      summary: Delete the selected customer's requested allocation
+      description: >
+        The selected customer ID is a temporary acting identity until authentication
+        is available. The allocation must have been requested through the customer
+        API by that customer and still have REQUESTED_ALLOCATION status. An issued
+        invoice also prevents deletion.
+      operationId: deleteCustomerRequest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: customerId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "204":
+          description: Customer request deleted
+        "400":
+          description: Invalid selected customer ID
+        "403":
+          description: Allocation was not requested by the selected customer
+        "404":
+          description: Allocation not found
+        "409":
+          description: Allocation has progressed or has an issued invoice
+
   /api/v1/allocations/{id}/invoice.pdf:
     get:
       summary: Download an issued allocation invoice as a PDF
@@ -717,6 +780,12 @@ components:
           type: integer
           format: int64
           example: 1
+
+        requestedByCustomerId:
+          type: integer
+          format: int64
+          nullable: true
+          description: Customer who created this through the customer request API; null for manager-created allocations.
 
         customerName:
           type: string

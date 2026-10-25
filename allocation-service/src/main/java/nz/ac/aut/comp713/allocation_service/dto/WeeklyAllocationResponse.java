@@ -9,6 +9,7 @@ import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 public record WeeklyAllocationResponse(
 		Long id,
 		Long customerId,
+		Long requestedByCustomerId,
 		String customerName,
 		LocalDate weekStart,
 		DeliveryStatus deliveryStatus,

@@ -21,6 +21,27 @@ import nz.ac.aut.comp713.allocation_service.dto.ApiError;
 public class GlobalExceptionHandler {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+	@ExceptionHandler(InvalidActingCustomerException.class)
+	public ResponseEntity<ApiError> handleInvalidActingCustomer(
+			InvalidActingCustomerException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiError("INVALID_ACTING_CUSTOMER", exception.getMessage(), request.getRequestURI()));
+	}
+
+	@ExceptionHandler(CustomerAllocationOwnershipException.class)
+	public ResponseEntity<ApiError> handleCustomerAllocationOwnership(
+			CustomerAllocationOwnershipException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(new ApiError("CUSTOMER_ALLOCATION_FORBIDDEN", exception.getMessage(), request.getRequestURI()));
+	}
+
+	@ExceptionHandler(AllocationNotRequestedException.class)
+	public ResponseEntity<ApiError> handleAllocationNotRequested(
+			AllocationNotRequestedException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiError("ALLOCATION_NOT_REQUESTED", exception.getMessage(), request.getRequestURI()));
+	}
+
 	@ExceptionHandler(InvalidCustomerFilterException.class)
 	public ResponseEntity<ApiError> handleInvalidCustomerFilter(
 			InvalidCustomerFilterException exception, HttpServletRequest request) {

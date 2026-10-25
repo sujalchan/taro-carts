@@ -756,11 +756,20 @@ The Android client should therefore use an API base URL similar to:
 http://10.0.2.2:8082/
 ```
 
-The Android app opens to the weekly allocation list. Its customer dropdown filters
-the list through the allocation API, and each allocation card shows its customer,
+After customer selection, the Android app opens the weekly allocation list.
+Each allocation card shows its customer,
 week start, order and payment statuses, and item quantities and prices. Start the
 allocation, customer, and taro services before opening the list in the app. The API
 base URL is defined by `API_BASE_URL` in `android-app/app/src/main/java/nz/ac/aut/comp713/tarocartmobile/data/AllocationApi.kt`.
+
+On launch, the Android app asks which active customer to act as. It then lists only
+that customer's allocations. The customer can request a week with one or more taro
+types and whole-number quantities; the service applies its default
+`REQUESTED_ALLOCATION` and `UNPAID` statuses and standard prices. The app offers
+deletion only for allocations requested through the customer app while they are
+still requested. The customer-request API checks requester, ownership, and status
+again. Customer selection is not authentication; this is a development workflow
+until login is added.
 
 When an allocation has an issued invoice, its card offers **View invoice PDF**.
 The invoice opens inside the app with page and zoom controls. On Android 17 and

@@ -26,6 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
@@ -39,6 +40,7 @@ import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.InvoiceRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
+import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -1362,6 +1364,65 @@ class WeeklyAllocationApiTest {
 	}
 
 	@Test
+	void customerCanDeleteOwnAllocationWhileRequested() throws Exception {
+		createCustomerAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		assertEquals(1L, weeklyAllocationRepository.findById(id).orElseThrow().getRequestedByCustomerId());
+		mockMvc.perform(get("/api/v1/allocations/{id}", id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.requestedByCustomerId").value(1))
+				.andExpect(jsonPath("$.deliveryStatus").value("REQUESTED_ALLOCATION"));
+
+		mockMvc.perform(delete("/api/v1/allocations/{id}/customer-request", id)
+				.param("customerId", "1"))
+				.andExpect(status().isNoContent());
+
+		assertTrue(weeklyAllocationRepository.findById(id).isEmpty());
+		assertTrue(allocationItemRepository.findByWeeklyAllocationId(id).isEmpty());
+	}
+
+	@Test
+	void customerCannotDeleteAnotherCustomersAllocation() throws Exception {
+		createCustomerAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+
+		mockMvc.perform(delete("/api/v1/allocations/{id}/customer-request", id)
+				.param("customerId", "2"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.code").value("CUSTOMER_ALLOCATION_FORBIDDEN"));
+
+		assertTrue(weeklyAllocationRepository.findById(id).isPresent());
+	}
+
+	@Test
+	void customerCannotDeleteAllocationAfterApproval() throws Exception {
+		createCustomerAllocation(1L, "2026-09-14", 1L, 100);
+		var allocation = weeklyAllocationRepository.findAll().getFirst();
+		allocation.setDeliveryStatus(DeliveryStatus.APPROVED_ALLOCATION);
+		weeklyAllocationRepository.saveAndFlush(allocation);
+
+		mockMvc.perform(delete("/api/v1/allocations/{id}/customer-request", allocation.getId())
+				.param("customerId", "1"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("ALLOCATION_NOT_REQUESTED"));
+
+		assertTrue(weeklyAllocationRepository.findById(allocation.getId()).isPresent());
+	}
+
+	@Test
+	void customerCannotDeleteManagerCreatedAllocation() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+
+		mockMvc.perform(delete("/api/v1/allocations/{id}/customer-request", id)
+				.param("customerId", "1"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.code").value("CUSTOMER_ALLOCATION_FORBIDDEN"));
+
+		assertTrue(weeklyAllocationRepository.findById(id).isPresent());
+	}
+
+	@Test
 	// verifies that deleting an unknown allocation returns not found
 	void deleteMissingAllocationReturns404() throws Exception {
 
@@ -1468,8 +1529,25 @@ class WeeklyAllocationApiTest {
 			String weekStart,
 			Long taroTypeId,
 			int quantity) throws Exception {
+		createAllocationAtPath("/api/v1/allocations", customerId, weekStart, taroTypeId, quantity);
+	}
 
-		mockMvc.perform(post("/api/v1/allocations")
+	private void createCustomerAllocation(
+			Long customerId,
+			String weekStart,
+			Long taroTypeId,
+			int quantity) throws Exception {
+		createAllocationAtPath("/api/v1/allocations/customer-request", customerId, weekStart, taroTypeId, quantity);
+	}
+
+	private void createAllocationAtPath(
+			String path,
+			Long customerId,
+			String weekStart,
+			Long taroTypeId,
+			int quantity) throws Exception {
+
+		mockMvc.perform(post(path)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{

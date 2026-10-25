@@ -26,6 +26,8 @@ import nz.ac.aut.comp713.allocation_service.dto.AllocationItemResponse;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationRequest;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationResponse;
 import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException;
+import nz.ac.aut.comp713.allocation_service.exception.CustomerAllocationOwnershipException;
+import nz.ac.aut.comp713.allocation_service.exception.AllocationNotRequestedException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidQuantityException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidDeliveryStatusException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidPaymentStatusException;
@@ -92,6 +94,16 @@ public class WeeklyAllocationService {
     @Transactional
     public WeeklyAllocationResponse createWeeklyAllocation(
             WeeklyAllocationRequest request) {
+        return createAllocation(request, null);
+    }
+
+    @Transactional
+    public WeeklyAllocationResponse createCustomerRequest(WeeklyAllocationRequest request) {
+        return createAllocation(request, request.customerId());
+    }
+
+    private WeeklyAllocationResponse createAllocation(
+            WeeklyAllocationRequest request, Long requestedByCustomerId) {
 
         // status can only be changed after the allocation has been created
         if (request.deliveryStatus() != null) {
@@ -140,6 +152,7 @@ public class WeeklyAllocationService {
         WeeklyAllocation weeklyAllocation = new WeeklyAllocation();
 
         weeklyAllocation.setCustomerId(request.customerId());
+        weeklyAllocation.setRequestedByCustomerId(requestedByCustomerId);
         weeklyAllocation.setWeekStart(normalizedWeekStart);
 
         // every new allocation begins in the requested state
@@ -305,6 +318,26 @@ public class WeeklyAllocationService {
                 .orElseThrow(
                         () -> new WeeklyAllocationNotFoundException(id));
 
+        deleteAllocation(weeklyAllocation);
+    }
+
+    // Customer selection is a temporary acting identity until authentication is added.
+    @Transactional
+    public void deleteCustomerRequest(Long id, Long actingCustomerId) {
+        WeeklyAllocation weeklyAllocation = weeklyAllocationRepository.findById(id)
+                .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        if (!weeklyAllocation.getCustomerId().equals(actingCustomerId)
+                || !actingCustomerId.equals(weeklyAllocation.getRequestedByCustomerId())) {
+            throw new CustomerAllocationOwnershipException();
+        }
+        if (weeklyAllocation.getDeliveryStatus() != DeliveryStatus.REQUESTED_ALLOCATION) {
+            throw new AllocationNotRequestedException();
+        }
+        deleteAllocation(weeklyAllocation);
+    }
+
+    private void deleteAllocation(WeeklyAllocation weeklyAllocation) {
+        Long id = weeklyAllocation.getId();
         if (invoiceService.hasInvoice(id)) {
             throw new IssuedInvoiceConflictException();
         }
@@ -353,6 +386,7 @@ public class WeeklyAllocationService {
         return new WeeklyAllocationResponse(
                 weeklyAllocation.getId(),
                 weeklyAllocation.getCustomerId(),
+                weeklyAllocation.getRequestedByCustomerId(),
                 customer.name(),
                 weeklyAllocation.getWeekStart(),
                 weeklyAllocation.getDeliveryStatus(),

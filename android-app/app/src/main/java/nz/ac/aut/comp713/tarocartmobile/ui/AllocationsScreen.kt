@@ -14,28 +14,30 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import nz.ac.aut.comp713.tarocartmobile.data.Allocation
 import nz.ac.aut.comp713.tarocartmobile.data.AllocationApi
 import nz.ac.aut.comp713.tarocartmobile.data.Customer
@@ -47,34 +49,68 @@ import java.util.Locale
 fun AllocationsScreen() {
     var customers by remember { mutableStateOf<List<Customer>>(emptyList()) }
     var allocations by remember { mutableStateOf<List<Allocation>>(emptyList()) }
-    var selectedCustomerId by remember { mutableStateOf<Long?>(null) }
+    var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
+    var loadingCustomers by remember { mutableStateOf(true) }
     var customersError by remember { mutableStateOf<String?>(null) }
     var allocationsError by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
-    var customerMenuOpen by remember { mutableStateOf(false) }
+    var customerRefreshKey by remember { mutableStateOf(0) }
     var refreshKey by remember { mutableStateOf(0) }
     var viewedInvoiceId by remember { mutableStateOf<Long?>(null) }
+    var requesting by remember { mutableStateOf(false) }
+    var deleteTarget by remember { mutableStateOf<Allocation?>(null) }
+    var deleting by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
-    viewedInvoiceId?.let { invoiceId ->
-        InvoicePdfViewer(allocationId = invoiceId, onBack = { viewedInvoiceId = null })
-        return
-    }
-
-    LaunchedEffect(Unit) {
+    LaunchedEffect(customerRefreshKey) {
+        loadingCustomers = true
+        customersError = null
         try {
             customers = AllocationApi.getCustomers()
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
             customersError = exception.message ?: "Could not load customers."
+        } finally {
+            loadingCustomers = false
         }
     }
 
-    LaunchedEffect(selectedCustomerId, refreshKey) {
+    val customer = selectedCustomer
+    if (customer == null) {
+        CustomerSelectionScreen(
+            customers = customers,
+            loading = loadingCustomers,
+            error = customersError,
+            onRetry = { customerRefreshKey++ },
+            onSelect = { selectedCustomer = it }
+        )
+        return
+    }
+
+    viewedInvoiceId?.let { invoiceId ->
+        InvoicePdfViewer(allocationId = invoiceId, onBack = { viewedInvoiceId = null })
+        return
+    }
+
+    if (requesting) {
+        RequestAllocationScreen(
+            customer = customer,
+            onBack = { requesting = false },
+            onCreated = {
+                requesting = false
+                refreshKey++
+            }
+        )
+        return
+    }
+
+    LaunchedEffect(customer.id, refreshKey) {
         loading = true
         allocationsError = null
         try {
-            allocations = AllocationApi.getAllocations(selectedCustomerId)
+            allocations = AllocationApi.getAllocations(customer.id)
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
@@ -83,6 +119,35 @@ fun AllocationsScreen() {
         } finally {
             loading = false
         }
+    }
+
+    deleteTarget?.let { allocation ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Delete this request?") },
+            text = { Text("Allocation #${allocation.id} will be removed while it is still requested.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteTarget = null
+                    deleting = true
+                    deleteError = null
+                    scope.launch {
+                        try {
+                            AllocationApi.deleteCustomerRequest(allocation.id, customer.id)
+                            refreshKey++
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (exception: Exception) {
+                            deleteError = exception.message ?: "Could not delete the request."
+                            refreshKey++
+                        } finally {
+                            deleting = false
+                        }
+                    }
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Cancel") } }
+        )
     }
 
     Scaffold(
@@ -106,48 +171,22 @@ fun AllocationsScreen() {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Filter by customer", style = MaterialTheme.typography.labelLarge)
-                        Spacer(Modifier.height(6.dp))
-                        androidx.compose.foundation.layout.Box {
-                            OutlinedButton(onClick = { customerMenuOpen = true }) {
-                                Text(customers.firstOrNull { it.id == selectedCustomerId }?.name ?: "All customers")
-                            }
-                            DropdownMenu(
-                                expanded = customerMenuOpen,
-                                onDismissRequest = { customerMenuOpen = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("All customers") },
-                                    onClick = {
-                                        selectedCustomerId = null
-                                        customerMenuOpen = false
-                                    }
-                                )
-                                customers.forEach { customer ->
-                                    DropdownMenuItem(
-                                        text = { Text(customer.name) },
-                                        onClick = {
-                                            selectedCustomerId = customer.id
-                                            customerMenuOpen = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Acting as ${customer.name}", style = MaterialTheme.typography.titleMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = {
+                            selectedCustomer = null
+                            allocations = emptyList()
+                            deleteError = null
+                            customerRefreshKey++
+                        }) { Text("Switch customer") }
+                        OutlinedButton(onClick = { refreshKey++ }) { Text("Refresh") }
                     }
-                    Button(onClick = { refreshKey++ }, modifier = Modifier.padding(top = 18.dp)) {
-                        Text("Refresh")
-                    }
+                    Button(onClick = { requesting = true }) { Text("Request allocation") }
                 }
-                customersError?.let {
+                deleteError?.let {
                     Text(
-                        "Customer filter unavailable: $it",
+                        it,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 6.dp)
@@ -187,7 +226,13 @@ fun AllocationsScreen() {
                 }
             } else {
                 items(allocations, key = { it.id }) { allocation ->
-                    AllocationCard(allocation, onViewInvoice = { viewedInvoiceId = it })
+                    AllocationCard(
+                        allocation,
+                        actingCustomerId = customer.id,
+                        deleting = deleting,
+                        onDelete = { deleteTarget = allocation },
+                        onViewInvoice = { viewedInvoiceId = it }
+                    )
                 }
             }
         }
@@ -195,7 +240,13 @@ fun AllocationsScreen() {
 }
 
 @Composable
-private fun AllocationCard(allocation: Allocation, onViewInvoice: (Long) -> Unit) {
+private fun AllocationCard(
+    allocation: Allocation,
+    actingCustomerId: Long,
+    deleting: Boolean,
+    onDelete: () -> Unit,
+    onViewInvoice: (Long) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -231,6 +282,11 @@ private fun AllocationCard(allocation: Allocation, onViewInvoice: (Long) -> Unit
                     Text("View invoice PDF")
                 }
             }
+            if (allocation.customerId == actingCustomerId
+                && allocation.requestedByCustomerId == actingCustomerId
+                && allocation.deliveryStatus == "REQUESTED_ALLOCATION") {
+                TextButton(onClick = onDelete, enabled = !deleting) { Text("Delete request") }
+            }
         }
     }
 }
@@ -246,4 +302,4 @@ private fun InfoLine(label: String, value: String) {
 private fun String.readableStatus(): String = lowercase().replace('_', ' ').replaceFirstChar { it.titlecase() }
 
 private fun formatPrice(amount: Double): String =
-    NumberFormat.getCurrencyInstance(Locale("en", "NZ")).format(amount)
+    NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-NZ")).format(amount)

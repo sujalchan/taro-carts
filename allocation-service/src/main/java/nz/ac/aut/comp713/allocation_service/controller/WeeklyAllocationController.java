@@ -28,6 +28,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import nz.ac.aut.comp713.allocation_service.dto.ApiError;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidCustomerFilterException;
+import nz.ac.aut.comp713.allocation_service.exception.InvalidActingCustomerException;
 
 // REST controller for weekly allocation API requests
 @RestController
@@ -102,6 +103,14 @@ public class WeeklyAllocationController {
 				.body(response);
 	}
 
+	@Operation(summary = "Request a weekly allocation as a customer")
+	@PostMapping("/customer-request")
+	public ResponseEntity<WeeklyAllocationResponse> createCustomerRequest(
+			@Valid @RequestBody WeeklyAllocationRequest request) {
+		WeeklyAllocationResponse response = weeklyAllocationService.createCustomerRequest(request);
+		return ResponseEntity.created(URI.create("/api/v1/allocations/" + response.id())).body(response);
+	}
+
 	@Operation(summary = "Update an existing weekly allocation")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Weekly allocation updated successfully"),
@@ -122,7 +131,25 @@ public class WeeklyAllocationController {
 						request));
 	}
 
-	// delete the weekly allocation identified by the path ID
+	// delete a request only when it was created through the customer-facing API
+	@Operation(summary = "Delete a customer's own requested allocation")
+	@ApiResponses({
+			@ApiResponse(responseCode = "204", description = "Requested allocation deleted"),
+			@ApiResponse(responseCode = "403", description = "Allocation was not requested by this customer"),
+			@ApiResponse(responseCode = "404", description = "Allocation not found"),
+			@ApiResponse(responseCode = "409", description = "Allocation has progressed or has an issued invoice")
+	})
+	@DeleteMapping("/{id}/customer-request")
+	public ResponseEntity<Void> deleteCustomerRequest(@PathVariable Long id,
+			@RequestParam Long customerId) {
+		if (customerId <= 0) {
+			throw new InvalidActingCustomerException();
+		}
+		weeklyAllocationService.deleteCustomerRequest(id, customerId);
+		return ResponseEntity.noContent().build();
+	}
+
+	// manager deletion remains available through the existing endpoint
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> deleteWeeklyAllocation(@PathVariable Long id) {
 		weeklyAllocationService.deleteWeeklyAllocation(id);

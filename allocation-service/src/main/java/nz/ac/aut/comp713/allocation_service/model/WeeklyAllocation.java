@@ -28,6 +28,10 @@ public class WeeklyAllocation {
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
+    // Set only for requests made through the customer-facing API.
+    @Column(name = "requested_by_customer_id")
+    private Long requestedByCustomerId;
+
     // normalized to the Monday of the allocation week by the service layer
     @Column(name = "week_start", nullable = false)
     private LocalDate weekStart;
@@ -55,6 +59,14 @@ public class WeeklyAllocation {
 
     public void setCustomerId(Long customerId) {
         this.customerId = customerId;
+    }
+
+    public Long getRequestedByCustomerId() {
+        return requestedByCustomerId;
+    }
+
+    public void setRequestedByCustomerId(Long requestedByCustomerId) {
+        this.requestedByCustomerId = requestedByCustomerId;
     }
 
     public LocalDate getWeekStart() {
