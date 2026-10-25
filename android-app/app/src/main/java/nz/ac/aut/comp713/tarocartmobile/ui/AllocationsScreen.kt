@@ -53,6 +53,12 @@ fun AllocationsScreen() {
     var loading by remember { mutableStateOf(true) }
     var customerMenuOpen by remember { mutableStateOf(false) }
     var refreshKey by remember { mutableStateOf(0) }
+    var viewedInvoiceId by remember { mutableStateOf<Long?>(null) }
+
+    viewedInvoiceId?.let { invoiceId ->
+        InvoicePdfViewer(allocationId = invoiceId, onBack = { viewedInvoiceId = null })
+        return
+    }
 
     LaunchedEffect(Unit) {
         try {
@@ -181,7 +187,7 @@ fun AllocationsScreen() {
                 }
             } else {
                 items(allocations, key = { it.id }) { allocation ->
-                    AllocationCard(allocation)
+                    AllocationCard(allocation, onViewInvoice = { viewedInvoiceId = it })
                 }
             }
         }
@@ -189,7 +195,7 @@ fun AllocationsScreen() {
 }
 
 @Composable
-private fun AllocationCard(allocation: Allocation) {
+private fun AllocationCard(allocation: Allocation, onViewInvoice: (Long) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -221,7 +227,9 @@ private fun AllocationCard(allocation: Allocation) {
                 }
             }
             if (allocation.invoiceAvailable) {
-                Text("Invoice available", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                OutlinedButton(onClick = { onViewInvoice(allocation.id) }) {
+                    Text("View invoice PDF")
+                }
             }
         }
     }

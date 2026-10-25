@@ -762,6 +762,10 @@ week start, order and payment statuses, and item quantities and prices. Start th
 allocation, customer, and taro services before opening the list in the app. The API
 base URL is defined by `API_BASE_URL` in `android-app/app/src/main/java/nz/ac/aut/comp713/tarocartmobile/data/AllocationApi.kt`.
 
+When an allocation has an issued invoice, its card offers **View invoice PDF**.
+The invoice opens inside the app with page and zoom controls. On Android 17 and
+newer, allow the app's local network request so it can reach the emulator host.
+
 A physical Android device will require the backend computer's reachable local network address instead.
 
 ---

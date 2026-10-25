@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -30,6 +31,38 @@ data class AllocationItem(
 )
 
 object AllocationApi {
+    suspend fun downloadInvoice(cacheDir: File, allocationId: Long): File = withContext(Dispatchers.IO) {
+        val connection = (URL("$API_BASE_URL/api/v1/allocations/$allocationId/invoice.pdf?inline=true")
+            .openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 10_000
+            readTimeout = 15_000
+            setRequestProperty("Accept", "application/pdf")
+        }
+        var file: File? = null
+        try {
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                val body = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                val message = runCatching { JSONObject(body).optString("message") }.getOrNull()
+                throw IOException(message?.takeIf { it.isNotBlank() } ?: "Invoice request failed (HTTP $status).")
+            }
+            if (!connection.contentType.orEmpty().startsWith("application/pdf", ignoreCase = true)) {
+                throw IOException("The server did not return a PDF invoice.")
+            }
+            val invoiceFile = File.createTempFile("invoice-$allocationId-", ".pdf", cacheDir)
+            file = invoiceFile
+            connection.inputStream.use { input -> invoiceFile.outputStream().use { output -> input.copyTo(output) } }
+            if (invoiceFile.length() == 0L) throw IOException("The invoice PDF is empty.")
+            invoiceFile
+        } catch (exception: Exception) {
+            file?.delete()
+            throw exception
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     suspend fun getCustomers(): List<Customer> = withContext(Dispatchers.IO) {
         val json = getJson("/api/v1/customer-service-reference/customers?includeInactive=true") as? JSONArray
             ?: throw IOException("The server returned an unexpected customer response.")
