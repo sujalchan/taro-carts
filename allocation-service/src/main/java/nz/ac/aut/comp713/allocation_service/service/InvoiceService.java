@@ -5,13 +5,17 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
+import nz.ac.aut.comp713.allocation_service.client.CustomerResponse;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;
+import nz.ac.aut.comp713.allocation_service.client.TaroTypeResponse;
 import nz.ac.aut.comp713.allocation_service.exception.InvoiceGenerationException;
 import nz.ac.aut.comp713.allocation_service.exception.InvoiceNotAvailableException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationNotFoundException;
@@ -119,16 +123,24 @@ public class InvoiceService {
 
     private InvoicePdfGenerator.Document buildDocument(WeeklyAllocation allocation,
             String number, LocalDate issuedOn) {
-        var customer = customerClient.getCustomer(allocation.getCustomerId());
+        // keep reference lookups local to this document build so repeated ids are fetched once
+        Map<Long, CustomerResponse> customers = new HashMap<>();
+        Map<Long, TaroTypeResponse> taroTypes = new HashMap<>();
+
+        CustomerResponse customer = customers.computeIfAbsent(
+                allocation.getCustomerId(),
+                customerClient::getCustomer);
         List<InvoicePdfGenerator.Line> lines = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO.setScale(2);
 
         for (AllocationItem item : itemRepository.findByWeeklyAllocationId(allocation.getId())) {
-            String productName = taroClient.getTaroType(item.getTaroTypeId()).name();
+            TaroTypeResponse taroType = taroTypes.computeIfAbsent(
+                    item.getTaroTypeId(),
+                    taroClient::getTaroType);
             BigDecimal price = item.getPricePerKg().setScale(2, RoundingMode.HALF_UP);
             BigDecimal amount = price.multiply(BigDecimal.valueOf(item.getQuantity()))
                     .setScale(2, RoundingMode.HALF_UP);
-            lines.add(new InvoicePdfGenerator.Line(productName, item.getQuantity(), price, amount));
+            lines.add(new InvoicePdfGenerator.Line(taroType.name(), item.getQuantity(), price, amount));
             total = total.add(amount);
         }
 
