@@ -656,6 +656,13 @@ The Maven and Gradle wrappers included with the projects should be used where po
 
 All three backend services should be running for the complete system to operate.
 
+To launch all three services together:
+
+- macOS/Linux: run `./start-services.sh` from the repository root. Logs are written to `logs/`; press Ctrl+C to stop the services.
+- Windows: run `start-services.bat` from the repository root. Each service opens in its own Command Prompt window; close the windows to stop them.
+
+These scripts use the included Maven wrappers and require Java 21.
+
 ### 1. Start Customer Service
 
 From the repository root:
