@@ -167,7 +167,7 @@
 
             addressField?.addEventListener("focusout", () => {
                 setTimeout(() => {
-                    if (!field.contains(document.activeElement)) {
+                    if (!addressField.contains(document.activeElement)) {
                         closeSuggestions();
                         sessionToken = null;
                     }

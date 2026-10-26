@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Choose an account · Taro Carts</title>
+    <link rel="stylesheet" th:href="@{/css/auth.css}" href="/css/auth.css">
+</head>
+<body>
+<div class="page-shell">
+    <header class="site-header">
+        <a class="brand" th:href="@{/login}" href="/login" aria-label="Taro Carts home">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>Taro Carts</span>
+        </a>
+        <a class="header-link" th:href="@{/login}" href="/login">Already have an account? Sign in <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main class="type-panel" aria-labelledby="type-title">
+        <ol class="registration-steps" aria-label="Registration progress">
+            <li aria-current="step"><span class="step-dot">1</span><span>Account type</span></li>
+            <li><span class="step-dot">2</span><span>Account details</span></li>
+            <li><span class="step-dot">3</span><span>Profile details</span></li>
+        </ol>
+
+        <div class="type-heading">
+            <span class="eyebrow">Step 1 of 3</span>
+            <h1 id="type-title">How will you use Taro Carts?</h1>
+            <p>Choose your account type. We’ll guide you through the details next.</p>
+        </div>
+
+        <div class="type-options">
+            <a class="type-card type-card-customer" th:href="@{/register/customer}" href="/register/customer">
+                <span class="type-card-icon" aria-hidden="true">◈</span>
+                <span class="type-card-label">Customer</span>
+                <span class="type-card-copy">Request weekly taro allocations and follow your orders.</span>
+                <span class="type-card-action">Continue as customer <span aria-hidden="true">→</span></span>
+            </a>
+            <a class="type-card type-card-dispatcher" th:href="@{/register/dispatcher}" href="/register/dispatcher">
+                <span class="type-card-icon" aria-hidden="true">↗</span>
+                <span class="type-card-label">Dispatcher</span>
+                <span class="type-card-copy">See assigned deliveries and plan your work.</span>
+                <span class="type-card-action">Continue as dispatcher <span aria-hidden="true">→</span></span>
+            </a>
+        </div>
+
+        <p class="type-note">Every request is reviewed before an account can be used.</p>
+    </main>
+
+    <footer class="site-footer"><span>© Taro Carts</span></footer>
+</div>
+</body>
+</html>

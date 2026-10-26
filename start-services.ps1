@@ -15,6 +15,7 @@ if ([string]::IsNullOrWhiteSpace($placesApiKey)) {
 }
 
 $services = @(
+    @{ Name = "Login Service"; Directory = "login-service"; Port = 8085; ApplicationClass = "nz.ac.aut.comp713.login_service.LoginServiceApplication" },
     @{ Name = "Customer Service"; Directory = "customer-service"; Port = 8081; ApplicationClass = "nz.ac.aut.comp713.customer_service.CustomerServiceApplication" },
     @{ Name = "Dispatcher Service"; Directory = "dispatcher-service"; Port = 8084; ApplicationClass = "nz.ac.aut.comp713.dispatcher_service.DispatcherServiceApplication" },
     @{ Name = "Taro Service"; Directory = "taro-service"; Port = 8083; ApplicationClass = "nz.ac.aut.comp713.taro_service.TaroServiceApplication" },
@@ -47,9 +48,9 @@ try {
             throw "Port $($service.Port) is in use by another process; cannot start $($service.Name)."
         }
 
-        # Only customer and dispatcher services inherit the Maps API keys.
+        # Only browser services with address autocomplete inherit the Maps API key.
         [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_BROWSER_API_KEY", $null, "Process")
-        if ($service.Directory -eq "customer-service" -or $service.Directory -eq "dispatcher-service") {
+        if ($service.Directory -eq "customer-service" -or $service.Directory -eq "dispatcher-service" -or $service.Directory -eq "login-service") {
             if (-not [string]::IsNullOrWhiteSpace($placesApiKey)) {
                 [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_BROWSER_API_KEY", $placesApiKey, "Process")
             }

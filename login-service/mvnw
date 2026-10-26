@@ -1,0 +1,3 @@
+#!/bin/sh
+# Reuse the repository's Maven wrapper while running in login-service's directory.
+exec "$(dirname "$0")/../customer-service/mvnw" "$@"

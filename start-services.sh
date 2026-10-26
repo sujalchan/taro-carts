@@ -26,7 +26,7 @@ start_service() {
 
     (
         cd "$ROOT_DIR/$directory"
-        if [[ "$directory" == "customer-service" || "$directory" == "dispatcher-service" ]]; then
+        if [[ "$directory" == "customer-service" || "$directory" == "dispatcher-service" || "$directory" == "login-service" ]]; then
             if [[ -n "$browser_places_api_key" ]]; then
                 export GOOGLE_MAPS_BROWSER_API_KEY="$browser_places_api_key"
             fi
@@ -51,15 +51,16 @@ stop_services() {
 
 trap stop_services INT TERM EXIT
 
+start_service login-service login-service
 start_service customer-service customer-service
 start_service dispatcher-service dispatcher-service
 start_service taro-service taro-service
 start_service allocation-service allocation-service
 
 printf '\nServices are starting. Press Ctrl+C to stop all of them.\n'
-printf 'Customer:    http://localhost:8081\nDispatcher:  http://localhost:8084/dispatchers\nTaro:        http://localhost:8083\nAllocations: http://localhost:8082\n\n'
+printf 'Login:       http://localhost:8085/login\nCustomer:    http://localhost:8081\nDispatcher:  http://localhost:8084/dispatchers\nTaro:        http://localhost:8083\nAllocations: http://localhost:8082\n\n'
 printf 'Streaming service logs below.\n'
-tail -n 20 -f "$LOG_DIR/customer-service.log" "$LOG_DIR/dispatcher-service.log" "$LOG_DIR/taro-service.log" "$LOG_DIR/allocation-service.log" &
+tail -n 20 -f "$LOG_DIR/login-service.log" "$LOG_DIR/customer-service.log" "$LOG_DIR/dispatcher-service.log" "$LOG_DIR/taro-service.log" "$LOG_DIR/allocation-service.log" &
 tail_pid=$!
 service_pids+=("$tail_pid")
 

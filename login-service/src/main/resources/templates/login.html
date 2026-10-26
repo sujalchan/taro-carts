@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Sign in · Taro Carts</title>
+    <link rel="stylesheet" th:href="@{/css/auth.css}" href="/css/auth.css">
+</head>
+<body>
+<div class="page-shell">
+    <header class="site-header">
+        <a class="brand" th:href="@{/login}" href="/login" aria-label="Taro Carts home">
+            <span class="brand-mark" aria-hidden="true">T</span>
+            <span>Taro Carts</span>
+        </a>
+        <a class="header-link" th:href="@{/register}" href="/register">Create an account <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main class="auth-layout">
+        <section class="story-panel" aria-labelledby="story-title">
+            <span class="eyebrow">A simpler way to stay in step</span>
+            <h1 id="story-title">Your weekly taro, all in one place.</h1>
+            <p>See requests, follow allocations, and keep deliveries moving with one account for your role.</p>
+            <div class="story-steps" aria-label="How it works">
+                <div><span class="step-number">01</span><span>Sign in to your account</span></div>
+                <div><span class="step-number">02</span><span>See what needs your attention</span></div>
+                <div><span class="step-number">03</span><span>Keep the week moving</span></div>
+            </div>
+            <div class="story-art" aria-hidden="true"><span class="art-leaf art-leaf-one"></span><span class="art-leaf art-leaf-two"></span><span class="art-leaf art-leaf-three"></span></div>
+        </section>
+
+        <section class="form-panel" aria-labelledby="login-title">
+            <div class="form-panel-inner">
+                <span class="eyebrow">Welcome back</span>
+                <h2 id="login-title">Sign in</h2>
+                <p class="intro">Enter your details to continue to Taro Carts.</p>
+
+                <form method="post" action="/login" autocomplete="on">
+                    <div class="field">
+                        <label for="username">Username</label>
+                        <input id="username" name="username" type="text" autocomplete="username" required maxlength="100" placeholder="Your username">
+                    </div>
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Your password">
+                    </div>
+                    <button class="primary-button" type="submit" disabled aria-describedby="phase-note">Sign in <span aria-hidden="true">→</span></button>
+                    <p class="phase-note" id="phase-note">Sign-in opens when account setup is complete.</p>
+                </form>
+
+                <div class="form-divider"><span>New to Taro Carts?</span></div>
+                <p class="switch-link"><a th:href="@{/register}" href="/register">Choose your account type</a> to get started.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer"><span>© Taro Carts</span></footer>
+</div>
+</body>
+</html>

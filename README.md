@@ -64,7 +64,7 @@ Actions performed by one user can affect what the other user sees or can do.
 
 ## Architecture
 
-The project contains four independently running Spring Boot backend services and a native Android client.
+The project contains five independently running Spring Boot backend services and a native Android client. `login-service` currently saves registration requests and serves a sign-in page; authentication is a later phase.
 
 ```text
 Web manager / Android worker ───→ allocation-service :8082 ───→ allocation.db
@@ -78,6 +78,7 @@ Web manager / Android worker ───→ allocation-service :8082 ───→ 
                                 customer.db        taro.db
 
 Browser ───→ dispatcher-service :8084 ───→ dispatcher.db
+Browser ───→ login-service :8085 (registration requests and sign-in page)
 ```
 
 Each backend service owns its own persistent data.
@@ -203,7 +204,7 @@ Set the browser key in the ignored repository-root `.env` file:
 GOOGLE_MAPS_BROWSER_API_KEY=your-google-api-key
 ```
 
-Restrict the browser key to the customer-service and dispatcher-service web origins and the Maps JavaScript API and Places API (New). The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read this key and pass it to `customer-service` and `dispatcher-service`; environment variables take precedence. When starting either service directly, set `GOOGLE_MAPS_BROWSER_API_KEY` for address suggestions and selection checks.
+Restrict the browser key to the customer-service, dispatcher-service, and login-service web origins (`http://localhost:8081`, `http://localhost:8084`, and `http://localhost:8085`) and the Maps JavaScript API and Places API (New). The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read this key and pass it to those three services; environment variables take precedence. When starting one of them directly, set `GOOGLE_MAPS_BROWSER_API_KEY` for address suggestions and selection checks. The login-service registration forms use the same Google Places address fill and save pending account requests.
 
 For Android customer editing, add this line to the ignored `android-app/local.properties` file, then sync and rebuild the app:
 
@@ -736,9 +737,9 @@ The Maven and Gradle wrappers included with the projects should be used where po
 
 ## Running the Backend
 
-All four backend services should be running for the complete system to operate.
+The launchers start all five backend services, including `login-service` at `http://localhost:8085/login`. Registration submissions save pending requests; sign-in is not active yet.
 
-To launch all four services together:
+To launch all five services together:
 
 - macOS/Linux: run `./start-services.sh` from the repository root. Logs are written to `logs/`; press Ctrl+C to stop the services.
 - Windows: run `start-services.bat` from the repository root. Each service opens in its own Command Prompt window; close the windows to stop them.
