@@ -36,9 +36,6 @@ async function loadCustomer() {
         document.getElementById("phone").value =
             customer.phone ?? "";
 
-        document.getElementById("active").checked =
-            customer.active;
-
     } catch (error) {
         showError("Unable to communicate with the server.");
     }
@@ -53,8 +50,7 @@ form.addEventListener("submit", async function (event) {
         name: document.getElementById("name").value,
         address: document.getElementById("address").value.trim(),
         contactName: document.getElementById("contactName").value,
-        phone: document.getElementById("phone").value,
-        active: document.getElementById("active").checked
+        phone: document.getElementById("phone").value
     };
 
     try {

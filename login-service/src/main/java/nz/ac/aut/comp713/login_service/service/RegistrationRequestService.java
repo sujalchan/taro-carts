@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import nz.ac.aut.comp713.login_service.model.RegistrationRequest;
 import nz.ac.aut.comp713.login_service.model.RegistrationRole;
+import nz.ac.aut.comp713.login_service.model.RegistrationStatus;
 import nz.ac.aut.comp713.login_service.repository.AccountRepository;
 import nz.ac.aut.comp713.login_service.repository.RegistrationRequestRepository;
 import nz.ac.aut.comp713.login_service.web.RegistrationForm;
@@ -19,12 +20,15 @@ public class RegistrationRequestService {
     private final RegistrationRequestRepository repository;
     private final AccountRepository accounts;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final RegistrationProvisioningService provisioning;
 
     public RegistrationRequestService(RegistrationRequestRepository repository,
-                                      AccountRepository accounts, BCryptPasswordEncoder passwordEncoder) {
+                                      AccountRepository accounts, BCryptPasswordEncoder passwordEncoder,
+                                      RegistrationProvisioningService provisioning) {
         this.repository = repository;
         this.accounts = accounts;
         this.passwordEncoder = passwordEncoder;
+        this.provisioning = provisioning;
     }
 
     public Long submit(RegistrationRole role, RegistrationForm form) {
@@ -45,7 +49,9 @@ public class RegistrationRequestService {
                 trimOptional(form.getPhone()),
                 form.getAddress().trim());
         try {
-            return repository.saveAndFlush(request).getId();
+            Long id = repository.saveAndFlush(request).getId();
+            provisioning.provision(id);
+            return id;
         } catch (DataIntegrityViolationException exception) {
             // The unique database constraint also handles concurrent requests.
             if (repository.existsByNormalizedUsername(normalizedUsername)) {
@@ -55,8 +61,8 @@ public class RegistrationRequestService {
         }
     }
 
-    public boolean exists(Long id) {
-        return repository.existsById(id);
+    public RegistrationStatus status(Long id) {
+        return repository.findById(id).map(RegistrationRequest::getStatus).orElse(null);
     }
 
     private String trimOptional(String value) {

@@ -21,36 +21,53 @@
     <main class="admin-panel">
         <span class="eyebrow">Account administration</span>
         <h1>Account requests</h1>
-        <p class="intro">Review incoming requests. Approval is not available until private customer and dispatcher provisioning is connected.</p>
+        <p class="intro">Review account requests, then enable linked profiles when they are ready to sign in.</p>
+        <div class="form-error" role="alert" th:if="${provisioningError}">Provisioning could not be completed. The request is saved; check the domain service and retry.</div>
+        <div class="form-error" role="alert" th:if="${activationError}">The account and profile could not be fully synchronized. The pending state is shown below; retry the action.</div>
 
         <section aria-labelledby="pending-title">
-            <h2 id="pending-title">Pending requests <span th:text="${#lists.size(requests)}">0</span></h2>
-            <div class="table-scroll" th:if="${!requests.isEmpty()}">
+            <h2 id="pending-title">Pending requests <span th:text="${#lists.size(pendingRequests)}">0</span></h2>
+            <div class="table-scroll" th:if="${!pendingRequests.isEmpty()}">
                 <table>
-                    <thead><tr><th scope="col">Reference</th><th scope="col">Username</th><th scope="col">Type</th><th scope="col">Profile name</th><th scope="col">Submitted</th><th scope="col">Status</th></tr></thead>
-                    <tbody><tr th:each="request : ${requests}">
-                        <td th:text="${request.id}">1</td>
-                        <td th:text="${request.username}">username</td>
-                        <td th:text="${request.role}">CUSTOMER</td>
-                        <td th:text="${request.name}">Profile</td>
-                        <td th:text="${#temporals.format(request.submittedAt, 'dd MMM yyyy HH:mm')}">Date</td>
-                        <td><span class="status-pill">Awaiting provisioning</span></td>
+                    <thead><tr><th scope="col">Reference</th><th scope="col">Username</th><th scope="col">Type</th><th scope="col">Profile name</th><th scope="col">Submitted</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
+                    <tbody><tr th:each="row : ${pendingRequests}">
+                        <td th:text="${row.request.id}">1</td>
+                        <td th:text="${row.request.username}">username</td>
+                        <td th:text="${row.request.role}">CUSTOMER</td>
+                        <td th:text="${row.request.name}">Profile</td>
+                        <td th:text="${#temporals.format(row.request.submittedAt, 'dd MMM yyyy HH:mm')}">Date</td>
+                        <td><span class="status-pill" th:text="${row.status}">Awaiting approval</span></td>
+                        <td>
+                            <form method="post" th:if="${row.retryable}" th:action="@{/admin/requests/{id}/retry(id=${row.request.id})}">
+                                <input type="hidden" name="csrf" th:value="${csrfToken}">
+                                <button class="table-action" type="submit">Retry provisioning</button>
+                            </form>
+                            <span th:if="${!row.retryable}">—</span>
+                        </td>
                     </tr></tbody>
                 </table>
             </div>
-            <p class="empty-state" th:if="${requests.isEmpty()}">No account requests yet.</p>
+            <p class="empty-state" th:if="${pendingRequests.isEmpty()}">No pending account requests.</p>
         </section>
 
         <section aria-labelledby="existing-title">
             <h2 id="existing-title">Login accounts <span th:text="${#lists.size(accounts)}">1</span></h2>
             <div class="table-scroll">
                 <table>
-                    <thead><tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Profile ID</th><th scope="col">Status</th></tr></thead>
+                    <thead><tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Profile ID</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
                     <tbody><tr th:each="account : ${accounts}">
                         <td th:text="${account.username}">admin</td>
                         <td th:text="${account.role}">ADMIN</td>
                         <td th:text="${account.profileId ?: '—'}">—</td>
-                        <td><span class="status-pill" th:text="${account.active ? 'Active' : 'Inactive'}">Active</span></td>
+                        <td><span class="status-pill" th:text="${account.desiredActive != null ? 'Sync pending' : (account.active ? 'Active' : 'Inactive')}">Active</span></td>
+                        <td>
+                            <form method="post" th:if="${account.role.name() != 'ADMIN' && account.profileId != null}" th:action="@{/admin/accounts/{id}/active(id=${account.id})}">
+                                <input type="hidden" name="csrf" th:value="${csrfToken}">
+                                <input type="hidden" name="active" th:value="${account.desiredActive != null ? account.desiredActive : !account.active}">
+                                <button class="table-action" type="submit" th:text="${account.desiredActive != null ? 'Retry sync' : (account.active ? 'Disable' : 'Enable')}">Enable</button>
+                            </form>
+                            <span th:if="${account.role.name() == 'ADMIN'}">—</span>
+                        </td>
                     </tr></tbody>
                 </table>
             </div>

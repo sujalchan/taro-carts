@@ -34,24 +34,6 @@ public class DispatcherService {
     }
 
     @Transactional
-    public DispatcherResponse create(DispatcherRequest request) {
-        String name = request.name().trim();
-        Dispatcher dispatcher = new Dispatcher();
-        dispatcher.setName(name);
-        dispatcher.setNormalizedName(normalize(name));
-        dispatcher.setContactName(clean(request.contactName()));
-        dispatcher.setPhone(clean(request.phone()));
-        dispatcher.setAddress(request.address().trim());
-        dispatcher.setActive(request.active() == null || request.active());
-        try {
-            return toResponse(repository.saveAndFlush(dispatcher));
-        } catch (DataIntegrityViolationException | JpaSystemException ex) {
-            if (!isUniqueConstraintViolation(ex)) throw ex;
-            throw new DispatcherAlreadyExistsException(name);
-        }
-    }
-
-    @Transactional
     public DispatcherResponse update(Long id, DispatcherRequest request) {
         Dispatcher dispatcher = repository.findById(id)
                 .orElseThrow(() -> new DispatcherNotFoundException(id));
@@ -61,7 +43,6 @@ public class DispatcherService {
         dispatcher.setContactName(clean(request.contactName()));
         dispatcher.setPhone(clean(request.phone()));
         dispatcher.setAddress(request.address().trim());
-        if (request.active() != null) dispatcher.setActive(request.active());
         try {
             return toResponse(repository.saveAndFlush(dispatcher));
         } catch (DataIntegrityViolationException | JpaSystemException ex) {

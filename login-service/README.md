@@ -1,36 +1,33 @@
-# Login service: authentication foundation
+# Login service
 
-This service currently provides sign-in page design and working customer/dispatcher account request forms. Run `./mvnw spring-boot:run` from this directory, or use the repository-root `start-services.sh` / `start-services.bat` launcher, then open `http://localhost:8085/login` or `/register`. Registration guides users through account type, account details, and role-specific details. The local wrapper delegates to the Maven wrapper already included with `customer-service`.
+`login-service` runs at `http://localhost:8085`. Start all services with the repository-root launcher, then open `/login` or `/register`. Registration guides the user through account type, credentials, and customer/dispatcher details. The address field uses the same Google Places autocomplete as the domain services; configure `GOOGLE_MAPS_BROWSER_API_KEY` for browser suggestions.
 
-Submitting a registration form validates the fields, hashes the password with BCrypt, and saves a pending request in `login.db`. A confirmation page appears only after that save succeeds. The request is **not yet a customer or dispatcher login account**: private profile provisioning and coordinated activation are still pending Phase 3, so these requests cannot sign in. The existing public create APIs in the domain services are also not yet removed; do not treat this increment as the completed cross-service authorization system.
+Registration saves a BCrypt-hashed request, then asks the appropriate domain service to create an inactive profile through its private endpoint. Login-service creates a linked inactive account and shows a receipt. If a downstream service is unavailable, the request remains pending or marked for repair in `/admin/accounts`; the administrator can retry it. Provisioning uses the registration-request ID as an idempotency key, so retrying after a timeout does not create a second profile.
 
-An active development administrator is seeded once with username `admin` and initial password `admin1234!`. The seed never resets a changed password. Sign in at `/login`, then use `/admin/accounts` to review requests and change the admin password. Changing the password revokes that admin's sessions. Change the initial password before using real data. There is intentionally no approval button yet: enabling an account without a linked, inactive domain profile would violate the plan.
+An active development administrator is seeded once with username `admin` and initial password `admin1234!`. The seed never resets a changed password. Sign in and change this password at `/admin/accounts` before using real data. The admin can enable or disable provisioned accounts there. Enabling activates the domain profile before login access; disabling revokes login access before deactivating the profile. Partial failures leave a visible, retryable desired state. New accounts cannot sign in until enabled.
 
-Login creates a 256-bit opaque `SESSION` cookie and stores only its SHA-256 hash. It is host-only, `HttpOnly`, `SameSite=Lax`, and expires after eight hours by default. Set `LOGIN_COOKIE_SECURE=true` when serving over HTTPS and keep every local service on `localhost` so the cookie can be sent across service ports. `LOGIN_SESSION_LIFETIME` accepts a duration such as `PT8H`. Login and registration forms use a separate CSRF cookie. Repeated failed logins receive a local in-memory backoff; a shared limiter is needed if login-service is deployed in multiple instances.
+The launcher supplies distinct `LOGIN_CUSTOMER_PROVISIONING_SECRET` and `LOGIN_DISPATCHER_PROVISIONING_SECRET` values. Set both to different random strings of at least 32 characters in the ignored root `.env` file for stable restarts. If unset, the launcher generates ephemeral values and shares each only with login-service and its matching domain service. Direct startup requires these environment variables. Internal domain endpoints accept the secret only from loopback addresses in local development. For deployment across hosts, use HTTPS, private networking, and a trusted proxy/network boundary; do not expose the endpoints on the public internet. A manually started service using a different secret cannot provision or activate profiles.
 
-Both registration views use the same New Zealand Google Places address autocomplete as the existing customer and dispatcher forms. Set `GOOGLE_MAPS_BROWSER_API_KEY` or use the root launcher with that value in the ignored `.env` file. The browser key must allow the login-service origin `http://localhost:8085` as well as the existing customer and dispatcher origins.
+Login creates a 256-bit opaque `SESSION` cookie and stores only its SHA-256 hash. The cookie is host-only, `HttpOnly`, `SameSite=Lax`, and expires after eight hours by default. Set `LOGIN_COOKIE_SECURE=true` when serving over HTTPS and keep every local service on `localhost` so the cookie can reach services on different ports. `LOGIN_SESSION_LIFETIME` accepts a duration such as `PT8H`. Login and registration forms use a separate CSRF cookie. Repeated failed logins receive a local in-memory backoff; a shared limiter is needed for multiple login-service instances.
 
-## Route and access contract
+## Routes and access
 
 | Route or operation | Anonymous | Admin | Customer | Dispatcher |
 | --- | --- | --- | --- | --- |
-| `GET /login`, `GET /register`, `GET /register/{customer,dispatcher}` | allowed | future redirect to home | future redirect to home | future redirect to home |
-| `POST /login` | allowed with CSRF token | redirect to admin accounts | future role portal | future role portal |
-| `POST /register/{customer,dispatcher}` | saves pending request | future redirect to home | future redirect to home | future redirect to home |
-| `GET /register/received/{id}` | receipt for saved request | receipt | receipt | receipt |
+| `GET /login`, `GET /register`, `GET /register/{customer,dispatcher}` | allowed | allowed | allowed | allowed |
+| `POST /login` | allowed with CSRF | allowed | allowed if active | allowed if active |
+| `POST /register/{customer,dispatcher}` | creates an inactive request/account | allowed | allowed | allowed |
+| `GET /register/received/{id}` | receipt | receipt | receipt | receipt |
 | `GET /admin/accounts`, `POST /admin/password` | denied | allowed | denied | denied |
-| Admin account approvals | denied | **not implemented until private provisioning** | denied | denied |
-| Customer portal and allocation requests | denied | any customer selected explicitly | own customer ID | denied |
-| Dispatcher portal and assigned deliveries | denied | any dispatcher selected explicitly | denied | own dispatcher ID |
-| Existing management pages and APIs | denied | allowed | denied | denied |
+| `POST /admin/requests/{id}/retry`, `POST /admin/accounts/{id}/active` | denied | allowed with CSRF | denied | denied |
 
-Every protected service must check a session with login-service and authorize from the returned role and linked profile ID. An ID sent by the browser is a selector, never proof of ownership. Public create routes in customer-service and dispatcher-service, including their add buttons and forms, must be removed in the provisioning phase.
+The account cookie is currently enforced by login-service only. Customer-service, dispatcher-service, allocation-service, and taro-service still need Phase 4 session validation and authorization before their management APIs/pages are secure. Customer/dispatcher allocation portals and ownership checks are later phases. An ID supplied by the browser must never be treated as proof of ownership.
 
-## Planned wire contracts
+## Private provisioning contract
 
-- Session cookie: host-only `SESSION`, random opaque value, `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` when `LOGIN_COOKIE_SECURE=true`. Persist only a SHA-256 token hash in `login.db`. Login/logout and admin pages are implemented; cross-service validation is not yet exposed.
-- Introspection: `POST /internal/v1/sessions/introspect`, restricted to services with validation credentials. Request contains the opaque token. Successful response is `accountId`, `username`, `role`, `profileId`, `active`, and `expiresAt`. Missing, expired, revoked, or inactive sessions fail closed.
-- Private provisioning: `POST /internal/v1/customers` and `POST /internal/v1/dispatchers`, each authenticated with a credential only login-service possesses. The profile service forces `active=false` and ignores or rejects any caller-provided active value.
-- Registration input: common `username`, `password`, `confirmPassword`; profile `name`, `contactName`, `phone`, `address`; account type comes from the route, not a trusted form field. Requests are stored pending. The later provisioning phase must create both account and profile inactive.
-- Internal portal calls: after validating the browser session, customer-service or dispatcher-service sends a short-lived signed identity assertion to allocation-service. Allocation-service checks the assertion and enforces role plus ownership again.
-- Authentication errors: browser pages redirect to login with an allowlisted return URL; APIs return `401` for missing or invalid sessions and `403` for insufficient role or ownership. Never follow arbitrary `returnTo` URLs.
+- `POST /internal/v1/customers` or `/internal/v1/dispatchers` creates an inactive profile. `X-Login-Provisioning-Key` carries the service-specific secret and `X-Registration-Request-Id` is a positive, retry-safe registration ID. The request body contains profile details only; any supplied `active` value is ignored by the internal DTO.
+- `PUT /internal/v1/{customers,dispatchers}/{id}/active` changes domain activation with the same secret and JSON `{ "active": true|false }`. Only login-service calls this from the admin workflow.
+- `DELETE /internal/v1/{customers,dispatchers}/{id}` is an authenticated inactive-profile compensation operation; it refuses to remove an active profile.
+- The public `POST /api/v1/customers` and `POST /api/v1/dispatchers` routes and both services' create pages/buttons have been removed. Public profile update requests cannot modify `active`.
+
+Planned Phase 4 validation uses `POST /internal/v1/sessions/introspect` with separate per-service credentials. It will return minimum principal data (`accountId`, `username`, `role`, `profileId`, `active`, `expiresAt`), never hashes or passwords. Protected services must reject missing, expired, revoked, or inactive sessions and enforce role and ownership themselves. This endpoint is not implemented yet.

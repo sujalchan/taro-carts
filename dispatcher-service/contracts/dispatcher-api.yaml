@@ -4,8 +4,9 @@ info:
   title: Dispatcher Service API
   version: 1.0.0
   description: >-
-    REST API for listing, searching, creating, and updating dispatcher profiles,
+    REST API for listing, searching, and updating dispatcher profiles,
     plus the browser configuration used by Google Places address suggestions.
+    Only login-service can create or activate profiles through private endpoints.
 
 servers:
   - url: http://localhost:8084
@@ -52,70 +53,6 @@ paths:
                   address: 20 Example Road, Auckland
                   active: true
 
-    post:
-      tags: [Dispatchers]
-      summary: Create a dispatcher
-      description: >-
-        Creates a dispatcher. Browser forms require a complete New Zealand
-        street address selected from Google Places; the REST API validates that
-        address is nonblank but does not call Google. Names are unique after
-        lowercasing and removing whitespace. If active is omitted, it defaults
-        to true.
-      operationId: createDispatcher
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/DispatcherRequest"
-            example:
-              name: Auckland Dispatch
-              contactName: Hana
-              phone: "+64211234567"
-              address: 20 Example Road, Auckland
-              active: true
-      responses:
-        "201":
-          description: Dispatcher created successfully.
-          headers:
-            Location:
-              description: URI of the newly created dispatcher resource.
-              schema:
-                type: string
-                format: uri
-              example: http://localhost:8084/api/v1/dispatchers/1
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DispatcherResponse"
-              example:
-                id: 1
-                name: Auckland Dispatch
-                contactName: Hana
-                phone: "+64211234567"
-                address: 20 Example Road, Auckland
-                active: true
-        "400":
-          description: Request validation failed, including missing required fields or an invalid phone number.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-              example:
-                code: VALIDATION_ERROR
-                message: Dispatcher address is required
-                path: /api/v1/dispatchers
-        "409":
-          description: A dispatcher with the same normalized name already exists.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-              example:
-                code: DISPATCHER_ALREADY_EXISTS
-                message: Dispatcher 'Auckland Dispatch' already exists.
-                path: /api/v1/dispatchers
-
   /api/v1/dispatchers/{id}:
     parameters:
       - name: id
@@ -161,8 +98,7 @@ paths:
       summary: Update a dispatcher
       description: >-
         Updates the required name and address. Omitted contactName or phone
-        values are cleared; omitted active preserves its existing value. A
-        supplied active value can activate or deactivate the dispatcher.
+        values are cleared. Active status cannot be changed through this API.
         Browser forms require changed addresses to be selected from Google
         Places; the REST API only requires a nonblank address. Names are unique
         after lowercasing and removing whitespace.
@@ -178,7 +114,6 @@ paths:
               contactName: Hana
               phone: "+64211234567"
               address: 20 Example Road, Auckland
-              active: false
       responses:
         "200":
           description: Dispatcher updated successfully.
@@ -274,12 +209,6 @@ components:
             Zealand street address selected from Google Places; direct API
             requests are not Google-validated.
           example: 20 Example Road, Auckland
-        active:
-          type: boolean
-          nullable: true
-          description: Defaults to true on create; if omitted on update, the existing value is preserved.
-          example: true
-
     DispatcherResponse:
       type: object
       required: [id, name, address, active]

@@ -37,6 +37,9 @@ public class Account {
     @Column(nullable = false)
     private boolean active;
 
+    // Non-null while a cross-service activation change needs completion or repair.
+    private Boolean desiredActive;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -67,6 +70,7 @@ public class Account {
     public AccountRole getRole() { return role; }
     public Long getProfileId() { return profileId; }
     public boolean isActive() { return active; }
+    public Boolean getDesiredActive() { return desiredActive; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getLastLoginAt() { return lastLoginAt; }
 
@@ -77,6 +81,18 @@ public class Account {
 
     public void changePassword(String newHash, Instant when) {
         passwordHash = newHash;
+        updatedAt = when;
+    }
+
+    public void beginActivationChange(boolean desired, Instant when) {
+        desiredActive = desired;
+        if (!desired) active = false;
+        updatedAt = when;
+    }
+
+    public void finishActivationChange(boolean value, Instant when) {
+        active = value;
+        desiredActive = null;
         updatedAt = when;
     }
 }

@@ -48,6 +48,14 @@ public class RegistrationRequest {
     @Column(nullable = false)
     private Instant submittedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private RegistrationStatus status;
+
+    private Long profileId;
+
+    private Long accountId;
+
     protected RegistrationRequest() {
     }
 
@@ -62,6 +70,7 @@ public class RegistrationRequest {
         this.phone = phone;
         this.address = address;
         this.submittedAt = Instant.now();
+        this.status = RegistrationStatus.PENDING_PROVISIONING;
     }
 
     public Long getId() {
@@ -69,7 +78,29 @@ public class RegistrationRequest {
     }
 
     public String getUsername() { return username; }
+    public String getNormalizedUsername() { return normalizedUsername; }
+    public String getPasswordHash() { return passwordHash; }
     public RegistrationRole getRole() { return role; }
     public String getName() { return name; }
+    public String getContactName() { return contactName; }
+    public String getPhone() { return phone; }
+    public String getAddress() { return address; }
     public Instant getSubmittedAt() { return submittedAt; }
+    public RegistrationStatus getStatus() { return status == null ? RegistrationStatus.PENDING_PROVISIONING : status; }
+    public Long getProfileId() { return profileId; }
+    public Long getAccountId() { return accountId; }
+
+    public void markProfileCreated(Long id) {
+        profileId = id;
+        status = RegistrationStatus.REPAIR_REQUIRED;
+    }
+
+    public void markProvisioned(Long id) {
+        accountId = id;
+        status = RegistrationStatus.PROVISIONED;
+    }
+
+    public void markRetryable() {
+        status = profileId == null ? RegistrationStatus.PENDING_PROVISIONING : RegistrationStatus.REPAIR_REQUIRED;
+    }
 }

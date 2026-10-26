@@ -20,14 +20,17 @@ public class Dispatcher {
     @Column(nullable = false, unique = true)
     private String normalizedName;
 
+    @Column
+    private Long provisioningRequestId;
+
     private String contactName;
     private String phone;
 
     @Column(nullable = false, length = 500)
     private String address;
 
-    @Column(nullable = false, columnDefinition = "boolean default true")
-    private boolean active = true;
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean active = false;
 
     public Dispatcher() {}
     public Long getId() { return id; }
@@ -35,6 +38,8 @@ public class Dispatcher {
     public void setName(String name) { this.name = name; }
     public String getNormalizedName() { return normalizedName; }
     public void setNormalizedName(String normalizedName) { this.normalizedName = normalizedName; }
+    public Long getProvisioningRequestId() { return provisioningRequestId; }
+    public void setProvisioningRequestId(Long provisioningRequestId) { this.provisioningRequestId = provisioningRequestId; }
     public String getContactName() { return contactName; }
     public void setContactName(String contactName) { this.contactName = contactName; }
     public String getPhone() { return phone; }

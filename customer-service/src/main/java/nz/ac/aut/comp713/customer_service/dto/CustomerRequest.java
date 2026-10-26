@@ -1,6 +1,7 @@
 package nz.ac.aut.comp713.customer_service.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -17,5 +18,5 @@ public record CustomerRequest(
 
 		@Pattern(regexp = "^$|^\\+?[0-9]{7,15}$", message = "Phone number must contain 7 to 15 digits") String phone,
 
-		Boolean active) {
+		@Null(message = "Active status is managed by login-service") Boolean active) {
 }

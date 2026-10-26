@@ -5,7 +5,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.CannotAcquireLockException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import nz.ac.aut.comp713.customer_service.dto.ApiError;
@@ -76,6 +79,29 @@ public class GlobalExceptionHandler {
 			HttpServletRequest request) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(new ApiError("RESOURCE_NOT_FOUND", "Resource not found", request.getRequestURI()));
+	}
+
+	@ExceptionHandler(ResponseStatusException.class)
+	public ResponseEntity<ApiError> handleResponseStatus(ResponseStatusException exception,
+			HttpServletRequest request) {
+		String message = exception.getStatusCode().value() == 403 ? "Access denied" : "Request cannot be completed";
+		return ResponseEntity.status(exception.getStatusCode())
+				.body(new ApiError("REQUEST_DENIED", message, request.getRequestURI()));
+	}
+
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	public ResponseEntity<ApiError> handleUnsupportedMethod(HttpRequestMethodNotSupportedException exception,
+			HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+				.body(new ApiError("METHOD_NOT_ALLOWED", "Method not allowed", request.getRequestURI()));
+	}
+
+	@ExceptionHandler(CannotAcquireLockException.class)
+	public ResponseEntity<ApiError> handleBusyDatabase(CannotAcquireLockException exception,
+			HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+				.header("Retry-After", "1")
+				.body(new ApiError("DATABASE_BUSY", "Profile store is busy; retry the request", request.getRequestURI()));
 	}
 
 	// catch any unhandled exception and avoid exposing internal implementation

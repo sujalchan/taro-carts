@@ -82,10 +82,12 @@ public class AccountPageController {
 
     @GetMapping("/register/received/{id}")
     public String requestReceived(@PathVariable Long id, Model model) {
-        if (!registrationRequestService.exists(id)) {
+        var status = registrationRequestService.status(id);
+        if (status == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         model.addAttribute("requestId", id);
+        model.addAttribute("requestStatus", status);
         return "request-received";
     }
 

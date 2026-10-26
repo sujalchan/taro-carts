@@ -32,44 +32,12 @@ public class DispatcherPageController {
         return "dispatchers";
     }
 
-    @GetMapping("/dispatchers/new")
-    public String newDispatcher(Model model) {
-        model.addAttribute("active", true);
-        return "dispatcher-form";
-    }
-
-    @PostMapping("/dispatchers/new")
-    public String create(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String contactName,
-            @RequestParam(required = false) String phone,
-            @RequestParam(required = false) String address,
-            @RequestParam(defaultValue = "false") boolean active,
-            Model model) {
-        DispatcherRequest request = new DispatcherRequest(name, contactName, phone, address, active);
-        var violations = validator.validate(request);
-        if (!violations.isEmpty()) {
-            addValues(model, name, contactName, phone, address, active);
-            model.addAttribute("errors", violations.stream().map(v -> v.getMessage()).toList());
-            return "dispatcher-form";
-        }
-        try {
-            dispatcherService.create(request);
-        } catch (DispatcherAlreadyExistsException exception) {
-            addValues(model, name, contactName, phone, address, active);
-            model.addAttribute("errors", List.of(exception.getMessage()));
-            return "dispatcher-form";
-        }
-        return "redirect:/dispatchers";
-    }
-
     @GetMapping("/dispatchers/{id}/edit")
     public String editDispatcher(@PathVariable Long id, Model model) {
         try {
             var dispatcher = dispatcherService.getById(id);
             model.addAttribute("dispatcherId", dispatcher.id());
-            addValues(model, dispatcher.name(), dispatcher.contactName(), dispatcher.phone(), dispatcher.address(),
-                    dispatcher.active());
+            addValues(model, dispatcher.name(), dispatcher.contactName(), dispatcher.phone(), dispatcher.address());
             return "dispatcher-edit-form";
         } catch (DispatcherNotFoundException exception) {
             return "redirect:/dispatchers";
@@ -83,13 +51,12 @@ public class DispatcherPageController {
             @RequestParam(required = false) String contactName,
             @RequestParam(required = false) String phone,
             @RequestParam(required = false) String address,
-            @RequestParam(defaultValue = "false") boolean active,
             Model model) {
-        DispatcherRequest request = new DispatcherRequest(name, contactName, phone, address, active);
+        DispatcherRequest request = new DispatcherRequest(name, contactName, phone, address, null);
         var violations = validator.validate(request);
         if (!violations.isEmpty()) {
             model.addAttribute("dispatcherId", id);
-            addValues(model, name, contactName, phone, address, active);
+            addValues(model, name, contactName, phone, address);
             model.addAttribute("errors", violations.stream().map(v -> v.getMessage()).toList());
             return "dispatcher-edit-form";
         }
@@ -97,18 +64,17 @@ public class DispatcherPageController {
             dispatcherService.update(id, request);
         } catch (DispatcherAlreadyExistsException | DispatcherNotFoundException exception) {
             model.addAttribute("dispatcherId", id);
-            addValues(model, name, contactName, phone, address, active);
+            addValues(model, name, contactName, phone, address);
             model.addAttribute("errors", List.of(exception.getMessage()));
             return "dispatcher-edit-form";
         }
         return "redirect:/dispatchers";
     }
 
-    private void addValues(Model model, String name, String contactName, String phone, String address, boolean active) {
+    private void addValues(Model model, String name, String contactName, String phone, String address) {
         model.addAttribute("name", name);
         model.addAttribute("contactName", contactName);
         model.addAttribute("phone", phone);
         model.addAttribute("address", address);
-        model.addAttribute("active", active);
     }
 }

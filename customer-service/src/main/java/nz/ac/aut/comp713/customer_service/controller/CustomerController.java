@@ -1,18 +1,14 @@
 package nz.ac.aut.comp713.customer_service.controller;
 
-import java.net.URI;
 import java.util.List;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import jakarta.validation.Valid;
 import nz.ac.aut.comp713.customer_service.dto.CustomerRequest;
@@ -54,32 +50,6 @@ public class CustomerController {
     @GetMapping("/{id}")
     public CustomerResponse getCustomerById(@PathVariable Long id) {
         return customerService.getCustomerById(id);
-    }
-
-    @Operation(summary = "Create a customer")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Customer created successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid customer data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "409", description = "Customer already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
-    })
-    // validate the request body before creating a customer
-    @PostMapping
-    public ResponseEntity<CustomerResponse> createCustomer(
-            @Valid @RequestBody CustomerRequest request) {
-
-        CustomerResponse created = customerService.createCustomer(request);
-
-        // build the URI of the created customer for the Location header
-        URI location = ServletUriComponentsBuilder
-                .fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(created.id())
-                .toUri();
-
-        // returns 201 created with the new resource location and response body
-        return ResponseEntity
-                .created(location)
-                .body(created);
     }
 
     @Operation(summary = "Update an existing customer")

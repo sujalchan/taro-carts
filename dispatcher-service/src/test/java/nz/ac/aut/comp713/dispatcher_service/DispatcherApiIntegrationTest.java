@@ -1,9 +1,13 @@
 package nz.ac.aut.comp713.dispatcher_service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,150 +25,123 @@ import nz.ac.aut.comp713.dispatcher_service.repository.DispatcherRepository;
 @AutoConfigureMockMvc
 class DispatcherApiIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    private static final String SECRET = "test-dispatcher-secret-0123456789abcdef0123456789abcdef";
+    private static final String VALID = """
+            {"name":"Auckland Dispatch","contactName":"Hana",
+             "phone":"+64211234567","address":"20 Example Road, Auckland"}
+            """;
 
-    @Autowired
-    private DispatcherRepository dispatcherRepository;
+    @Autowired MockMvc mvc;
+    @Autowired DispatcherRepository dispatchers;
 
     @BeforeEach
     void clearDispatchers() {
-        dispatcherRepository.deleteAll();
+        dispatchers.deleteAll();
     }
 
     @Test
-    void clientPagesAreServed() throws Exception {
-        mockMvc.perform(get("/dispatchers-client.html")).andExpect(status().isOk());
-        mockMvc.perform(get("/dispatcher-new-client.html")).andExpect(status().isOk());
-        mockMvc.perform(get("/dispatcher-edit-client.html")).andExpect(status().isOk());
+    void publicCreateRoutesAndPagesAreGone() throws Exception {
+        mvc.perform(post("/api/v1/dispatchers").contentType(MediaType.APPLICATION_JSON).content(VALID))
+                .andExpect(status().isMethodNotAllowed());
+        mvc.perform(get("/dispatchers/new")).andExpect(status().isNotFound());
+        mvc.perform(post("/dispatchers/new").param("name", "Forged"))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/dispatcher-new-client.html")).andExpect(status().isNotFound());
+        mvc.perform(get("/dispatchers")).andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("Create Dispatcher"))));
+        mvc.perform(get("/dispatchers-client.html")).andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("Add Dispatcher"))));
+        assertThat(dispatchers.count()).isZero();
     }
 
     @Test
-    void listStartsEmpty() throws Exception {
-        mockMvc.perform(get("/api/v1/dispatchers"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$", hasSize(0)));
+    void secretAndLoopbackAreRequired() throws Exception {
+        mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "1")
+                .contentType(MediaType.APPLICATION_JSON).content(VALID))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "1")
+                .header("X-Login-Provisioning-Key", "wrong")
+                .contentType(MediaType.APPLICATION_JSON).content(VALID))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "1")
+                .header("X-Login-Provisioning-Key", SECRET)
+                .with(request -> { request.setRemoteAddr("203.0.113.10"); return request; })
+                .contentType(MediaType.APPLICATION_JSON).content(VALID))
+                .andExpect(status().isForbidden());
+        assertThat(dispatchers.count()).isZero();
     }
 
     @Test
-    void createDispatcherReturnsCreatedProfile() throws Exception {
-        mockMvc.perform(post("/api/v1/dispatchers")
+    void provisioningIgnoresForgedActiveAndActivationIsPrivate() throws Exception {
+        mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "1")
+                .header("X-Login-Provisioning-Key", SECRET)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(dispatcherJson("Auckland Dispatch", "Hana", "+64211234567", "20 Example Road, Auckland")))
-                .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
-                .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.name").value("Auckland Dispatch"))
-                .andExpect(jsonPath("$.contactName").value("Hana"))
-                .andExpect(jsonPath("$.phone").value("+64211234567"))
-                .andExpect(jsonPath("$.address").value("20 Example Road, Auckland"))
-                .andExpect(jsonPath("$.active").value(true));
-    }
-
-    @Test
-    void activeStateDefaultsToTrueAndCanBeUpdated() throws Exception {
-        mockMvc.perform(post("/api/v1/dispatchers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(dispatcherJson("Auckland Dispatch", "Hana", "+64211234567", "20 Example Road, Auckland", false)))
+                .content("""
+                        {"name":"Auckland Dispatch","address":"20 Example Road, Auckland","active":true}
+                        """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.active").value(false));
-
-        Long id = dispatcherRepository.findAll().getFirst().getId();
-
-        mockMvc.perform(get("/dispatchers/{id}/edit", id))
-                .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
-                        .string(org.hamcrest.Matchers.containsString("id=\"active\" name=\"active\" value=\"true\"")));
-
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
-                "/api/v1/dispatchers/{id}", id)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(dispatcherJson("Auckland Dispatch", "Hana", "+64211234567", "20 Example Road, Auckland")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.active").value(false));
-
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
-                "/api/v1/dispatchers/{id}", id)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(dispatcherJson("Auckland Dispatch", "Hana", "+64211234567", "20 Example Road, Auckland", true)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.active").value(true));
+        Long id = dispatchers.findAll().getFirst().getId();
+        mvc.perform(put("/api/v1/dispatchers/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"Auckland Dispatch","address":"20 Example Road, Auckland","active":true}
+                        """))
+                .andExpect(status().isBadRequest());
+        assertThat(dispatchers.findById(id).orElseThrow().isActive()).isFalse();
+        mvc.perform(put("/internal/v1/dispatchers/{id}/active", id)
+                .header("X-Login-Provisioning-Key", SECRET)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":true}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.active").value(true));
     }
 
     @Test
-    void getByIdAndSearchReturnCreatedDispatcher() throws Exception {
-        mockMvc.perform(post("/api/v1/dispatchers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(dispatcherJson("Auckland Dispatch", "Hana", "+64211234567", "20 Example Road, Auckland")))
-                .andExpect(status().isCreated());
-
-        Long id = dispatcherRepository.findAll().getFirst().getId();
-
-        mockMvc.perform(get("/api/v1/dispatchers/{id}", id))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(id))
+    void readSearchUpdateAndDuplicateChecksStillWork() throws Exception {
+        provision(VALID);
+        Long id = dispatchers.findAll().getFirst().getId();
+        mvc.perform(get("/api/v1/dispatchers/{id}", id)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Auckland Dispatch"));
-
-        mockMvc.perform(get("/api/v1/dispatchers").param("search", "Example Road"))
+        mvc.perform(get("/api/v1/dispatchers").param("search", "Example Road"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
+        mvc.perform(put("/api/v1/dispatchers/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"Auckland Dispatch","address":"22 Example Road, Auckland"}
+                        """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].address").value("20 Example Road, Auckland"));
+                .andExpect(jsonPath("$.active").value(false));
+        mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "2")
+                .header("X-Login-Provisioning-Key", SECRET)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"aucklanddispatch","address":"24 Example Road, Auckland"}
+                        """))
+                .andExpect(status().isConflict());
     }
 
     @Test
-    void missingAddressIsRejected() throws Exception {
-        mockMvc.perform(post("/api/v1/dispatchers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Auckland Dispatch\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.message").value("Dispatcher address is required"));
+    void invalidDataAndUnknownProfileAreRejected() throws Exception {
+        mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "1")
+                .header("X-Login-Provisioning-Key", SECRET)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Auckland Dispatch\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/dispatchers/999")).andExpect(status().isNotFound());
     }
 
     @Test
-    void invalidPhoneNumberIsRejected() throws Exception {
-        mockMvc.perform(post("/api/v1/dispatchers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(dispatcherJson("Auckland Dispatch", "Hana", "12AB", "20 Example Road, Auckland")))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Phone number must contain 7 to 15 digits"));
+    void retryingTheSameRegistrationReturnsTheSameProfile() throws Exception {
+        provision(VALID);
+        Long firstId = dispatchers.findAll().getFirst().getId();
+        mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "1")
+                .header("X-Login-Provisioning-Key", SECRET)
+                .contentType(MediaType.APPLICATION_JSON).content(VALID))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(firstId));
+        assertThat(dispatchers.count()).isEqualTo(1);
     }
 
-    @Test
-    void duplicateNamesAreCaseAndWhitespaceInsensitive() throws Exception {
-        mockMvc.perform(post("/api/v1/dispatchers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(dispatcherJson("Auckland Dispatch", null, null, "20 Example Road, Auckland")))
+    private void provision(String body) throws Exception {
+        mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "1")
+                .header("X-Login-Provisioning-Key", SECRET)
+                .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated());
-
-        mockMvc.perform(post("/api/v1/dispatchers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(dispatcherJson("aucklanddispatch", null, null, "22 Example Road, Auckland")))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("DISPATCHER_ALREADY_EXISTS"));
-    }
-
-    @Test
-    void unknownDispatcherReturnsNotFound() throws Exception {
-        mockMvc.perform(get("/api/v1/dispatchers/999"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("DISPATCHER_NOT_FOUND"))
-                .andExpect(jsonPath("$.path").value("/api/v1/dispatchers/999"));
-    }
-
-    private String dispatcherJson(String name, String contactName, String phone, String address) {
-        return dispatcherJson(name, contactName, phone, address, null);
-    }
-
-    private String dispatcherJson(String name, String contactName, String phone, String address, Boolean active) {
-        return """
-                {"name":"%s","contactName":%s,"phone":%s,"address":"%s"%s}
-                """.formatted(name, jsonValue(contactName), jsonValue(phone), address,
-                        active == null ? "" : ",\"active\":" + active);
-    }
-
-    private String jsonValue(String value) {
-        return value == null ? "null" : "\"" + value + "\"";
     }
 }

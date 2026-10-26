@@ -29,7 +29,6 @@
             <a href="/dispatchers" class="search-clear">Clear</a>
         </div>
     </form>
-    <p><a class="button-primary" href="/dispatchers/new">Create Dispatcher</a></p>
     <p th:if="${#lists.isEmpty(dispatchers)}">No dispatchers found.</p>
     <div class="table-scroll" role="region" aria-label="Dispatcher table" tabindex="0">
         <table th:if="${!#lists.isEmpty(dispatchers)}" border="1">

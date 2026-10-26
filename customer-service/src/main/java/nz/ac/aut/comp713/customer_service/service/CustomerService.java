@@ -41,35 +41,6 @@ public class CustomerService {
         return toResponse(customer);
     }
 
-    // create a customer within a transaction so the database write is atomic
-    @Transactional
-    public CustomerResponse createCustomer(CustomerRequest request) {
-
-        String name = request.name();
-        String normalizedName = name.toLowerCase().replaceAll("\\s+", "");
-
-        Customer customer = new Customer();
-        customer.setName(name);
-        customer.setAddress(request.address().trim());
-        customer.setNormalizedName(normalizedName);
-        customer.setContactName(request.contactName());
-        customer.setPhone(request.phone());
-
-        // set the active status if provided in the request
-        if (request.active() != null) {
-            customer.setActive(request.active());
-        }
-
-        // flush immediately so database uniqueness violations are detected here
-        try {
-            Customer savedCustomer = customerRepository.saveAndFlush(customer);
-            return toResponse(savedCustomer);
-        } catch (JpaSystemException e) {
-            // convert the database constraint failure into a domain-specific conflict
-            throw new CustomerAlreadyExistsException(name);
-        }
-    }
-
     // update an existing customer within a transaction
     @Transactional
     public CustomerResponse updateCustomer(Long id, CustomerRequest request) {
@@ -84,11 +55,6 @@ public class CustomerService {
         customer.setNormalizedName(normalizedName);
         customer.setContactName(request.contactName());
         customer.setPhone(request.phone());
-
-        // set the active status if provided in the request
-        if (request.active() != null) {
-            customer.setActive(request.active());
-        }
 
         // flush immediately so duplicate-name conflicts are raised before returning
         try {

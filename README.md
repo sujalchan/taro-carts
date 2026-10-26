@@ -64,7 +64,7 @@ Actions performed by one user can affect what the other user sees or can do.
 
 ## Architecture
 
-The project contains five independently running Spring Boot backend services and a native Android client. `login-service` now supports admin sign-in and sessions and saves customer/dispatcher registration requests. Cross-service authorization and account approval are not yet connected.
+The project contains five independently running Spring Boot backend services and a native Android client. `login-service` handles registration, provisions inactive customer/dispatcher profiles, and lets the seeded admin enable or disable linked accounts. Session validation and role-based protection in the other services are planned for the next phase.
 
 ```text
 Web manager / Android worker ───→ allocation-service :8082 ───→ allocation.db
@@ -78,7 +78,10 @@ Web manager / Android worker ───→ allocation-service :8082 ───→ 
                                 customer.db        taro.db
 
 Browser ───→ dispatcher-service :8084 ───→ dispatcher.db
-Browser ───→ login-service :8085 (admin login and registration requests)
+Browser ───→ login-service :8085 (registration, login, admin approval)
+                       │
+                       └── private provisioning/activation → customer-service :8081
+                                                          or dispatcher-service :8084
 ```
 
 Each backend service owns its own persistent data.
@@ -180,7 +183,7 @@ The build systems are independent and do not need to match because communication
 http://localhost:8081
 ```
 
-It owns customer records and supports customer creation, retrieval, updates, search, and activation.
+It owns customer records and supports retrieval, updates, and search. Only login-service can create or activate customers through private endpoints.
 New customers require an address. Existing customers without one can be viewed and must enter an address when edited.
 Its SQLite database is `customer.db`.
 
@@ -192,7 +195,7 @@ Its SQLite database is `customer.db`.
 http://localhost:8084
 ```
 
-It creates, lists, searches, and edits dispatcher profiles with dispatcher name, contact, phone number, address, and active status. New dispatchers are active by default. Its SQLite database is `dispatcher.db`. Server-rendered pages are `/dispatchers`, `/dispatchers/new`, and `/dispatchers/{id}/edit`; client-rendered pages are `/dispatchers-client.html`, `/dispatcher-new-client.html`, and `/dispatcher-edit-client.html`. Create forms require a complete address selected from Google Places; edit forms allow an unchanged saved address and require a Places selection for changes.
+It lists, searches, and edits dispatcher profiles. Only login-service can create or activate dispatchers, and newly provisioned profiles are inactive. Its SQLite database is `dispatcher.db`. Server-rendered pages are `/dispatchers` and `/dispatchers/{id}/edit`; client-rendered pages are `/dispatchers-client.html` and `/dispatcher-edit-client.html`. Edit forms allow an unchanged saved address and require a Places selection for changes.
 
 ### Google Maps address suggestions and validation
 
@@ -204,7 +207,7 @@ Set the browser key in the ignored repository-root `.env` file:
 GOOGLE_MAPS_BROWSER_API_KEY=your-google-api-key
 ```
 
-Restrict the browser key to the customer-service, dispatcher-service, and login-service web origins (`http://localhost:8081`, `http://localhost:8084`, and `http://localhost:8085`) and the Maps JavaScript API and Places API (New). The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read this key and pass it to those three services; environment variables take precedence. When starting one of them directly, set `GOOGLE_MAPS_BROWSER_API_KEY` for address suggestions and selection checks. The login-service registration forms use the same Google Places address fill and save pending account requests.
+Restrict the browser key to the customer-service, dispatcher-service, and login-service web origins (`http://localhost:8081`, `http://localhost:8084`, and `http://localhost:8085`) and the Maps JavaScript API and Places API (New). The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read this key and pass it to those three services; environment variables take precedence. When starting one of them directly, set `GOOGLE_MAPS_BROWSER_API_KEY` for address suggestions and selection checks. The login-service registration forms use the same Google Places address fill before provisioning an inactive account.
 
 For Android customer editing, add this line to the ignored `android-app/local.properties` file, then sync and rebuild the app:
 
@@ -737,7 +740,9 @@ The Maven and Gradle wrappers included with the projects should be used where po
 
 ## Running the Backend
 
-The launchers start all five backend services, including `login-service` at `http://localhost:8085/login`. The seeded development admin can sign in with `admin` / `admin1234!` and should immediately change that password at `/admin/accounts`. Registration submissions still save pending requests; customer/dispatcher login and approval wait for private profile provisioning.
+The launchers start all five backend services, including `login-service` at `http://localhost:8085/login`. The seeded development admin can sign in with `admin` / `admin1234!` and should immediately change that password at `/admin/accounts`. Registration provisions an inactive customer or dispatcher profile and linked account; the admin enables it from `/admin/accounts`. If provisioning is temporarily unavailable, the request remains visible there for retry.
+
+The launcher supplies separate customer and dispatcher provisioning secrets. Set `LOGIN_CUSTOMER_PROVISIONING_SECRET` and `LOGIN_DISPATCHER_PROVISIONING_SECRET` to distinct random values of at least 32 characters in the ignored root `.env` file for stable restarts; if either is unset, the launcher generates an ephemeral value for that run. Direct service startup requires the relevant secret in its environment. The private endpoints accept the credential only from loopback in local development; use TLS and private networking when deploying beyond one host. Restart the services together if you rely on ephemeral launcher secrets.
 
 To launch all five services together:
 

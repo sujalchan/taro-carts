@@ -38,86 +38,6 @@ public class CustomerPageController {
         return "customers";
     }
 
-    // show the create form with new customers active by default
-    @GetMapping("/customers/new")
-    public String getCreateCustomerPage(Model model) {
-        model.addAttribute("active", true);
-        return "customer-form";
-    }
-
-    @PostMapping("/customers/new")
-    public String createCustomer(
-            @RequestParam String name,
-            @RequestParam(defaultValue = "") String address,
-            @RequestParam(required = false) String contactName,
-            @RequestParam(required = false) String phone,
-            @RequestParam(defaultValue = "false") boolean active,
-            Model model) {
-
-        CustomerRequest request = new CustomerRequest(
-                name,
-                address,
-                contactName,
-                phone,
-                active);
-
-        // run the same validation rules used by the API
-        var violations = validator.validate(request);
-
-        // return validation messages and preserve the submitted form values
-        if (!violations.isEmpty()) {
-            List<String> errors = violations.stream()
-                    .map(violation -> violation.getMessage())
-                    .toList();
-
-            addFormValues(
-                    model,
-                    name,
-                    address,
-                    contactName,
-                    phone,
-                    active);
-
-            model.addAttribute("errors", errors);
-            return "customer-form";
-        }
-
-        // show the duplicate customer error without losing the entered form data
-        try {
-            customerService.createCustomer(request);
-        } catch (CustomerAlreadyExistsException exception) {
-
-            addFormValues(
-                    model,
-                    name,
-                    address,
-                    contactName,
-                    phone,
-                    active);
-
-            model.addAttribute("errors", List.of(exception.getMessage()));
-            return "customer-form";
-        }
-
-        return "redirect:/customers";
-    }
-
-    // restore submitted values when the create form has to be displayed again
-    private void addFormValues(
-            Model model,
-            String name,
-            String address,
-            String contactName,
-            String phone,
-            boolean active) {
-
-        model.addAttribute("name", name);
-        model.addAttribute("address", address);
-        model.addAttribute("contactName", contactName);
-        model.addAttribute("phone", phone);
-        model.addAttribute("active", active);
-    }
-
     // load the existing customer and populate the edit form
     @GetMapping("/customers/{id}/edit")
     public String getEditCustomerPage(
@@ -131,7 +51,6 @@ public class CustomerPageController {
         model.addAttribute("address", customer.address());
         model.addAttribute("contactName", customer.contactName());
         model.addAttribute("phone", customer.phone());
-        model.addAttribute("active", customer.active());
 
         return "customer-edit-form";
     }
@@ -144,7 +63,6 @@ public class CustomerPageController {
             @RequestParam(defaultValue = "") String address,
             @RequestParam(required = false) String contactName,
             @RequestParam(required = false) String phone,
-            @RequestParam(defaultValue = "false") boolean active,
             Model model) {
 
         CustomerRequest request = new CustomerRequest(
@@ -152,7 +70,7 @@ public class CustomerPageController {
                 address,
                 contactName,
                 phone,
-                active);
+                null);
 
         var violations = validator.validate(request);
 
@@ -170,8 +88,7 @@ public class CustomerPageController {
                     name,
                     address,
                     contactName,
-                    phone,
-                    active);
+                    phone);
 
             model.addAttribute("errors", errors);
 
@@ -189,8 +106,7 @@ public class CustomerPageController {
                     name,
                     address,
                     contactName,
-                    phone,
-                    active);
+                    phone);
 
             model.addAttribute(
                     "errors",
@@ -209,14 +125,12 @@ public class CustomerPageController {
             String name,
             String address,
             String contactName,
-            String phone,
-            boolean active) {
+            String phone) {
 
         model.addAttribute("customerId", customerId);
         model.addAttribute("name", name);
         model.addAttribute("address", address);
         model.addAttribute("contactName", contactName);
         model.addAttribute("phone", phone);
-        model.addAttribute("active", active);
     }
 }

@@ -4,7 +4,8 @@ info:
   title: Customer Service API
   version: 1.0.0
   description: >
-    REST API for managing customers in the Taro Allocation System.
+    REST API for listing and editing customers in the Taro Allocation System.
+    Only login-service can create or activate customer profiles through private endpoints.
 
 servers:
   - url: http://localhost:8081
@@ -25,67 +26,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CustomerResponse"
-
-    post:
-      summary: Create a customer
-      operationId: createCustomer
-
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CustomerRequest"
-            example:
-              name: Island Foods
-              address: 12 Market Street, Auckland
-              contactName: John
-              phone: "0211234567"
-              active: true
-
-      responses:
-        "201":
-          description: Customer created successfully
-          headers:
-            Location:
-              description: URI of the newly created customer
-              schema:
-                type: string
-                format: uri
-              example: http://localhost:8081/api/v1/customers/1
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CustomerResponse"
-              example:
-                id: 1
-                name: Island Foods
-                address: 12 Market Street, Auckland
-                contactName: John
-                phone: "0211234567"
-                active: true
-
-        "400":
-          description: Invalid customer data
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-              example:
-                code: VALIDATION_ERROR
-                message: Customer name is required
-                path: /api/v1/customers
-
-        "409":
-          description: Customer already exists
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-              example:
-                code: CUSTOMER_ALREADY_EXISTS
-                message: Customer 'Island Foods' already exists.
-                path: /api/v1/customers
 
   /api/v1/customers/{id}:
     get:
@@ -153,7 +93,6 @@ paths:
               address: 12 Market Street, Auckland
               contactName: James
               phone: "0219999999"
-              active: true
 
       responses:
         "200":
@@ -233,11 +172,6 @@ components:
           description: Optional phone number containing 7 to 15 digits, optionally starting with +
           pattern: '^\+?[0-9]{7,15}$'
           example: "0211234567"
-
-        active:
-          type: boolean
-          default: true
-          example: true
 
     CustomerResponse:
       type: object

@@ -49,7 +49,7 @@ public class SessionService {
         return new IssuedSession(token, expiresAt);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Optional<LoginSession> validate(String token) {
         if (!isTokenShapeValid(token)) return Optional.empty();
         Optional<LoginSession> session = sessions.findByTokenHashAndRevokedAtIsNull(hash(token));
@@ -60,7 +60,6 @@ public class SessionService {
                     && session.get().getAccount().getProfileId() == null)) {
             return Optional.empty();
         }
-        session.get().seenAt(now);
         return session;
     }
 

@@ -1,11 +1,12 @@
 package nz.ac.aut.comp713.dispatcher_service.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** Fields accepted when creating or updating a dispatcher. */
+/** Fields accepted when updating a dispatcher. */
 @Schema(description = "Dispatcher details. Browser forms require users to select an address suggestion before submitting; the REST API only enforces that the address is nonblank.")
 public record DispatcherRequest(
         @Schema(description = "Dispatcher's display name; required and limited to 100 characters", example = "Mere Tahana", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 100)
@@ -22,10 +23,11 @@ public record DispatcherRequest(
         @NotBlank(message = "Dispatcher address is required")
         @Size(max = 500, message = "Dispatcher address must be 500 characters or fewer")
         String address,
-        @Schema(description = "Whether the dispatcher is active. Defaults to true on create; omitted on update preserves the current value.", example = "true")
+        @Schema(description = "Activation is controlled only by login-service")
+        @Null(message = "Active status is managed by login-service")
         Boolean active) {
 
-    /** Creates a request without explicitly setting active; creation defaults it to true. */
+    /** Creates an update request without an activation change. */
     public DispatcherRequest(String name, String contactName, String phone, String address) {
         this(name, contactName, phone, address, null);
     }

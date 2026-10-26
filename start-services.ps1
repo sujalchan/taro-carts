@@ -2,16 +2,38 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $originalPlacesKey = [Environment]::GetEnvironmentVariable("GOOGLE_MAPS_BROWSER_API_KEY", "Process")
+$originalCustomerSecret = [Environment]::GetEnvironmentVariable("LOGIN_CUSTOMER_PROVISIONING_SECRET", "Process")
+$originalDispatcherSecret = [Environment]::GetEnvironmentVariable("LOGIN_DISPATCHER_PROVISIONING_SECRET", "Process")
 $placesApiKey = $originalPlacesKey
-if ([string]::IsNullOrWhiteSpace($placesApiKey)) {
-    $envFile = Join-Path $root ".env"
-    if (Test-Path -LiteralPath $envFile) {
-        foreach ($line in Get-Content -LiteralPath $envFile) {
-            if ([string]::IsNullOrWhiteSpace($placesApiKey) -and $line -match '^\s*GOOGLE_MAPS_BROWSER_API_KEY\s*=\s*(.*?)\s*$') {
-                $placesApiKey = $Matches[1].Trim('"', "'")
-            }
+$customerSecret = $originalCustomerSecret
+$dispatcherSecret = $originalDispatcherSecret
+$envFile = Join-Path $root ".env"
+if (Test-Path -LiteralPath $envFile) {
+    foreach ($line in Get-Content -LiteralPath $envFile) {
+        if ([string]::IsNullOrWhiteSpace($placesApiKey) -and $line -match '^\s*GOOGLE_MAPS_BROWSER_API_KEY\s*=\s*(.*?)\s*$') {
+            $placesApiKey = $Matches[1].Trim('"', "'")
+        }
+        if ([string]::IsNullOrWhiteSpace($customerSecret) -and $line -match '^\s*LOGIN_CUSTOMER_PROVISIONING_SECRET\s*=\s*(.*?)\s*$') {
+            $customerSecret = $Matches[1].Trim('"', "'")
+        }
+        if ([string]::IsNullOrWhiteSpace($dispatcherSecret) -and $line -match '^\s*LOGIN_DISPATCHER_PROVISIONING_SECRET\s*=\s*(.*?)\s*$') {
+            $dispatcherSecret = $Matches[1].Trim('"', "'")
         }
     }
+}
+function New-ProvisioningSecret {
+    $bytes = New-Object byte[] 32
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
+    return [BitConverter]::ToString($bytes).Replace("-", "").ToLowerInvariant()
+}
+if ([string]::IsNullOrWhiteSpace($customerSecret)) { $customerSecret = New-ProvisioningSecret }
+if ([string]::IsNullOrWhiteSpace($dispatcherSecret)) { $dispatcherSecret = New-ProvisioningSecret }
+if ($customerSecret.Length -lt 32 -or $dispatcherSecret.Length -lt 32) {
+    throw "Provisioning secrets must contain at least 32 characters."
+}
+if ($customerSecret -ceq $dispatcherSecret) {
+    throw "Customer and dispatcher provisioning secrets must be different."
 }
 
 $services = @(
@@ -55,6 +77,14 @@ try {
                 [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_BROWSER_API_KEY", $placesApiKey, "Process")
             }
         }
+        [Environment]::SetEnvironmentVariable("LOGIN_CUSTOMER_PROVISIONING_SECRET", $null, "Process")
+        [Environment]::SetEnvironmentVariable("LOGIN_DISPATCHER_PROVISIONING_SECRET", $null, "Process")
+        if ($service.Directory -eq "login-service" -or $service.Directory -eq "customer-service") {
+            [Environment]::SetEnvironmentVariable("LOGIN_CUSTOMER_PROVISIONING_SECRET", $customerSecret, "Process")
+        }
+        if ($service.Directory -eq "login-service" -or $service.Directory -eq "dispatcher-service") {
+            [Environment]::SetEnvironmentVariable("LOGIN_DISPATCHER_PROVISIONING_SECRET", $dispatcherSecret, "Process")
+        }
 
         Start-Process -FilePath "cmd.exe" `
             -ArgumentList @("/k", "mvnw.cmd spring-boot:run") `
@@ -64,6 +94,8 @@ try {
     }
 } finally {
     [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_BROWSER_API_KEY", $originalPlacesKey, "Process")
+    [Environment]::SetEnvironmentVariable("LOGIN_CUSTOMER_PROVISIONING_SECRET", $originalCustomerSecret, "Process")
+    [Environment]::SetEnvironmentVariable("LOGIN_DISPATCHER_PROVISIONING_SECRET", $originalDispatcherSecret, "Process")
 }
 
 if ($startedCount -gt 0) {

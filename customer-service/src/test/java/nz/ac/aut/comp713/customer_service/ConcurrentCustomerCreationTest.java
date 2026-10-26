@@ -61,7 +61,9 @@ class ConcurrentCustomerCreationTest {
 				start.await();
 
 				return mockMvc.perform(
-						post("/api/v1/customers")
+						post("/internal/v1/customers")
+								.header("X-Registration-Request-Id", "101")
+								.header("X-Login-Provisioning-Key", "test-customer-secret-0123456789abcdef0123456789abcdef")
 								.contentType(MediaType.APPLICATION_JSON)
 								.content(requestBody))
 						.andReturn();
@@ -72,7 +74,9 @@ class ConcurrentCustomerCreationTest {
 				start.await();
 
 				return mockMvc.perform(
-						post("/api/v1/customers")
+						post("/internal/v1/customers")
+								.header("X-Registration-Request-Id", "102")
+								.header("X-Login-Provisioning-Key", "test-customer-secret-0123456789abcdef0123456789abcdef")
 								.contentType(MediaType.APPLICATION_JSON)
 								.content(requestBody))
 						.andReturn();
@@ -93,8 +97,8 @@ class ConcurrentCustomerCreationTest {
 					.filter(status -> status == 201)
 					.count();
 
-			long conflictCount = statuses.stream()
-					.filter(status -> status == 409)
+			long rejectedCount = statuses.stream()
+					.filter(status -> status == 409 || status == 503)
 					.count();
 
 			assertEquals(
@@ -104,8 +108,8 @@ class ConcurrentCustomerCreationTest {
 
 			assertEquals(
 					1,
-					conflictCount,
-					"Exactly one request should receive 409 Conflict");
+					rejectedCount,
+					"Exactly one request should be rejected as a duplicate or transient SQLite writer collision");
 
 			assertEquals(
 					1,

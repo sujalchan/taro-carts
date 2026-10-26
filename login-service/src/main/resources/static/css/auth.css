@@ -262,6 +262,8 @@ legend { width: 100%; margin-bottom: 17px; padding: 0 0 9px; border-bottom: 1px 
 .admin-panel tr:last-child td { border-bottom: 0; }
 .admin-panel th { background: #f6f9f6; color: var(--muted); font-size: .76rem; }
 .status-pill { display: inline-block; padding: 5px 9px; border-radius: 20px; background: #eaf3ed; color: var(--green); font-size: .75rem; font-weight: 700; }
+.table-action { border: 1px solid var(--green); border-radius: 7px; padding: 7px 10px; background: #fff; color: var(--green); font-size: .78rem; font-weight: 700; cursor: pointer; }
+.table-action:hover { background: #eaf3ed; }
 .empty-state { padding: 23px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); }
 .admin-password-form { max-width: 440px; }
 .admin-password-form .primary-button { cursor: pointer; }

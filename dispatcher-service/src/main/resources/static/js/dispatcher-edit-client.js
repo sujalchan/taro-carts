@@ -23,7 +23,6 @@ async function loadDispatcher() {
         document.getElementById("contactName").value = dispatcher.contactName ?? "";
         document.getElementById("phone").value = dispatcher.phone ?? "";
         document.getElementById("address").value = dispatcher.address ?? "";
-        document.getElementById("active").checked = dispatcher.active === true;
     } catch (_) {
         showError("Unable to communicate with the server.");
         dispatcherForm.hidden = true;
@@ -38,8 +37,7 @@ dispatcherForm.addEventListener("submit", async event => {
         name: document.getElementById("name").value,
         contactName: document.getElementById("contactName").value,
         phone: document.getElementById("phone").value,
-        address: document.getElementById("address").value.trim(),
-        active: document.getElementById("active").checked
+        address: document.getElementById("address").value.trim()
     };
 
     try {

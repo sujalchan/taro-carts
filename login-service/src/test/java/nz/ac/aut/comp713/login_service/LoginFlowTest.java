@@ -36,7 +36,12 @@ import nz.ac.aut.comp713.login_service.repository.RegistrationRequestRepository;
 import nz.ac.aut.comp713.login_service.service.AccountSeeder;
 import nz.ac.aut.comp713.login_service.service.AuthCookies;
 
-@SpringBootTest(properties = {"debug=false", "logging.level.root=ERROR", "logging.level.org.hibernate.SQL=OFF"})
+@SpringBootTest(properties = {"debug=false", "logging.level.root=ERROR", "logging.level.org.hibernate.SQL=OFF",
+        "login.customer-provisioning-secret=test-customer-secret-0123456789abcdef0123456789abcdef",
+        "login.dispatcher-provisioning-secret=test-dispatcher-secret-0123456789abcdef0123456789abcdef",
+        "login.customer-service-url=http://localhost:19081",
+        "login.dispatcher-service-url=http://localhost:19084",
+        "login.provisioning.connect-timeout=PT0.2S", "login.provisioning.read-timeout=PT0.2S"})
 @AutoConfigureMockMvc
 class LoginFlowTest {
 

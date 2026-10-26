@@ -25,25 +25,29 @@ public class Customer {
     @Column(nullable = false, unique = true)
     private String normalizedName;
 
+    @Column
+    private Long provisioningRequestId;
+
     private String contactName;
     private String phone;
     // Nullable so existing SQLite customer rows remain readable after the column is added.
     @Column(length = 500)
     private String address;
 
-    // customers are active by default
-    private boolean active = true;
+    // Accounts require explicit approval through login-service.
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean active = false;
 
     public Customer() {
     }
 
-    // override constructor for creating a new active customer
+    // New domain profiles are always inactive until the login admin enables them.
     public Customer(String name, String address, String contactName, String phone) {
         this.name = name;
         this.address = address;
         this.contactName = contactName;
         this.phone = phone;
-        this.active = true;
+        this.active = false;
     }
 
     public Long getId() {
@@ -69,6 +73,9 @@ public class Customer {
     public void setNormalizedName(String normalizedName) {
         this.normalizedName = normalizedName;
     }
+
+    public Long getProvisioningRequestId() { return provisioningRequestId; }
+    public void setProvisioningRequestId(Long provisioningRequestId) { this.provisioningRequestId = provisioningRequestId; }
 
     public String getContactName() {
         return contactName;

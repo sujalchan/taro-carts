@@ -2,6 +2,7 @@ package nz.ac.aut.comp713.dispatcher_service.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -35,5 +36,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> conflict(DataIntegrityViolationException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiError("DISPATCHER_ALREADY_EXISTS", "Dispatcher already exists", request.getRequestURI()));
+    }
+
+    @ExceptionHandler(CannotAcquireLockException.class)
+    public ResponseEntity<ApiError> busyDatabase(CannotAcquireLockException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", "1")
+                .body(new ApiError("DATABASE_BUSY", "Profile store is busy; retry the request", request.getRequestURI()));
     }
 }

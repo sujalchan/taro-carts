@@ -20,7 +20,8 @@
         <div class="receipt-icon" aria-hidden="true">✓</div>
         <span class="eyebrow">Account request</span>
         <h1 id="receipt-title">Your request was received.</h1>
-        <p>We saved your account request. An administrator will need to review it before you can sign in.</p>
+        <p th:if="${requestStatus.name() == 'PROVISIONED'}">Your account was created inactive. An administrator must enable it before you can sign in.</p>
+        <p th:if="${requestStatus.name() != 'PROVISIONED'}">We saved your request, but profile setup is still pending. An administrator can retry it; you cannot sign in yet.</p>
         <p class="receipt-reference">Reference number <strong th:text="${requestId}">123</strong></p>
         <a class="receipt-link" th:href="@{/login}" href="/login">Back to sign in <span aria-hidden="true">→</span></a>
     </main>
