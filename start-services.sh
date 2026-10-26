@@ -53,11 +53,12 @@ trap stop_services INT TERM EXIT
 start_service customer-service customer-service
 start_service taro-service taro-service
 start_service allocation-service allocation-service
+start_service login-service login-service
 
 printf '\nServices are starting. Press Ctrl+C to stop all of them.\n'
-printf 'Customer:    http://localhost:8081\nTaro:        http://localhost:8083\nAllocations: http://localhost:8082\n\n'
+printf 'Customer:    http://localhost:8081\nTaro:        http://localhost:8083\nAllocations: http://localhost:8082\nLogin:       http://localhost:8084/login\n\n'
 printf 'Streaming service logs below.\n'
-tail -n 20 -f "$LOG_DIR/customer-service.log" "$LOG_DIR/taro-service.log" "$LOG_DIR/allocation-service.log" &
+tail -n 20 -f "$LOG_DIR/customer-service.log" "$LOG_DIR/taro-service.log" "$LOG_DIR/allocation-service.log" "$LOG_DIR/login-service.log" &
 tail_pid=$!
 service_pids+=("$tail_pid")
 
