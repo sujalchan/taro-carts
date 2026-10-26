@@ -8,6 +8,7 @@ import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 
 // 10.0.2.2 maps to the development computer from the standard android emulator
 private const val API_BASE_URL = "http://10.0.2.2:8082"
@@ -54,37 +55,48 @@ data class AllocationItem(
 
 // centralizes allocation-service requests and keeps network work off the main thread
 object AllocationApi {
+    @Volatile private var sessionToken: String? = null
+    private val csrfTokens = ConcurrentHashMap<String, String>()
+
+    fun setSessionToken(token: String?) {
+        sessionToken = token
+        csrfTokens.clear()
+    }
+
     // Dispatcher profiles are owned by dispatcher-service, while assignments are
     // stored on allocations. Match by ID so duplicate or changed names are safe.
     suspend fun getDispatchers(): List<Dispatcher> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/dispatchers", DISPATCHER_API_BASE_URL) as? JSONArray
+        val json = getJson("/api/v1/mobile/portal/profile", DISPATCHER_API_BASE_URL) as? JSONObject
             ?: throw IOException("The server returned an unexpected dispatcher response.")
-        (0 until json.length()).map { index ->
-            json.getJSONObject(index).let { dispatcher ->
-                Dispatcher(dispatcher.getLong("id"), dispatcher.optString("name", "Dispatcher"),
-                    dispatcher.optBoolean("active", true))
-            }
-        }.filter { it.active }
+        listOf(Dispatcher(json.getLong("id"), json.optString("name", "Dispatcher"),
+            json.optBoolean("active", true)))
     }
 
     suspend fun getAssignedDeliveries(dispatcherId: Long): List<AssignedDelivery> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/allocations/dispatcher/$dispatcherId") as? JSONArray
+        val json = getJson("/api/v1/mobile/portal/deliveries", DISPATCHER_API_BASE_URL) as? JSONArray
             ?: throw IOException("The server returned an unexpected allocations response.")
         val assigned = (0 until json.length()).map { index ->
             json.getJSONObject(index).toAllocation()
-        }.filter { it.dispatcherId == dispatcherId }
+        }
         assigned.map { allocation -> AssignedDelivery(allocation) }
             .sortedWith(compareBy<AssignedDelivery> { it.allocation.weekStart }.thenBy { it.allocation.id })
     }
 
+    suspend fun advanceDelivery(allocationId: Long, nextStatus: String) = withContext(Dispatchers.IO) {
+        val body = JSONObject().put("nextStatus", nextStatus)
+        request("PUT", "/api/v1/mobile/portal/deliveries/$allocationId/status", body,
+            DISPATCHER_API_BASE_URL)
+    }
+
     // downloads an invoice into the app cache and removes partial files after failures
     suspend fun downloadInvoice(cacheDir: File, allocationId: Long): File = withContext(Dispatchers.IO) {
-        val connection = (URL("$API_BASE_URL/api/v1/allocations/$allocationId/invoice.pdf?inline=true")
+        val connection = (URL("$CUSTOMER_API_BASE_URL/api/v1/mobile/portal/allocations/$allocationId/invoice.pdf?inline=true")
             .openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 10_000
             readTimeout = 15_000
             setRequestProperty("Accept", "application/pdf")
+            setRequestProperty("Cookie", sessionCookie(CUSTOMER_API_BASE_URL))
         }
         var file: File? = null
         try {
@@ -112,11 +124,9 @@ object AllocationApi {
 
     // loads active customers exposed through the allocation-service reference endpoint
     suspend fun getCustomers(): List<Customer> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/customer-service-reference/customers") as? JSONArray
+        val json = getJson("/api/v1/mobile/portal/profile", CUSTOMER_API_BASE_URL) as? JSONObject
             ?: throw IOException("The server returned an unexpected customer response.")
-        (0 until json.length()).map { index ->
-            json.getJSONObject(index).toCustomer()
-        }
+        listOf(json.toCustomer())
     }
 
     // updates the selected customer's editable information in customer-service
@@ -126,11 +136,10 @@ object AllocationApi {
             put("address", customer.address)
             put("contactName", customer.contactName)
             put("phone", customer.phone)
-            put("active", customer.active)
         }
         val response = request(
             method = "PUT",
-            path = "/api/v1/customers/${customer.id}",
+            path = "/api/v1/mobile/portal/profile",
             payload = body,
             baseUrl = CUSTOMER_API_BASE_URL
         )
@@ -139,7 +148,7 @@ object AllocationApi {
 
     // loads taro types used to populate allocation request choices
     suspend fun getTaroTypes(): List<TaroType> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/taro-service-reference/taro-types") as? JSONArray
+        val json = getJson("/api/v1/mobile/portal/taro-types", CUSTOMER_API_BASE_URL) as? JSONArray
             ?: throw IOException("The server returned an unexpected taro type response.")
         (0 until json.length()).map { index ->
             val taroType = json.getJSONObject(index)
@@ -153,7 +162,7 @@ object AllocationApi {
 
     // retrieves allocations belonging to the selected acting customer
     suspend fun getAllocations(customerId: Long): List<Allocation> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/allocations?customerId=$customerId") as? JSONArray
+        val json = getJson("/api/v1/mobile/portal/allocations", CUSTOMER_API_BASE_URL) as? JSONArray
             ?: throw IOException("The server returned an unexpected allocations response.")
         (0 until json.length()).map { index -> json.getJSONObject(index).toAllocation() }
     }
@@ -162,7 +171,6 @@ object AllocationApi {
     suspend fun requestAllocation(customerId: Long, weekStart: String, items: List<RequestedItem>) =
         withContext(Dispatchers.IO) {
             val body = JSONObject().apply {
-                put("customerId", customerId)
                 put("weekStart", weekStart)
                 put("allocationItems", JSONArray().apply {
                     items.forEach { item ->
@@ -173,17 +181,17 @@ object AllocationApi {
                     }
                 })
             }
-            request("POST", "/api/v1/allocations/customer-request", body)
+            request("POST", "/api/v1/mobile/portal/allocations", body, CUSTOMER_API_BASE_URL)
         }
 
     // deletes a request while sending the acting customer for ownership validation
     suspend fun deleteCustomerRequest(allocationId: Long, customerId: Long) = withContext(Dispatchers.IO) {
-        request("DELETE", "/api/v1/allocations/$allocationId/customer-request?customerId=$customerId")
+        request("DELETE", "/api/v1/mobile/portal/allocations/$allocationId/request", baseUrl = CUSTOMER_API_BASE_URL)
     }
 
     // records payment confirmation for an allocation owned by the acting customer
     suspend fun recordPayment(allocationId: Long, customerId: Long) = withContext(Dispatchers.IO) {
-        request("POST", "/api/v1/allocations/$allocationId/pay?customerId=$customerId")
+        request("POST", "/api/v1/mobile/portal/allocations/$allocationId/pay", baseUrl = CUSTOMER_API_BASE_URL)
     }
 
     // maps a nested allocation response into strongly typed app models
@@ -241,11 +249,17 @@ object AllocationApi {
         payload: JSONObject? = null,
         baseUrl: String = API_BASE_URL
     ): String = withContext(Dispatchers.IO) {
+        val token = sessionToken ?: throw IOException("Sign in to use the customer or dispatcher portal.")
         val connection = (URL(baseUrl + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = 10_000
             readTimeout = 10_000
             setRequestProperty("Accept", "application/json")
+            setRequestProperty("Cookie", sessionCookie(baseUrl))
+            if (method != "GET" && method != "HEAD") {
+                val csrf = csrfTokens[baseUrl] ?: throw IOException("Refresh the portal and try again.")
+                setRequestProperty("X-CSRF-Token", csrf)
+            }
             if (payload != null) {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -257,6 +271,7 @@ object AllocationApi {
                 connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
             }
             val status = connection.responseCode
+            rememberCsrf(baseUrl, connection.getHeaderFields()["Set-Cookie"])
             val body = (if (status in 200..299) connection.inputStream else connection.errorStream)
                 ?.bufferedReader()
                 ?.use { it.readText() }
@@ -273,6 +288,31 @@ object AllocationApi {
             throw exception
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun sessionCookie(baseUrl: String): String {
+        val token = sessionToken ?: throw IOException("Sign in to use the customer or dispatcher portal.")
+        val csrfName = when (baseUrl) {
+            CUSTOMER_API_BASE_URL -> "CUSTOMER_CSRF"
+            DISPATCHER_API_BASE_URL -> "DISPATCHER_CSRF"
+            else -> null
+        }
+        val csrf = csrfName?.let { name -> csrfTokens[baseUrl]?.let { value -> "$name=$value" } }
+        return listOfNotNull("SESSION=$token", csrf).joinToString("; ")
+    }
+
+    private fun rememberCsrf(baseUrl: String, headers: List<String>?) {
+        val csrfName = when (baseUrl) {
+            CUSTOMER_API_BASE_URL -> "CUSTOMER_CSRF"
+            DISPATCHER_API_BASE_URL -> "DISPATCHER_CSRF"
+            else -> return
+        }
+        headers.orEmpty().forEach { header ->
+            val cookie = header.substringBefore(';').trim()
+            if (cookie.startsWith("$csrfName=")) {
+                csrfTokens[baseUrl] = cookie.substringAfter('=')
+            }
         }
     }
 }

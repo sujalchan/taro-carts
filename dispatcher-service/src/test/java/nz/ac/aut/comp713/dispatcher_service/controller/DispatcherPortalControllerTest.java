@@ -52,7 +52,8 @@ class DispatcherPortalControllerTest {
         when(dispatchers.getById(7L)).thenReturn(
                 new DispatcherResponse(7L, "Driver", null, null, "Auckland", true));
         when(deliveries.list(admin, 7L)).thenReturn(List.of(new PortalDeliveryClient.Delivery(
-                11L, 3L, "Customer", LocalDate.now(), "AWAITING_DISPATCH", "UNPAID", 7L, "Auckland")));
+                11L, 3L, "Customer", LocalDate.now(), "AWAITING_DISPATCH", "UNPAID", 7L, "Auckland",
+                false, List.of())));
         assertThat(controller.update(11L, 7L, "IN_TRANSIT", admin, new ExtendedModelMap()))
                 .isEqualTo("redirect:/portal/deliveries?dispatcherId=7");
         verify(deliveries).advance(admin, 11L, "IN_TRANSIT");

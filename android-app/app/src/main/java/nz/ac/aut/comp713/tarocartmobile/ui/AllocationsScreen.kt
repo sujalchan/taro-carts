@@ -1,6 +1,5 @@
 package nz.ac.aut.comp713.tarocartmobile.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -24,9 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -61,7 +58,12 @@ import java.util.Locale
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun AllocationsScreen(onAccountSelected: (Boolean) -> Unit = {}) {
+fun AllocationsScreen(
+    modifier: Modifier = Modifier,
+    username: String = "",
+    onSignOut: suspend () -> Unit = {},
+    onAccountSelected: (Boolean) -> Unit = {}
+) {
     var customers by remember { mutableStateOf<List<Customer>>(emptyList()) }
     var allocations by remember { mutableStateOf<List<Allocation>>(emptyList()) }
     // saves the acting customer's basic details so rotation does not restart selection
@@ -90,31 +92,21 @@ fun AllocationsScreen(onAccountSelected: (Boolean) -> Unit = {}) {
     // tracks whether the customer actions drawer is open or closed
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    fun clearCustomerSelection() {
-        selectedCustomerId = null
-        selectedCustomerName = null
-        selectedCustomerAddress = ""
-        selectedCustomerContactName = ""
-        selectedCustomerPhone = ""
-        selectedCustomerActive = true
-        allocations = emptyList()
-        deleteError = null
-        paymentError = null
-        customerRefreshKey++
-        onAccountSelected(false)
-    }
-
     LaunchedEffect(selectedCustomerId) { onAccountSelected(selectedCustomerId != null) }
-    BackHandler(selectedCustomerId != null && !requesting && !editingCustomer
-        && viewedInvoiceId == null && !drawerState.isOpen) {
-        clearCustomerSelection()
-    }
 
     LaunchedEffect(customerRefreshKey) {
         loadingCustomers = true
         customersError = null
         try {
             customers = AllocationApi.getCustomers()
+            val ownCustomer = customers.singleOrNull()
+                ?: throw IllegalStateException("This account does not have one linked customer profile.")
+            selectedCustomerId = ownCustomer.id
+            selectedCustomerName = ownCustomer.name
+            selectedCustomerAddress = ownCustomer.address
+            selectedCustomerContactName = ownCustomer.contactName
+            selectedCustomerPhone = ownCustomer.phone
+            selectedCustomerActive = ownCustomer.active
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
@@ -139,22 +131,17 @@ fun AllocationsScreen(onAccountSelected: (Boolean) -> Unit = {}) {
             }
     }
     if (customer == null) {
-        CustomerSelectionScreen(
-            customers = customers,
-            loading = loadingCustomers,
-            error = customersError,
-            onRetry = { customerRefreshKey++ },
-            onSelect = {
-                // stores only saveable values rather than the complete customer object
-                selectedCustomerId = it.id
-                selectedCustomerName = it.name
-                selectedCustomerAddress = it.address
-                selectedCustomerContactName = it.contactName
-                selectedCustomerPhone = it.phone
-                selectedCustomerActive = it.active
-                onAccountSelected(true)
+        Column(modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            if (loadingCustomers) CircularProgressIndicator()
+            else {
+                Text(customersError ?: "No customer profile is linked to this account.",
+                    color = MaterialTheme.colorScheme.error)
+                Button(onClick = { customerRefreshKey++ }, modifier = Modifier.padding(top = 12.dp)) {
+                    Text("Try again")
+                }
             }
-        )
+        }
         return
     }
 
@@ -284,40 +271,22 @@ fun AllocationsScreen(onAccountSelected: (Boolean) -> Unit = {}) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                Text(
-                    "Customer menu",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp)
-                )
-                // uses standard material drawer rows with transparent unselected states
-                NavigationDrawerItem(
-                    label = { Text("Edit information") },
-                    selected = false,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            editingCustomer = true
-                        }
+            PortalDrawerContent(
+                title = "Customer portal",
+                username = username,
+                role = "Customer",
+                onSignOut = onSignOut,
+                onEditInformation = {
+                    scope.launch {
+                        drawerState.close()
+                        editingCustomer = true
                     }
-                )
-                NavigationDrawerItem(
-                    label = { Text("Switch customer") },
-                    selected = false,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    onClick = {
-                        scope.launch {
-                            // closes the drawer and clears state before choosing another customer
-                            drawerState.close()
-                            clearCustomerSelection()
-                        }
-                    }
-                )
-            }
+                }
+            )
         }
     ) {
         Scaffold(
+            modifier = modifier,
             topBar = {
                 TopAppBar(
                     navigationIcon = {
@@ -345,7 +314,7 @@ fun AllocationsScreen(onAccountSelected: (Boolean) -> Unit = {}) {
             ) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Acting as ${customer.name}", style = MaterialTheme.typography.titleMedium)
+                        Text("Your account · ${customer.name}", style = MaterialTheme.typography.titleMedium)
                         // keeps only the two primary allocation actions on the main screen
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { requesting = true }) { Text("Request allocation") }

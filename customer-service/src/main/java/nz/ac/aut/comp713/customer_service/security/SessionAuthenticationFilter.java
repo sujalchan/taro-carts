@@ -107,7 +107,8 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
         request.setAttribute(PRINCIPAL_ATTRIBUTE, principal);
 
         boolean customerPortal = path.equals("/portal/allocations")
-                || path.startsWith("/portal/allocations/");
+                || path.startsWith("/portal/allocations/")
+                || path.startsWith("/api/v1/mobile/portal/");
         boolean portalAsset = "GET".equals(request.getMethod())
                 && (path.equals("/css/style.css") || path.equals("/js/service-navigation.js"));
         if (!"ADMIN".equals(principal.role())

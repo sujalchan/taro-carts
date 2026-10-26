@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -56,7 +55,6 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
     var address by remember(customer.id) { mutableStateOf(customer.address) }
     var contactName by remember(customer.id) { mutableStateOf(customer.contactName) }
     var phone by remember(customer.id) { mutableStateOf(customer.phone) }
-    var active by remember(customer.id) { mutableStateOf(customer.active) }
     var saving by remember(customer.id) { mutableStateOf(false) }
     var error by remember(customer.id) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -157,10 +155,6 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth()
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = active, onCheckedChange = { active = it }, enabled = !saving)
-                Text("Active customer")
-            }
             error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
@@ -188,8 +182,7 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
                                         name = trimmedName,
                                         address = address.trim(),
                                         contactName = contactName.trim(),
-                                        phone = phone.trim(),
-                                        active = active
+                                        phone = phone.trim()
                                     )
                                 )
                                 onSaved(updated)

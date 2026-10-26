@@ -1,6 +1,5 @@
 package nz.ac.aut.comp713.tarocartmobile.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,9 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -55,7 +51,12 @@ import java.util.Locale
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
+fun DispatcherScreen(
+    modifier: Modifier = Modifier,
+    username: String = "",
+    onSignOut: suspend () -> Unit = {},
+    onAccountSelected: (Boolean) -> Unit = {}
+) {
     var dispatchers by remember { mutableStateOf<List<Dispatcher>>(emptyList()) }
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedName by rememberSaveable { mutableStateOf("") }
@@ -66,6 +67,8 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
     var loadingDeliveries by remember { mutableStateOf(false) }
     var deliveriesError by remember { mutableStateOf<String?>(null) }
     var deliveriesRefresh by remember { mutableStateOf(0) }
+    var updatingDeliveryId by remember { mutableStateOf<Long?>(null) }
+    var updateError by remember { mutableStateOf<String?>(null) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -76,6 +79,10 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
         dispatcherError = null
         try {
             dispatchers = AllocationApi.getDispatchers()
+            val ownDispatcher = dispatchers.singleOrNull()
+                ?: throw IllegalStateException("This account does not have one linked dispatcher profile.")
+            selectedId = ownDispatcher.id
+            selectedName = ownDispatcher.name
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
@@ -101,36 +108,20 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
         }
     }
 
-    BackHandler(selectedId != null) {
-        deliveries = emptyList()
-        selectedId = null
-        onAccountSelected(false)
-    }
-
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = selectedId != null,
+        gesturesEnabled = true,
         drawerContent = {
-            ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                Text("Dispatcher menu", style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp))
-                NavigationDrawerItem(
-                    label = { Text("Switch dispatcher") },
-                    selected = false,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            deliveries = emptyList()
-                            selectedId = null
-                            onAccountSelected(false)
-                        }
-                    }
-                )
-            }
+            PortalDrawerContent(
+                title = "Dispatcher portal",
+                username = username,
+                role = "Dispatcher",
+                onSignOut = onSignOut
+            )
         }
     ) {
-    Scaffold(
+        Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
@@ -140,14 +131,12 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
                             Text("Assigned Deliveries", style = MaterialTheme.typography.bodySmall)
                         }
                     } else {
-                        Text("Choose a dispatcher")
+                        Text("My deliveries")
                     }
                 },
                 navigationIcon = {
-                    if (selectedId != null) {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Text("☰", style = MaterialTheme.typography.headlineSmall)
-                        }
+                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        Text("☰", style = MaterialTheme.typography.headlineSmall)
                     }
                 }
             )
@@ -155,7 +144,6 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
             if (selectedId == null) {
-                Text("Select the dispatcher you want to act as.")
                 when {
                     loadingDispatchers -> CircularProgressIndicator(Modifier.padding(top = 20.dp))
                     dispatcherError != null -> {
@@ -163,36 +151,16 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
                             modifier = Modifier.padding(top = 16.dp))
                         Button(onClick = { dispatcherRefresh++ }) { Text("Try again") }
                     }
-                    dispatchers.isEmpty() -> {
-                        Text("No active dispatchers are available.", Modifier.padding(top = 16.dp))
-                        Button(onClick = { dispatcherRefresh++ }) { Text("Refresh dispatchers") }
-                    }
-                    else -> LazyColumn(
-                        modifier = Modifier.fillMaxSize().padding(top = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(dispatchers, key = { it.id }) { dispatcher ->
-                            Button(onClick = {
-                                deliveries = emptyList()
-                                loadingDeliveries = true
-                                selectedId = dispatcher.id
-                                selectedName = dispatcher.name
-                                onAccountSelected(true)
-                            }, modifier = Modifier.fillMaxWidth().height(40.dp),
-                                shape = RoundedCornerShape(24.dp)) {
-                                Text(dispatcher.name, style = MaterialTheme.typography.labelLarge)
-                            }
-                        }
-                    }
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Acting as $selectedName", style = MaterialTheme.typography.titleMedium)
+                    Text("Deliveries for $selectedName", style = MaterialTheme.typography.titleMedium)
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedButton(onClick = { deliveriesRefresh++ }) { Text("Refresh") }
                     }
                 }
                 when {
+                    loadingDispatchers -> CircularProgressIndicator(Modifier.padding(top = 20.dp))
                     loadingDeliveries -> CircularProgressIndicator(Modifier.padding(top = 20.dp))
                     deliveriesError != null -> {
                         Text(deliveriesError.orEmpty(), color = MaterialTheme.colorScheme.error,
@@ -206,10 +174,27 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(deliveries, key = { it.allocation.id }) { delivery ->
-                            DeliveryCard(delivery)
+                            DeliveryCard(delivery,
+                                updating = updatingDeliveryId == delivery.allocation.id,
+                                onAdvance = { status ->
+                                    updateError = null
+                                    updatingDeliveryId = delivery.allocation.id
+                                    scope.launch {
+                                        try {
+                                            AllocationApi.advanceDelivery(delivery.allocation.id, status)
+                                            deliveriesRefresh++
+                                        } catch (exception: CancellationException) {
+                                            throw exception
+                                        } catch (exception: Exception) {
+                                            updateError = exception.message ?: "Could not update delivery status."
+                                        } finally { updatingDeliveryId = null }
+                                    }
+                                })
                         }
                     }
                 }
+                updateError?.let { Text(it, color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp)) }
             }
         }
     }
@@ -217,7 +202,7 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
 }
 
 @Composable
-private fun DeliveryCard(delivery: AssignedDelivery) {
+private fun DeliveryCard(delivery: AssignedDelivery, updating: Boolean, onAdvance: (String) -> Unit) {
     val allocation = delivery.allocation
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -247,6 +232,16 @@ private fun DeliveryCard(delivery: AssignedDelivery) {
             } else {
                 allocation.items.forEach { item ->
                     Text("${item.taroTypeName}: ${item.quantity} kg")
+                }
+            }
+            when (allocation.deliveryStatus) {
+                "AWAITING_DISPATCH" -> Button(enabled = !updating,
+                    onClick = { onAdvance("IN_TRANSIT") }) {
+                    if (updating) CircularProgressIndicator() else Text("Start delivery")
+                }
+                "IN_TRANSIT" -> Button(enabled = !updating,
+                    onClick = { onAdvance("DELIVERED") }) {
+                    if (updating) CircularProgressIndicator() else Text("Mark delivered")
                 }
             }
         }

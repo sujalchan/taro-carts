@@ -8,9 +8,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,9 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
-import nz.ac.aut.comp713.tarocartmobile.data.MobileAccount
 import nz.ac.aut.comp713.tarocartmobile.data.MobileAuthApi
+import nz.ac.aut.comp713.tarocartmobile.data.AllocationApi
 import nz.ac.aut.comp713.tarocartmobile.data.SessionStore
+import nz.ac.aut.comp713.tarocartmobile.ui.AllocationsScreen
+import nz.ac.aut.comp713.tarocartmobile.ui.DispatcherScreen
 import nz.ac.aut.comp713.tarocartmobile.ui.MobileAuthScreen
 import nz.ac.aut.comp713.tarocartmobile.ui.theme.TaroCartMobileTheme
 
@@ -89,19 +91,33 @@ private fun TaroCartApp() {
     val savedSession = remember { store.read() }
     var account by remember { mutableStateOf(savedSession?.first) }
     var sessionToken by remember { mutableStateOf(savedSession?.second) }
-    MobileAuthScreen(
-        account = account,
-        onSignedIn = { signedInAccount, token ->
-            store.write(signedInAccount, token)
-            account = signedInAccount
-            sessionToken = token
-        },
-        onSignOut = {
+    remember { AllocationApi.setSessionToken(sessionToken) }
+    val signOut: suspend () -> Unit = {
             val token = sessionToken
             if (token != null) MobileAuthApi.logout(token)
             store.clear()
+            AllocationApi.setSessionToken(null)
             account = null
             sessionToken = null
         }
-    )
+
+    when (account?.role) {
+        "CUSTOMER", "DISPATCHER" -> {
+            if (account?.role == "CUSTOMER") {
+                AllocationsScreen(username = account?.username.orEmpty(), onSignOut = signOut)
+            } else {
+                DispatcherScreen(username = account?.username.orEmpty(), onSignOut = signOut)
+            }
+        }
+        else -> MobileAuthScreen(
+            account = account,
+            onSignedIn = { signedInAccount, token ->
+                store.write(signedInAccount, token)
+                AllocationApi.setSessionToken(token)
+                account = signedInAccount
+                sessionToken = token
+            },
+            onSignOut = signOut
+        )
+    }
 }

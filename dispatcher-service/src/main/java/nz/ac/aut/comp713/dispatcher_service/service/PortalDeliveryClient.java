@@ -1,6 +1,7 @@
 package nz.ac.aut.comp713.dispatcher_service.service;
 
 import java.net.URI;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -24,9 +25,11 @@ import nz.ac.aut.comp713.dispatcher_service.security.AllocationIdentitySigner;
 @Component
 @Profile("!legacy-tests")
 public class PortalDeliveryClient {
+    public record Item(Long id, Long taroTypeId, String taroTypeName, Integer quantity, BigDecimal pricePerKg) {}
     public record Delivery(Long id, Long customerId, String customerName, LocalDate weekStart,
                            String deliveryStatus, String paymentStatus, Long dispatcherId,
-                           String deliveryAddress) {}
+                           String deliveryAddress, boolean invoiceAvailable,
+                           List<Item> allocationItems) {}
     private record StatusUpdate(String deliveryStatus) {}
 
     private final RestClient client;

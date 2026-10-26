@@ -31,6 +31,7 @@ public class PortalAllocationClient {
                              boolean invoiceAvailable, List<Item> allocationItems,
                              Long dispatcherId, String deliveryAddress) {}
     public record TaroType(Long id, String name, String description, BigDecimal standardPrice) {}
+    public record RequestItem(Long taroTypeId, BigDecimal quantity, BigDecimal pricePerKg) {}
     private record RequestedItem(Long taroTypeId, BigDecimal quantity, BigDecimal pricePerKg) {}
     private record NewRequest(Long customerId, LocalDate weekStart, List<RequestedItem> allocationItems,
                               String deliveryAddress) {}
@@ -78,12 +79,19 @@ public class PortalAllocationClient {
 
     public void create(HttpServletRequest request, Long customerId, LocalDate weekStart,
                        Long taroTypeId, BigDecimal quantity, String address) {
+        create(request, customerId, weekStart,
+                List.of(new RequestItem(taroTypeId, quantity, null)), address);
+    }
+
+    public void create(HttpServletRequest request, Long customerId, LocalDate weekStart,
+                       List<RequestItem> items, String address) {
         String path = "/api/v1/allocations/customer-request";
         call(() -> client.post().uri(path)
                 .header("X-Allocation-Identity-Assertion", signer.sign(request, "POST", path))
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new NewRequest(customerId, weekStart,
-                        List.of(new RequestedItem(taroTypeId, quantity, null)), address))
+                .body(new NewRequest(customerId, weekStart, items.stream()
+                        .map(item -> new RequestedItem(item.taroTypeId(), item.quantity(), item.pricePerKg()))
+                        .toList(), address))
                 .retrieve().toBodilessEntity());
     }
 
