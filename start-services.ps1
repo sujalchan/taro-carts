@@ -18,8 +18,7 @@ if ([string]::IsNullOrWhiteSpace($placesApiKey)) {
 $services = @(
     @{ Name = "Customer Service"; Directory = "customer-service"; Port = 8081 },
     @{ Name = "Taro Service"; Directory = "taro-service"; Port = 8083 },
-    @{ Name = "Allocation Service"; Directory = "allocation-service"; Port = 8082 },
-    @{ Name = "Login Service"; Directory = "login-service"; Port = 8084 }
+    @{ Name = "Allocation Service"; Directory = "allocation-service"; Port = 8082 }
 )
 
 try {
