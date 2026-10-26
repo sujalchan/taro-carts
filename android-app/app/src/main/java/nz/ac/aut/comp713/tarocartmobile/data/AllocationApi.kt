@@ -222,7 +222,7 @@ object AllocationApi {
     )
 
     // accepts either json object or array responses and rejects malformed content
-    private fun getJson(path: String, baseUrl: String = API_BASE_URL): Any {
+    private suspend fun getJson(path: String, baseUrl: String = API_BASE_URL): Any {
         val body = request("GET", path, baseUrl = baseUrl)
         val trimmed = body.trimStart()
         return when {
@@ -233,12 +233,14 @@ object AllocationApi {
     }
 
     // performs a shared http request and converts server errors into readable exceptions
-    private fun request(
+    // Enforces the threading rule at the lowest HTTP boundary so new callers
+    // cannot accidentally perform a blocking connection on the main thread.
+    private suspend fun request(
         method: String,
         path: String,
         payload: JSONObject? = null,
         baseUrl: String = API_BASE_URL
-    ): String {
+    ): String = withContext(Dispatchers.IO) {
         val connection = (URL(baseUrl + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = 10_000
@@ -263,7 +265,7 @@ object AllocationApi {
                 val serverMessage = runCatching { JSONObject(body).optString("message") }.getOrNull()
                 throw IOException(serverMessage?.takeIf { it.isNotBlank() } ?: "Request failed (HTTP $status).")
             }
-            return body
+            body
         } catch (exception: IOException) {
             if (exception.message?.startsWith("CLEARTEXT") == true) {
                 throw IOException("HTTP traffic is blocked. Check the app network configuration.", exception)
