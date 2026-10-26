@@ -8,11 +8,9 @@
 </head>
 <body>
 <div class="page-shell">
-    <header class="site-header">
-        <a class="brand" th:href="@{/admin/accounts}" href="/admin/accounts" aria-label="Taro Carts account administration">
-            <span class="brand-mark" aria-hidden="true">T</span><span>Taro Carts</span>
-        </a>
-        <nav class="admin-header-nav" aria-label="Admin navigation">
+    <nav class="app-nav" aria-label="Admin navigation">
+        <a class="app-nav__brand" href="http://localhost:8081/customers">Taro Allocation System</a>
+        <div class="app-nav__links">
             <a href="http://localhost:8081/customers">Customers</a>
             <a href="http://localhost:8084/dispatchers">Dispatchers</a>
             <a href="http://localhost:8083/taro-types">Taro</a>
@@ -21,8 +19,8 @@
             <a href="http://localhost:8084/portal/deliveries">Dispatcher portal</a>
             <a href="/admin/accounts" aria-current="page">Accounts</a>
             <a th:href="@{/logout}" href="/logout">Sign out</a>
-        </nav>
-    </header>
+        </div>
+    </nav>
 
     <main class="admin-panel">
         <span class="eyebrow">Account administration</span>

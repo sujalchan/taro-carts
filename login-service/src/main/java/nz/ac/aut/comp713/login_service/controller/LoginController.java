@@ -16,6 +16,7 @@ import nz.ac.aut.comp713.login_service.service.AuthenticationService;
 import nz.ac.aut.comp713.login_service.service.LoginAttemptLimiter;
 import nz.ac.aut.comp713.login_service.service.LoginDestinations;
 import nz.ac.aut.comp713.login_service.service.SessionService;
+import nz.ac.aut.comp713.login_service.service.SecurityAudit;
 
 @Controller
 public class LoginController {
@@ -61,14 +62,18 @@ public class LoginController {
         }
         String address = request.getRemoteAddr();
         if (!limiter.allowed(address, username)) {
+            SecurityAudit.denied("login.denied", "reason=rate_limited");
             return loginError(model, username, returnTo, csrfCookie, oldSession);
         }
         var account = authentication.authenticate(username, password);
         if (account.isEmpty()) {
+            SecurityAudit.denied("login.denied", "reason=credentials_or_inactive_account");
             limiter.failed(address, username);
             return loginError(model, username, returnTo, csrfCookie, oldSession);
         }
         limiter.succeeded(address, username);
+        SecurityAudit.event("login.succeeded", "accountId=" + account.get().getId()
+                + " role=" + account.get().getRole().name());
         sessions.revoke(oldSession);
         cookies.issueSession(response, sessions.issue(account.get()));
         cookies.clearCsrf(response);
@@ -84,6 +89,7 @@ public class LoginController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         sessions.revoke(sessionToken);
+        SecurityAudit.event("logout", "sessionPresented=" + (sessionToken != null));
         cookies.clearSession(response);
         cookies.clearCsrf(response);
         return "redirect:/login";

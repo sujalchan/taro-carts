@@ -5,14 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Taro Carts · Request unavailable</title>
     <style>
-        :root { color-scheme: light; --ink: #203330; --muted: #5d6b65; --green: #17665f; }
+        :root { color-scheme: light; --ink: #243333; --muted: #526464; --green: #17665f; --page: #f4f6f6; --line: #d5dede; }
         * { box-sizing: border-box; }
-        body { min-width: 320px; min-height: 100vh; margin: 0; background: #f5f3ec; color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
-        .shell { width: min(1040px, calc(100% - 40px)); margin: 0 auto; }
-        header { display: flex; align-items: center; min-height: 92px; }
-        .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); font-weight: 750; text-decoration: none; }
-        .mark { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 9px; background: var(--green); color: #fff; font: 700 1.4rem Georgia, serif; }
-        .card { display: grid; grid-template-columns: minmax(220px, .7fr) 1fr; min-height: 430px; overflow: hidden; border: 1px solid #d9dfd9; border-radius: 20px; background: #fff; box-shadow: 0 28px 65px rgba(24, 51, 42, .08); animation: rise .35s ease-out both; }
+        html { min-height: 100%; border-top: 5px solid var(--green); background: var(--page); }
+        body { min-width: 320px; min-height: 100vh; max-width: 1120px; margin: 0 auto; padding: 40px 28px 64px; background: var(--page); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 16px; line-height: 1.5; }
+        .shell { width: 100%; margin: 0 auto; }
+        .app-nav { position: relative; left: 50%; transform: translateX(-50%); width: min(1280px, calc(100vw - 56px)); display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 36px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+        .app-nav a { color: var(--ink); font-weight: 600; text-decoration: none; }
+        .app-nav a:hover { color: var(--green); }
+        .app-nav__brand { font-size: 1.05rem; white-space: nowrap; }
+        .app-nav__links { display: flex; flex-wrap: wrap; gap: 14px; }
+        .app-nav__links a { padding: 7px 10px; border-radius: 5px; }
+        .app-nav__links a:hover { background: #eaf0ef; }
+        .card { display: grid; grid-template-columns: minmax(220px, .7fr) 1fr; min-height: 430px; overflow: hidden; border: 1px solid #d5dede; border-radius: 20px; background: #fff; box-shadow: 0 28px 65px rgba(24, 51, 42, .08); animation: rise .35s ease-out both; }
         .art { display: flex; flex-direction: column; justify-content: space-between; padding: clamp(30px, 5vw, 58px); background: radial-gradient(circle at 85% 16%, rgba(208, 230, 175, .24), transparent 35%), linear-gradient(145deg, #17665f, #113c39); color: #fff; }
         .art small { color: #c9dfcd; font-size: .73rem; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
         .art strong { font: 500 clamp(5rem, 12vw, 8rem)/1 Georgia, serif; letter-spacing: -.06em; }
@@ -25,13 +30,23 @@
         .button:focus-visible { outline: 3px solid #da9c4a; outline-offset: 3px; }
         .hint { margin-top: 18px; color: var(--muted); font-size: .88rem; }
         @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 680px) { header { min-height: 76px; } .card { grid-template-columns: 1fr; } .art { min-height: 150px; } .art strong { font-size: 4.5rem; } .content { min-height: 310px; } }
+        @media (max-width: 850px) { .app-nav { align-items: flex-start; flex-direction: column; gap: 10px; width: calc(100vw - 32px); } .app-nav__links { gap: 5px; } }
+        @media (max-width: 680px) { body { padding: 24px 16px 48px; } .card { grid-template-columns: 1fr; } .art { min-height: 150px; } .art strong { font-size: 4.5rem; } .content { min-height: 310px; } }
         @media (prefers-reduced-motion: reduce) { .card { animation: none; } .button { transition: none; } .button:hover { transform: none; } }
     </style>
 </head>
 <body>
 <div class="shell">
-    <header><a class="brand" href="http://localhost:8085/login"><span class="mark" aria-hidden="true">T</span><span>Taro Carts</span></a></header>
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="http://localhost:8081/customers">Taro Allocation System</a>
+        <div class="app-nav__links">
+            <a href="http://localhost:8081/customers">Customer Service</a>
+            <a href="http://localhost:8084/dispatchers">Dispatcher Service</a>
+            <a href="http://localhost:8083/taro-types">Taro Service</a>
+            <a href="http://localhost:8082/allocations">Allocation Service</a>
+            <a href="http://localhost:8085/login">Login Service</a>
+        </div>
+    </nav>
     <main class="card">
         <div class="art" aria-hidden="true"><small>We hit a roadblock</small><strong th:text="${status}">!</strong></div>
         <div class="content">

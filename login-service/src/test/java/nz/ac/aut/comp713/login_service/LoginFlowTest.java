@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.http.MediaType;
 
@@ -94,6 +95,49 @@ class LoginFlowTest {
         assertThat(accounts.count()).isEqualTo(1);
         assertThat(accounts.findByNormalizedUsername("admin").orElseThrow().getPasswordHash())
                 .isEqualTo(storedHash);
+    }
+
+    @Test
+    void mobileLoginReturnsOpaqueSessionForActiveAccountAndLogoutRevokesIt() throws Exception {
+        MvcResult result = mvc.perform(post("/api/v1/mobile/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"admin1234!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(header().string("Cache-Control", containsString("no-store")))
+                .andExpect(jsonPath("$.role").value("ADMIN"))
+                .andReturn();
+        String token = com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), "$.sessionToken");
+        assertThat(token).hasSize(43);
+        assertThat(sessions.findAll()).hasSize(1);
+        assertThat(sessions.findAll().getFirst().getTokenHash()).isNotEqualTo(token);
+
+        mvc.perform(post("/api/v1/mobile/logout").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sessionToken\":\"" + token + "\"}"))
+                .andExpect(status().isNoContent());
+        assertThat(sessions.findAll().getFirst().getRevokedAt()).isNotNull();
+    }
+
+    @Test
+    void mobileRegistrationCreatesPendingCustomerRequestAndRejectsPasswordMismatch() throws Exception {
+        mvc.perform(post("/api/v1/mobile/register/customer").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"mobile-customer","password":"strong-password-123",
+                                 "confirmPassword":"strong-password-123","name":"Mobile Customer",
+                                 "contactName":"Contact","phone":"+64211234567","address":"1 Test Road"}
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("PENDING"));
+        assertThat(requests.existsByNormalizedUsername("mobile-customer")).isTrue();
+        assertThat(accounts.findByNormalizedUsername("mobile-customer")).isEmpty();
+
+        mvc.perform(post("/api/v1/mobile/register/dispatcher").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"mobile-driver","password":"strong-password-123",
+                                 "confirmPassword":"different-password","name":"Mobile Driver",
+                                 "phone":"+64211234567","address":"1 Test Road"}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

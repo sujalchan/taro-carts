@@ -8,7 +8,10 @@
 </head>
 <body>
 <div class="page-shell">
-    <header class="site-header"><a class="brand" href="/login"><span class="brand-mark" aria-hidden="true">T</span><span>Taro Carts</span></a></header>
+    <nav class="app-nav" aria-label="Account navigation">
+        <a class="app-nav__brand" href="http://localhost:8081/customers">Taro Allocation System</a>
+        <div class="app-nav__links"><a href="/login">Sign in</a><a th:href="${returnUrl}" href="/login">Keep working</a></div>
+    </nav>
     <main class="logout-panel">
         <span class="eyebrow">Account</span>
         <h1>Sign out?</h1>

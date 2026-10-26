@@ -26,6 +26,7 @@ import nz.ac.aut.comp713.login_service.service.AdminPasswordService;
 import nz.ac.aut.comp713.login_service.service.AccountActivationService;
 import nz.ac.aut.comp713.login_service.service.RegistrationProvisioningService;
 import nz.ac.aut.comp713.login_service.service.SessionService;
+import nz.ac.aut.comp713.login_service.service.SecurityAudit;
 
 @Controller
 public class AdminAccountController {
@@ -124,8 +125,14 @@ public class AdminAccountController {
                                @RequestParam boolean active) {
         requireAdmin(sessionToken, csrfCookie, csrf);
         if (!accounts.existsById(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return activation.change(id, active) ? "redirect:/admin/accounts"
-                : "redirect:/admin/accounts?activationError=1";
+        boolean changed = activation.change(id, active);
+        if (changed) {
+            SecurityAudit.event(active ? "account.activated" : "account.deactivated", "accountId=" + id);
+            if (!active) SecurityAudit.event("sessions.revoked", "accountId=" + id);
+        } else {
+            SecurityAudit.denied("account.activation.failed", "accountId=" + id + " active=" + active);
+        }
+        return changed ? "redirect:/admin/accounts" : "redirect:/admin/accounts?activationError=1";
     }
 
     @PostMapping("/admin/password")
@@ -139,8 +146,11 @@ public class AdminAccountController {
         Long adminId = requireAdmin(sessionToken, csrfCookie, csrf);
         if (!passwords.change(adminId, currentPassword,
                 newPassword, confirmPassword)) {
+            SecurityAudit.denied("admin.password.change.failed", "accountId=" + adminId);
             return "redirect:/admin/accounts?passwordError=1";
         }
+        SecurityAudit.event("admin.password.changed", "accountId=" + adminId);
+        SecurityAudit.event("sessions.revoked", "accountId=" + adminId);
         cookies.clearSession(response);
         cookies.clearCsrf(response);
         return "redirect:/login?passwordChanged=1";
@@ -148,10 +158,12 @@ public class AdminAccountController {
 
     private Long requireAdmin(String sessionToken, String csrfCookie, String csrf) {
         if (!cookies.validCsrf(csrf, csrfCookie)) {
+            SecurityAudit.denied("admin.authorization.denied", "reason=csrf");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         var session = sessions.validate(sessionToken);
         if (session.isEmpty() || session.get().getAccount().getRole() != AccountRole.ADMIN) {
+            SecurityAudit.denied("admin.authorization.denied", "reason=missing_or_wrong_role");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         return session.get().getAccount().getId();

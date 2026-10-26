@@ -20,12 +20,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /** Fail-closed authentication boundary for browser and API requests. */
 @Component
 @Profile("!legacy-tests")
 public class SessionAuthenticationFilter extends OncePerRequestFilter {
+    private static final Logger AUDIT = LoggerFactory.getLogger("security.audit");
 
     public static final String PRINCIPAL_ATTRIBUTE = SessionAuthenticationFilter.class.getName() + ".principal";
     public static final String CSRF_ATTRIBUTE = SessionAuthenticationFilter.class.getName() + ".csrf";
@@ -191,6 +194,8 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
 
     private void deny(HttpServletRequest request, HttpServletResponse response,
                              int status, String message) throws IOException {
+        AUDIT.warn("event=authorization.denied service=dispatcher status={} method={} path={}",
+                status, request.getMethod(), request.getRequestURI());
         if (status == HttpServletResponse.SC_UNAUTHORIZED && "GET".equals(request.getMethod())
                 && !request.getRequestURI().startsWith("/api/")
                 && !request.getRequestURI().startsWith("/internal/")

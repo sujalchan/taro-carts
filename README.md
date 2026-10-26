@@ -209,13 +209,14 @@ GOOGLE_MAPS_BROWSER_API_KEY=your-google-api-key
 
 Restrict the browser key to the customer-service, dispatcher-service, and login-service web origins (`http://localhost:8081`, `http://localhost:8084`, and `http://localhost:8085`) and the Maps JavaScript API and Places API (New). The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read this key and pass it to those three services; environment variables take precedence. When starting one of them directly, set `GOOGLE_MAPS_BROWSER_API_KEY` for address suggestions and selection checks. The login-service registration forms use the same Google Places address fill before provisioning an inactive account.
 
-For Android customer editing, add this line to the ignored `android-app/local.properties` file, then sync and rebuild the app:
+For Android address search and the login-service endpoint, add these values to the ignored `android-app/local.properties` file, then sync and rebuild the app:
 
 ```properties
 GOOGLE_MAPS_ANDROID_API_KEY=your-google-api-key
+LOGIN_SERVICE_BASE_URL=http://10.0.2.2:8085
 ```
 
-The address remains editable on both platforms. If a key is not configured or Google cannot find the address, users can enter it manually. Android currently edits customers but does not create them.
+Android registration uses the Places picker when the Android key is configured; the address can also be entered manually. The Android app supports customer/dispatcher registration requests and sign-in, but not admin account management.
 
 If the Android build runs out of Java heap while merging dex files, set `org.gradle.jvmargs=-Xmx3g` in the ignored `android-app/gradle.properties` file and rebuild.
 
@@ -866,35 +867,16 @@ The Android client should therefore use an API base URL similar to:
 http://10.0.2.2:8082/
 ```
 
-After customer selection, the Android app opens the weekly allocation list.
-Each allocation card shows its customer,
-week start, order and payment statuses, and item quantities and prices. Start the
-allocation, customer, and taro services before opening the list in the app. The API
-base URL is defined by `API_BASE_URL` in `android-app/app/src/main/java/nz/ac/aut/comp713/tarocartmobile/data/AllocationApi.kt`.
-
-The Android app currently asks which active customer to act as and has a
-selection-based allocation workflow. Customer selection is not authentication.
-Because Phase 4 now protects the backend APIs, the current Android app receives
-401 until a mobile login/session flow is implemented; its older workflow cannot
-be used against the protected services.
-
-For a customer's unpaid or overdue allocation, the app shows **Pay** after the
-requested stage and before cancellation. Confirming records `PAID` through the
-allocation API and refreshes an existing invoice PDF. It does not collect money.
-
-When an allocation has an issued invoice, its card offers **View invoice PDF**.
-The invoice opens inside the app with page and zoom controls. On Android 17 and
-newer, allow the app's local network request so it can reach the emulator host.
+The Android app signs in against login-service. New customer and dispatcher
+accounts remain pending until enabled by an administrator. The previous
+selection-based “act as any customer/dispatcher” screens are removed so mobile
+users cannot choose another profile's identity. After sign-in, use the matching
+web portal for allocation and delivery workflows; admin account management is
+web-only. On Android 17 and newer, allow the app's local network request so it
+can reach the emulator host.
 
 A physical Android device will require the backend computer's reachable local network address instead.
 
-The bottom bar switches between Customer and Dispatcher on account selection screens.
-It disappears after an account is selected and returns when the user switches accounts
-or goes back to selection. In Dispatcher, select an
-active dispatcher profile to see its assigned allocations, customer addresses,
-taro quantities, status, and delivery week. The allocation service stores the
-Monday of an allocation week, not an exact delivery day. Dispatcher selection,
-like customer selection, is a development account switch and is not authentication.
 The dispatcher view also needs dispatcher-service on port 8084.
 
 ---

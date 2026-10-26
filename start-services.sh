@@ -7,6 +7,9 @@ LOG_DIR="$ROOT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 browser_places_api_key="${GOOGLE_MAPS_BROWSER_API_KEY:-}"
+login_service_url="${LOGIN_SERVICE_URL:-http://localhost:8085}"
+login_session_lifetime="${LOGIN_SESSION_LIFETIME:-PT8H}"
+login_cookie_secure="${LOGIN_COOKIE_SECURE:-false}"
 customer_provisioning_secret="${LOGIN_CUSTOMER_PROVISIONING_SECRET:-}"
 dispatcher_provisioning_secret="${LOGIN_DISPATCHER_PROVISIONING_SECRET:-}"
 secret_names=(
@@ -25,6 +28,18 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
         if [[ -z "$browser_places_api_key" && "$line" == GOOGLE_MAPS_BROWSER_API_KEY=* ]]; then
             browser_places_api_key="${line#*=}"
             browser_places_api_key="${browser_places_api_key%$'\r'}"
+        fi
+        if [[ "${LOGIN_SERVICE_URL+x}" != x && "$line" == LOGIN_SERVICE_URL=* ]]; then
+            login_service_url="${line#*=}"
+            login_service_url="${login_service_url%$'\r'}"
+        fi
+        if [[ "${LOGIN_SESSION_LIFETIME+x}" != x && "$line" == LOGIN_SESSION_LIFETIME=* ]]; then
+            login_session_lifetime="${line#*=}"
+            login_session_lifetime="${login_session_lifetime%$'\r'}"
+        fi
+        if [[ "${LOGIN_COOKIE_SECURE+x}" != x && "$line" == LOGIN_COOKIE_SECURE=* ]]; then
+            login_cookie_secure="${line#*=}"
+            login_cookie_secure="${login_cookie_secure%$'\r'}"
         fi
         if [[ -z "$customer_provisioning_secret" && "$line" == LOGIN_CUSTOMER_PROVISIONING_SECRET=* ]]; then
             customer_provisioning_secret="${line#*=}"
@@ -74,6 +89,9 @@ for secret_name in "${secret_names[@]}"; do
     all_secrets+=("${service_secrets[$secret_name]}")
 done
 unset GOOGLE_MAPS_BROWSER_API_KEY
+export LOGIN_SERVICE_URL="$login_service_url"
+export LOGIN_SESSION_LIFETIME="$login_session_lifetime"
+export LOGIN_COOKIE_SECURE="$login_cookie_secure"
 
 service_pids=()
 

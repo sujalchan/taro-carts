@@ -16,20 +16,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import nz.ac.aut.comp713.tarocartmobile.ui.AllocationsScreen
-import nz.ac.aut.comp713.tarocartmobile.ui.DispatcherScreen
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.remember
+import nz.ac.aut.comp713.tarocartmobile.data.MobileAccount
+import nz.ac.aut.comp713.tarocartmobile.data.MobileAuthApi
+import nz.ac.aut.comp713.tarocartmobile.data.SessionStore
+import nz.ac.aut.comp713.tarocartmobile.ui.MobileAuthScreen
 import nz.ac.aut.comp713.tarocartmobile.ui.theme.TaroCartMobileTheme
 
 class MainActivity : ComponentActivity() {
@@ -55,7 +54,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Text("Local network access needed", style = MaterialTheme.typography.headlineSmall)
                         Spacer(Modifier.height(12.dp))
-                        Text("Allow access to load allocations from the Taro Carts service on this computer.")
+                        Text("Allow local network access to sign in and create an account with Taro Carts.")
                         Spacer(Modifier.height(16.dp))
                         Button(onClick = { requestLocalNetworkAccess() }) {
                             Text("Allow access")
@@ -83,48 +82,26 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// identifies the two top-level views available from the bottom navigation bar
-private enum class AppView {
-    CUSTOMER,
-    DISPATCHER
-}
-
 @Composable
 private fun TaroCartApp() {
-    // preserves the selected view when the activity is recreated, such as after rotation
-    var selectedView by rememberSaveable { mutableStateOf(AppView.CUSTOMER) }
-    val viewStateHolder = rememberSaveableStateHolder()
-
-    Scaffold(
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                    NavigationBarItem(
-                        selected = selectedView == AppView.CUSTOMER,
-                        onClick = { selectedView = AppView.CUSTOMER },
-                        icon = { Text("👤") },
-                        label = { Text("Customer") }
-                    )
-                    NavigationBarItem(
-                        selected = selectedView == AppView.DISPATCHER,
-                        onClick = { selectedView = AppView.DISPATCHER },
-                        icon = { Text("🚚") },
-                        label = { Text("Dispatcher") }
-                    )
-            }
+    val context = LocalContext.current
+    val store = remember { SessionStore(context) }
+    val savedSession = remember { store.read() }
+    var account by remember { mutableStateOf(savedSession?.first) }
+    var sessionToken by remember { mutableStateOf(savedSession?.second) }
+    MobileAuthScreen(
+        account = account,
+        onSignedIn = { signedInAccount, token ->
+            store.write(signedInAccount, token)
+            account = signedInAccount
+            sessionToken = token
+        },
+        onSignOut = {
+            val token = sessionToken
+            if (token != null) MobileAuthApi.logout(token)
+            store.clear()
+            account = null
+            sessionToken = null
         }
-    ) { contentPadding ->
-        // displays the content belonging to the currently selected navigation item
-        when (selectedView) {
-            AppView.CUSTOMER -> viewStateHolder.SaveableStateProvider(AppView.CUSTOMER) {
-                Column(Modifier.fillMaxSize().padding(contentPadding)) {
-                    AllocationsScreen()
-                }
-            }
-            AppView.DISPATCHER -> viewStateHolder.SaveableStateProvider(AppView.DISPATCHER) {
-                Column(Modifier.fillMaxSize().padding(contentPadding)) {
-                    DispatcherScreen()
-                }
-            }
-        }
-    }
+    )
 }

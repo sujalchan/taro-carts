@@ -20,6 +20,7 @@ import nz.ac.aut.comp713.login_service.model.RegistrationRole;
 import nz.ac.aut.comp713.login_service.service.RegistrationRequestService;
 import nz.ac.aut.comp713.login_service.service.AuthCookies;
 import nz.ac.aut.comp713.login_service.service.RegistrationRequestService.DuplicateUsernameException;
+import nz.ac.aut.comp713.login_service.service.SecurityAudit;
 import nz.ac.aut.comp713.login_service.web.RegistrationForm;
 
 /** Public account request pages. */
@@ -105,6 +106,7 @@ public class AccountPageController {
         }
         try {
             Long id = registrationRequestService.submit(role, form);
+            SecurityAudit.event("registration.requested", "requestId=" + id + " role=" + role.name());
             return "redirect:/register/received/" + id;
         } catch (DuplicateUsernameException exception) {
             bindingResult.rejectValue("username", "duplicate", "That username has already been requested.");

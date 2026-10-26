@@ -9,13 +9,17 @@
 </head>
 <body>
 <div class="page-shell">
-    <header class="site-header">
-        <a class="brand" th:href="@{/login}" href="/login" aria-label="Taro Carts home">
-            <span class="brand-mark" aria-hidden="true">T</span>
-            <span>Taro Carts</span>
-        </a>
-        <a class="header-link" th:href="@{/login}" href="/login">Already have an account? Sign in <span aria-hidden="true">↗</span></a>
-    </header>
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="http://localhost:8081/customers">Taro Allocation System</a>
+        <div class="app-nav__links">
+            <a href="http://localhost:8081/customers">Customer Service</a>
+            <a href="http://localhost:8084/dispatchers">Dispatcher Service</a>
+            <a href="http://localhost:8083/taro-types">Taro Service</a>
+            <a href="http://localhost:8082/allocations">Allocation Service</a>
+            <a href="/login">Sign in</a>
+            <a href="/register" aria-current="page">Create account</a>
+        </div>
+    </nav>
 
     <main class="type-panel" aria-labelledby="type-title">
         <ol class="registration-steps" aria-label="Registration progress">

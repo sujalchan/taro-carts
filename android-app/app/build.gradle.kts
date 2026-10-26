@@ -9,6 +9,7 @@ val localProperties = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
 }
 val placesApiKey = localProperties.getProperty("GOOGLE_MAPS_ANDROID_API_KEY", "")
+val loginServiceBaseUrl = localProperties.getProperty("LOGIN_SERVICE_BASE_URL", "http://10.0.2.2:8085")
 
 android {
     namespace = "nz.ac.aut.comp713.tarocartmobile"
@@ -25,6 +26,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PLACES_API_KEY", "\"$placesApiKey\"")
+        buildConfigField("String", "LOGIN_SERVICE_BASE_URL", "\"$loginServiceBaseUrl\"")
     }
 
     buildTypes {
