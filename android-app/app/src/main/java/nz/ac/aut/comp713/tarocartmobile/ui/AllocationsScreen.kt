@@ -297,7 +297,7 @@ fun AllocationsScreen(
                     },
                     title = {
                         Column {
-                            Text("Taro Allocation System", style = MaterialTheme.typography.titleMedium)
+                            Text("Taro Carts", style = MaterialTheme.typography.titleMedium)
                             Text("Weekly Allocations", style = MaterialTheme.typography.bodySmall)
                         }
                     }

@@ -119,6 +119,18 @@ class LoginFlowTest {
     }
 
     @Test
+    void mobileLoginExplainsAdministratorActivationAfterCorrectPassword() throws Exception {
+        accounts.save(new Account("pending-mobile", "pending-mobile", passwords.encode("validpassword123"),
+                AccountRole.CUSTOMER, 7L, false));
+
+        mvc.perform(post("/api/v1/mobile/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"pending-mobile\",\"password\":\"validpassword123\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string(containsString(
+                        "Your account is waiting for administrator activation.")));
+    }
+
+    @Test
     void mobileRegistrationCreatesPendingCustomerRequestAndRejectsPasswordMismatch() throws Exception {
         mvc.perform(post("/api/v1/mobile/register/customer").contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -287,16 +299,25 @@ class LoginFlowTest {
     void badCredentialsAndInactiveAccountCannotSignIn() throws Exception {
         accounts.save(new Account("pending", "pending", passwords.encode("validpassword123"),
                 AccountRole.CUSTOMER, 7L, false));
-        for (String username : List.of("unknown", "admin", "pending")) {
+        for (String username : List.of("unknown", "admin")) {
             String csrf = csrfFromLoginPage();
             mvc.perform(post("/login")
                             .cookie(new Cookie(AuthCookies.CSRF, csrf))
                             .param("csrf", csrf)
                             .param("username", username)
-                            .param("password", username.equals("pending") ? "validpassword123" : "incorrect"))
+                            .param("password", "incorrect"))
                     .andExpect(status().isOk())
                     .andExpect(content().string(containsString("Sign-in failed. Check your details or account status and try again.")));
         }
+        String csrf = csrfFromLoginPage();
+        mvc.perform(post("/login")
+                        .cookie(new Cookie(AuthCookies.CSRF, csrf))
+                        .param("csrf", csrf)
+                        .param("username", "pending")
+                        .param("password", "validpassword123"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "Your password is correct, but your account is waiting for administrator activation.")));
         assertThat(sessions.count()).isZero();
     }
 

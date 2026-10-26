@@ -10,12 +10,12 @@
 <body>
 <div class="page-shell">
     <nav class="app-nav" aria-label="Service navigation">
-        <a class="app-nav__brand" href="http://localhost:8081/customers">Taro Allocation System</a>
+        <a class="app-nav__brand" href="/login">Taro Carts</a>
         <div class="app-nav__links">
-            <a href="http://localhost:8081/customers">Customer Service</a>
-            <a href="http://localhost:8084/dispatchers">Dispatcher Service</a>
-            <a href="http://localhost:8083/taro-types">Taro Service</a>
-            <a href="http://localhost:8082/allocations">Allocation Service</a>
+            <a th:if="${signedInUsername != null}" href="http://localhost:8081/customers">Customer Service</a>
+            <a th:if="${signedInUsername != null}" href="http://localhost:8084/dispatchers">Dispatcher Service</a>
+            <a th:if="${signedInUsername != null}" href="http://localhost:8083/taro-types">Taro Service</a>
+            <a th:if="${signedInUsername != null}" href="http://localhost:8082/allocations">Allocation Service</a>
             <a href="/login" aria-current="page">Login Service</a>
             <a th:if="${signedInUsername == null}" href="/register">Create account</a>
             <a th:if="${signedInUsername != null}" href="/logout">Sign out</a>

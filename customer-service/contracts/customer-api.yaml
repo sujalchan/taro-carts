@@ -4,7 +4,7 @@ info:
   title: Customer Service API
   version: 1.0.0
   description: >
-    REST API for listing and editing customers in the Taro Allocation System.
+    REST API for listing and editing customers in the Taro Carts.
     Only login-service can create or activate customer profiles through private endpoints.
 
 servers:

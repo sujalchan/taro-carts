@@ -127,7 +127,7 @@ fun DispatcherScreen(
                 title = {
                     if (selectedId != null) {
                         Column {
-                            Text("Taro Allocation System", style = MaterialTheme.typography.titleMedium)
+                            Text("Taro Carts", style = MaterialTheme.typography.titleMedium)
                             Text("Assigned Deliveries", style = MaterialTheme.typography.bodySmall)
                         }
                     } else {

@@ -63,21 +63,30 @@ public class LoginController {
         String address = request.getRemoteAddr();
         if (!limiter.allowed(address, username)) {
             SecurityAudit.denied("login.denied", "reason=rate_limited");
-            return loginError(model, username, returnTo, csrfCookie, oldSession);
+            return loginError(model, username, returnTo, csrfCookie, oldSession,
+                    "Sign-in failed. Check your details or account status and try again.");
         }
-        var account = authentication.authenticate(username, password);
-        if (account.isEmpty()) {
+        var result = authentication.authenticateForLogin(username, password);
+        if (result.awaitingActivation()) {
+            SecurityAudit.denied("login.denied", "reason=inactive_account");
+            limiter.failed(address, username);
+            return loginError(model, username, returnTo, csrfCookie, oldSession,
+                    "Your password is correct, but your account is waiting for administrator activation. You can sign in once it has been enabled.");
+        }
+        var account = result.account();
+        if (account == null) {
             SecurityAudit.denied("login.denied", "reason=credentials_or_inactive_account");
             limiter.failed(address, username);
-            return loginError(model, username, returnTo, csrfCookie, oldSession);
+            return loginError(model, username, returnTo, csrfCookie, oldSession,
+                    "Sign-in failed. Check your details or account status and try again.");
         }
         limiter.succeeded(address, username);
-        SecurityAudit.event("login.succeeded", "accountId=" + account.get().getId()
-                + " role=" + account.get().getRole().name());
+        SecurityAudit.event("login.succeeded", "accountId=" + account.getId()
+                + " role=" + account.getRole().name());
         sessions.revoke(oldSession);
-        cookies.issueSession(response, sessions.issue(account.get()));
+        cookies.issueSession(response, sessions.issue(account));
         cookies.clearCsrf(response);
-        return "redirect:" + destinations.destination(account.get().getRole(), returnTo);
+        return "redirect:" + destinations.destination(account.getRole(), returnTo);
     }
 
     @PostMapping("/logout")
@@ -108,8 +117,8 @@ public class LoginController {
     }
 
     private String loginError(Model model, String username, String returnTo, String csrfCookie,
-                              String sessionToken) {
-        model.addAttribute("loginError", "Sign-in failed. Check your details or account status and try again.");
+                              String sessionToken, String message) {
+        model.addAttribute("loginError", message);
         model.addAttribute("username", username);
         model.addAttribute("returnTo", destinations.permittedReturnTo(returnTo));
         model.addAttribute("csrfToken", csrfCookie);

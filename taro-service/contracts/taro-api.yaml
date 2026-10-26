@@ -3,7 +3,7 @@ openapi: 3.0.3
 info:
   title: Taro Service API
   version: 1.0.0
-  description: REST API for managing taro types in the Taro Allocation System.
+  description: REST API for managing taro types in the Taro Carts.
 
 servers:
   - url: http://localhost:8083
