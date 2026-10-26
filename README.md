@@ -64,21 +64,20 @@ Actions performed by one user can affect what the other user sees or can do.
 
 ## Architecture
 
-The project contains three independently running Spring Boot backend services and a native Android client.
+The project contains four independently running Spring Boot backend services and a native Android client.
 
 ```text
-Web manager / Android worker
-             |
-             v
- allocation-service :8082  →  allocation.db
-       |             |
-       | HTTP        | HTTP
-       v             v
-customer-service   taro-service
-     :8081             :8083
-       |                 |
-       v                 v
-  customer.db         taro.db
+Web manager / Android worker ───→ allocation-service :8082 ───→ allocation.db
+                                       │          │
+                                     HTTP       HTTP
+                                       ↓          ↓
+                              customer-service  taro-service
+                                   :8081            :8083
+                                     │                │
+                                     ↓                ↓
+                                customer.db        taro.db
+
+Browser ───→ login-service :8084 (login/register forms; receipt-only prototype)
 ```
 
 Each backend service owns its own persistent data.
@@ -103,6 +102,11 @@ taro-carts/
 │   └── src/
 │
 ├── allocation-service/
+│   ├── pom.xml
+│   ├── mvnw
+│   └── src/
+│
+├── login-service/
 │   ├── pom.xml
 │   ├── mvnw
 │   └── src/
@@ -220,6 +224,16 @@ Persistent database:
 ```text
 allocation.db
 ```
+
+### Login Service
+
+`login-service` runs on:
+
+```text
+http://localhost:8084
+```
+
+It provides server-rendered login and registration forms and matching versioned API endpoints. For now, submissions are validated and acknowledged as received; no authentication, account creation, or credential storage is performed.
 
 ---
 
@@ -339,6 +353,17 @@ PUT     /allocations/{id}
 DELETE  /allocations/{id}
 ```
 
+### Login Service
+
+Base URL: `http://localhost:8084/api/v1`
+
+```text
+POST /auth/login
+POST /auth/register
+```
+
+Both endpoints return `202 Accepted` with a receipt message. Invalid input returns the shared `{code, message, path}` error shape. The OpenAPI contract is `login-service/contracts/login-api.yaml`.
+
 Additional Assignment 3 operations will be added as shared workflows are implemented.
 
 ---
@@ -363,12 +388,19 @@ Allocation Service:
 http://localhost:8082/swagger-ui/index.html
 ```
 
+Login Service:
+
+```text
+http://localhost:8084/swagger-ui/index.html
+```
+
 Raw OpenAPI definitions are available at:
 
 ```text
 http://localhost:8081/v3/api-docs
 http://localhost:8083/v3/api-docs
 http://localhost:8082/v3/api-docs
+http://localhost:8084/v3/api-docs
 ```
 
 ---

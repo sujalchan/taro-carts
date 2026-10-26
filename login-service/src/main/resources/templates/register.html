@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/register.js"></script>
+    <title>Create account | Taro Carts</title>
+</head>
+<body>
+    <main class="auth-card">
+        <a class="brand" href="/login">Taro Carts</a>
+        <p class="eyebrow">Join Taro Carts</p>
+        <h1>Create an account</h1>
+        <p class="intro">Add your details to get started.</p>
+
+        <div class="notice notice--success" role="status" th:if="${success != null}" th:text="${success}"></div>
+        <div class="notice notice--error" role="alert" th:if="${errors != null && !errors.isEmpty()}">
+            <strong>Please check your details:</strong>
+            <ul><li th:each="error : ${errors}" th:text="${error}">Validation error</li></ul>
+        </div>
+
+        <form action="/register" method="post">
+            <fieldset class="account-types">
+                <legend>Account type</legend>
+                <label class="radio-option">
+                    <input type="radio" name="accountType" value="CUSTOMER" required th:checked="${accountType == 'CUSTOMER'}">
+                    <span>Customer</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="accountType" value="DISPATCHER" th:checked="${accountType == 'DISPATCHER'}">
+                    <span>Dispatcher</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="accountType" value="ADMIN" th:checked="${accountType == 'ADMIN'}">
+                    <span>Admin</span>
+                </label>
+            </fieldset>
+
+            <div id="customer-details" class="customer-details" hidden>
+                <h2>Customer details</h2>
+                <label for="businessName">Business Name</label>
+                <input type="text" id="businessName" name="businessName" maxlength="255"
+                       th:value="${businessName}">
+
+                <label for="contactName">Contact Name</label>
+                <input type="text" id="contactName" name="contactName" th:value="${contactName}">
+
+                <label for="phone">Phone</label>
+                <input type="tel" id="phone" name="phone" autocomplete="tel" pattern="\+?[0-9]{7,15}"
+                       title="Enter 7 to 15 digits, optionally starting with +" th:value="${phone}">
+            </div>
+
+            <div id="other-account-details" class="customer-details" hidden>
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" autocomplete="name" maxlength="100" th:value="${name}">
+            </div>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" autocomplete="email" maxlength="254" required th:value="${email}">
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+            <p class="field-hint">Use at least 8 characters.</p>
+
+            <button type="submit">Create account</button>
+        </form>
+        <p class="switch">Already have an account? <a href="/login">Log in</a></p>
+        <p class="stub-note">This service currently confirms receipt only. Account creation is not enabled.</p>
+    </main>
+</body>
+</html>
