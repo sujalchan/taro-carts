@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import nz.ac.aut.comp713.dispatcher_service.dto.ApiError;
-import nz.ac.aut.comp713.dispatcher_service.exception.AddressNotValidException;
-import nz.ac.aut.comp713.dispatcher_service.exception.AddressValidationUnavailableException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,19 +22,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> notFound(DispatcherNotFoundException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ApiError("DISPATCHER_NOT_FOUND", ex.getMessage(), request.getRequestURI()));
-    }
-
-    @ExceptionHandler(AddressNotValidException.class)
-    public ResponseEntity<ApiError> invalidAddress(AddressNotValidException ex, HttpServletRequest request) {
-        return ResponseEntity.badRequest()
-                .body(new ApiError("ADDRESS_NOT_VALID", ex.getMessage(), request.getRequestURI()));
-    }
-
-    @ExceptionHandler(AddressValidationUnavailableException.class)
-    public ResponseEntity<ApiError> addressValidationUnavailable(AddressValidationUnavailableException ex,
-            HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(new ApiError("ADDRESS_VALIDATION_UNAVAILABLE", ex.getMessage(), request.getRequestURI()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

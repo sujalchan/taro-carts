@@ -191,20 +191,19 @@ Its SQLite database is `customer.db`.
 http://localhost:8084
 ```
 
-It creates, lists, searches, and edits dispatcher profiles with dispatcher name, contact, phone number, address, and active status. New dispatchers are active by default. Its SQLite database is `dispatcher.db`. Server-rendered pages are `/dispatchers`, `/dispatchers/new`, and `/dispatchers/{id}/edit`; client-rendered pages are `/dispatchers-client.html`, `/dispatcher-new-client.html`, and `/dispatcher-edit-client.html`. Create and edit forms use Google Places address suggestions when the browser key is configured.
+It creates, lists, searches, and edits dispatcher profiles with dispatcher name, contact, phone number, address, and active status. New dispatchers are active by default. Its SQLite database is `dispatcher.db`. Server-rendered pages are `/dispatchers`, `/dispatchers/new`, and `/dispatchers/{id}/edit`; client-rendered pages are `/dispatchers-client.html`, `/dispatcher-new-client.html`, and `/dispatcher-edit-client.html`. Create forms require a complete address selected from Google Places; edit forms allow an unchanged saved address and require a Places selection for changes.
 
 ### Google Maps address suggestions and validation
 
-Enable **Maps JavaScript API**, **Places API (New)**, and **Address Validation API** in a billing-enabled Google Cloud project. The web forms use Places for suggestions. Before saving a customer or dispatcher, the server validates the submitted address using Address Validation API and only accepts complete premise-level matches without inferred, replaced, spell-corrected, or unconfirmed components. The server stores Google's formatted address.
+Enable **Maps JavaScript API** and **Places API (New)** in a billing-enabled Google Cloud project. The browser forms require a complete street address selected from Google Places suggestions before submission and store Google's formatted address. The API endpoints still require a nonblank address, but do not call Google's address validation service.
 
-Use separate keys for browser suggestions and server validation in the ignored repository-root `.env` file:
+Set the browser key in the ignored repository-root `.env` file:
 
 ```properties
 GOOGLE_MAPS_BROWSER_API_KEY=your-google-api-key
-GOOGLE_MAPS_SERVER_API_KEY=your-server-api-key
 ```
 
-Restrict the browser key to the customer-service and dispatcher-service web origins and the Maps JavaScript API and Places API (New). Restrict the server key to the Address Validation API and the server's allowed network where possible. The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read both keys and pass them to `customer-service` and `dispatcher-service`; environment variables take precedence. When starting either service directly, set `GOOGLE_MAPS_BROWSER_API_KEY` for suggestions and `GOOGLE_MAPS_SERVER_API_KEY` for required server-side validation. Without the server key, creation fails closed with an address-validation unavailable error.
+Restrict the browser key to the customer-service and dispatcher-service web origins and the Maps JavaScript API and Places API (New). The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read this key and pass it to `customer-service` and `dispatcher-service`; environment variables take precedence. When starting either service directly, set `GOOGLE_MAPS_BROWSER_API_KEY` for address suggestions and selection checks.
 
 For Android customer editing, add this line to the ignored `android-app/local.properties` file, then sync and rebuild the app:
 
@@ -350,7 +349,7 @@ PUT  /dispatchers/{id}
 ```
 
 Dispatcher searching uses `GET /dispatchers?search=<value>`. Creation requires `name` and `address`; `contactName` and `phone` are optional.
-The `active` flag defaults to `true` when omitted on create; omitting it on update preserves the existing value. The server validates each submitted address with the address validation API and rejects addresses that do not produce a complete match. Validation errors return `400`, duplicate names return `409`, and address-validation outages return `503`. See the [Dispatcher Service Swagger UI](http://localhost:8084/swagger-ui/index.html) for request and response schemas.
+The `active` flag defaults to `true` when omitted on create; omitting it on update preserves the existing value. Browser forms require an address selected from Google Places suggestions; the API requires a nonblank address. Duplicate names return `409`. See the [Dispatcher Service Swagger UI](http://localhost:8084/swagger-ui/index.html) for request and response schemas.
 
 ### Taro Service
 

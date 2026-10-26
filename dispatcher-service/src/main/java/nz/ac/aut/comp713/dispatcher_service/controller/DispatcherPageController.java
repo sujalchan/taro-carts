@@ -11,8 +11,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import nz.ac.aut.comp713.dispatcher_service.dto.DispatcherRequest;
-import nz.ac.aut.comp713.dispatcher_service.exception.AddressNotValidException;
-import nz.ac.aut.comp713.dispatcher_service.exception.AddressValidationUnavailableException;
 import nz.ac.aut.comp713.dispatcher_service.exception.DispatcherAlreadyExistsException;
 import nz.ac.aut.comp713.dispatcher_service.exception.DispatcherNotFoundException;
 import nz.ac.aut.comp713.dispatcher_service.service.DispatcherService;
@@ -57,8 +55,7 @@ public class DispatcherPageController {
         }
         try {
             dispatcherService.create(request);
-        } catch (DispatcherAlreadyExistsException | AddressNotValidException
-                | AddressValidationUnavailableException exception) {
+        } catch (DispatcherAlreadyExistsException exception) {
             addValues(model, name, contactName, phone, address, active);
             model.addAttribute("errors", List.of(exception.getMessage()));
             return "dispatcher-form";
@@ -98,8 +95,7 @@ public class DispatcherPageController {
         }
         try {
             dispatcherService.update(id, request);
-        } catch (DispatcherAlreadyExistsException | AddressNotValidException
-                | AddressValidationUnavailableException | DispatcherNotFoundException exception) {
+        } catch (DispatcherAlreadyExistsException | DispatcherNotFoundException exception) {
             model.addAttribute("dispatcherId", id);
             addValues(model, name, contactName, phone, address, active);
             model.addAttribute("errors", List.of(exception.getMessage()));

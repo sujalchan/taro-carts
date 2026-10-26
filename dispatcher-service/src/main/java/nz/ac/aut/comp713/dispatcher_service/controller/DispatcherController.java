@@ -64,10 +64,10 @@ public class DispatcherController {
     }
 
     /** Validates and creates a dispatcher, returning its location and representation. */
-    @Operation(summary = "Create a dispatcher", description = "Creates a dispatcher after validating the supplied address against the address validation API. Dispatcher names must be unique.")
+    @Operation(summary = "Create a dispatcher", description = "Creates a dispatcher. Browser forms require an address selected from Google Places suggestions. Dispatcher names must be unique.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Dispatcher created", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DispatcherResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Request validation failed or the address was not a complete valid match", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "400", description = "Request data is invalid, including a missing address", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "409", description = "A dispatcher with this name already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "503", description = "Address validation service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
     })
@@ -80,10 +80,10 @@ public class DispatcherController {
     }
 
     /** Validates and updates the dispatcher identified by the path ID. */
-    @Operation(summary = "Update a dispatcher", description = "Replaces the dispatcher's editable details and validates its address. If active is omitted, the current active state is preserved.")
+    @Operation(summary = "Update a dispatcher", description = "Replaces the dispatcher's editable details. Browser forms require a new address to be selected from Google Places suggestions. If active is omitted, the current active state is preserved.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Dispatcher updated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DispatcherResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Request validation failed or the address was not a complete valid match", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "400", description = "Request data is invalid, including a missing address", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Dispatcher not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "409", description = "Another dispatcher with this name already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "503", description = "Address validation service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))

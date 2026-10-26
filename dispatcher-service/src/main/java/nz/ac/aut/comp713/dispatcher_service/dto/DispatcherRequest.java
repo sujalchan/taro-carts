@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /** Fields accepted when creating or updating a dispatcher. */
-@Schema(description = "Dispatcher details. Address is checked by the server against the address validation API before saving.")
+@Schema(description = "Dispatcher details. Browser forms require users to select an address suggestion before submitting; the REST API only enforces that the address is nonblank.")
 public record DispatcherRequest(
         @Schema(description = "Dispatcher's display name; required and limited to 100 characters", example = "Mere Tahana", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 100)
         @NotBlank(message = "Dispatcher name is required")

@@ -33,6 +33,7 @@ Thumbs.db
 *.db-shm
 *.db-wal
 *.db-journal
+/dispatcher-service/dispatcher.db
 
 # Local environment files, including the Google Maps key in the root .env
 .env

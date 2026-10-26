@@ -7,20 +7,15 @@ LOG_DIR="$ROOT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 browser_places_api_key="${GOOGLE_MAPS_BROWSER_API_KEY:-}"
-server_places_api_key="${GOOGLE_MAPS_SERVER_API_KEY:-}"
-if [[ ( -z "$browser_places_api_key" || -z "$server_places_api_key" ) && -f "$ROOT_DIR/.env" ]]; then
+if [[ -z "$browser_places_api_key" && -f "$ROOT_DIR/.env" ]]; then
     while IFS= read -r line || [[ -n "$line" ]]; do
         if [[ -z "$browser_places_api_key" && "$line" == GOOGLE_MAPS_BROWSER_API_KEY=* ]]; then
             browser_places_api_key="${line#*=}"
             browser_places_api_key="${browser_places_api_key%$'\r'}"
-        elif [[ -z "$server_places_api_key" && "$line" == GOOGLE_MAPS_SERVER_API_KEY=* ]]; then
-            server_places_api_key="${line#*=}"
-            server_places_api_key="${server_places_api_key%$'\r'}"
         fi
     done < "$ROOT_DIR/.env"
 fi
 unset GOOGLE_MAPS_BROWSER_API_KEY
-unset GOOGLE_MAPS_SERVER_API_KEY
 
 service_pids=()
 
@@ -34,9 +29,6 @@ start_service() {
         if [[ "$directory" == "customer-service" || "$directory" == "dispatcher-service" ]]; then
             if [[ -n "$browser_places_api_key" ]]; then
                 export GOOGLE_MAPS_BROWSER_API_KEY="$browser_places_api_key"
-            fi
-            if [[ -n "$server_places_api_key" ]]; then
-                export GOOGLE_MAPS_SERVER_API_KEY="$server_places_api_key"
             fi
         fi
         exec ./mvnw spring-boot:run

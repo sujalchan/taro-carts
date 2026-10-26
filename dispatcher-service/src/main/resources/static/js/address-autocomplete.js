@@ -6,15 +6,42 @@
     const status = document.getElementById("addressAutocompleteStatus");
     if (!address || !container || !suggestionsList || !status) return;
 
+    const form = address.form;
+    const addressField = address.closest(".address-field");
+    const editingExistingAddress = location.pathname.includes("edit");
+    let hasVerifiedAddress = editingExistingAddress && address.value.trim().length > 0;
+
+    address.addEventListener("input", () => {
+        hasVerifiedAddress = false;
+        address.setCustomValidity("");
+    });
+
+    form?.addEventListener("submit", event => {
+        if (hasVerifiedAddress) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        address.setCustomValidity("Select a complete address from the Google Places suggestions.");
+        address.reportValidity();
+        status.textContent = "Select a complete street address from the suggestions before submitting.";
+        address.focus();
+    }, true);
+
     let apiKey;
     try {
         const response = await fetch("/api/v1/google-places/config");
-        if (!response.ok) return;
+        if (!response.ok) {
+            status.textContent = "Google Places address checking is unavailable. Try again later.";
+            return;
+        }
         ({ apiKey } = await response.json());
     } catch (_) {
+        status.textContent = "Google Places address checking is unavailable. Try again later.";
         return;
     }
-    if (!apiKey) return;
+    if (!apiKey) {
+        status.textContent = "Google Places is not configured, so an address cannot be checked.";
+        return;
+    }
 
     window.taroPlacesReady = async () => {
         try {
@@ -39,16 +66,29 @@
                 address.focus();
                 try {
                     const place = prediction.toPlace();
-                    await place.fetchFields({ fields: ["formattedAddress"] });
+                    await place.fetchFields({ fields: ["formattedAddress", "addressComponents"] });
                     if (version !== requestVersion) return;
                     if (!place.formattedAddress || place.formattedAddress.length > address.maxLength) {
-                        status.textContent = "Enter this address manually in the address field.";
+                        status.textContent = "Choose a complete street address from the suggestions.";
+                        return;
+                    }
+                    const components = place.addressComponents || [];
+                    const types = new Set(components.flatMap(component => component.types || []));
+                    const country = components.find(component => component.types?.includes("country"));
+                    const hasLocality = ["locality", "postal_town", "sublocality_level_1", "postal_code"]
+                        .some(type => types.has(type));
+                    if (!types.has("street_number") || !types.has("route") || !hasLocality
+                            || country?.shortText !== "NZ") {
+                        hasVerifiedAddress = false;
+                        status.textContent = "Select a complete New Zealand street address, including its street number.";
                         return;
                     }
                     address.value = place.formattedAddress;
+                    hasVerifiedAddress = true;
+                    address.setCustomValidity("");
                 } catch (_) {
                     if (version === requestVersion) {
-                        status.textContent = "Could not load that address. Enter it manually.";
+                        status.textContent = "Could not check that address. Select a suggestion and try again.";
                     }
                 }
             }
@@ -94,7 +134,7 @@
                         }
                     } catch (_) {
                         if (version === requestVersion) {
-                            status.textContent = "Address suggestions are unavailable. Enter the address manually.";
+                            status.textContent = "Address suggestions are unavailable. Try again later.";
                         }
                     }
                 }, 300);
@@ -125,8 +165,7 @@
                 }
             });
 
-            const field = address.closest(".address-field");
-            field.addEventListener("focusout", () => {
+            addressField?.addEventListener("focusout", () => {
                 setTimeout(() => {
                     if (!field.contains(document.activeElement)) {
                         closeSuggestions();
@@ -135,7 +174,7 @@
                 }, 0);
             });
         } catch (_) {
-            status.textContent = "Address suggestions are unavailable. Enter the address manually.";
+            status.textContent = "Address suggestions are unavailable. Try again later.";
         }
     };
 
@@ -144,7 +183,7 @@
     script.src = "https://maps.googleapis.com/maps/api/js?key=" +
         encodeURIComponent(apiKey) + "&v=weekly&loading=async&callback=taroPlacesReady";
     script.onerror = () => {
-        status.textContent = "Address suggestions are unavailable. Enter the address manually.";
+        status.textContent = "Address suggestions are unavailable. Try again later.";
     };
     document.head.appendChild(script);
 })();

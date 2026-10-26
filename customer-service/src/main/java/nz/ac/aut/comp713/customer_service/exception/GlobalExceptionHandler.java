@@ -9,8 +9,6 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import nz.ac.aut.comp713.customer_service.dto.ApiError;
-import nz.ac.aut.comp713.customer_service.exception.AddressNotValidException;
-import nz.ac.aut.comp713.customer_service.exception.AddressValidationUnavailableException;
 
 // converts exceptions thrown by the REST API into consistent JSON error responses
 @RestControllerAdvice
@@ -46,20 +44,6 @@ public class GlobalExceptionHandler {
 		return ResponseEntity
 				.status(HttpStatus.CONFLICT)
 				.body(error);
-	}
-
-	@ExceptionHandler(AddressNotValidException.class)
-	public ResponseEntity<ApiError> handleAddressNotValid(AddressNotValidException exception,
-			HttpServletRequest request) {
-		return ResponseEntity.badRequest().body(new ApiError("ADDRESS_NOT_VALID", exception.getMessage(),
-				request.getRequestURI()));
-	}
-
-	@ExceptionHandler(AddressValidationUnavailableException.class)
-	public ResponseEntity<ApiError> handleAddressValidationUnavailable(AddressValidationUnavailableException exception,
-			HttpServletRequest request) {
-		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-				.body(new ApiError("ADDRESS_VALIDATION_UNAVAILABLE", exception.getMessage(), request.getRequestURI()));
 	}
 
 	// return the first validation message when @Valid request data is invalid

@@ -18,12 +18,10 @@ import nz.ac.aut.comp713.customer_service.repository.CustomerRepository;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final GoogleAddressValidationService addressValidationService;
 
     // pass the respository used for customer persistence
-    public CustomerService(CustomerRepository customerRepository, GoogleAddressValidationService addressValidationService) {
+    public CustomerService(CustomerRepository customerRepository) {
         this.customerRepository = customerRepository;
-        this.addressValidationService = addressValidationService;
     }
 
     // return all customers, optionally filtered by name, contact name, or phone
@@ -52,7 +50,7 @@ public class CustomerService {
 
         Customer customer = new Customer();
         customer.setName(name);
-        customer.setAddress(addressValidationService.validate(request.address().trim()));
+        customer.setAddress(request.address().trim());
         customer.setNormalizedName(normalizedName);
         customer.setContactName(request.contactName());
         customer.setPhone(request.phone());

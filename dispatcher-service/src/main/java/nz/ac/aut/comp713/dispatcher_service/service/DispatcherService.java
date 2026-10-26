@@ -18,11 +18,9 @@ import nz.ac.aut.comp713.dispatcher_service.repository.DispatcherRepository;
 @Service
 public class DispatcherService {
     private final DispatcherRepository repository;
-    private final GoogleAddressValidationService addressValidationService;
 
-    public DispatcherService(DispatcherRepository repository, GoogleAddressValidationService addressValidationService) {
+    public DispatcherService(DispatcherRepository repository) {
         this.repository = repository;
-        this.addressValidationService = addressValidationService;
     }
 
     public List<DispatcherResponse> getAll(String search) {
@@ -43,7 +41,7 @@ public class DispatcherService {
         dispatcher.setNormalizedName(normalize(name));
         dispatcher.setContactName(clean(request.contactName()));
         dispatcher.setPhone(clean(request.phone()));
-        dispatcher.setAddress(addressValidationService.validate(request.address().trim()));
+        dispatcher.setAddress(request.address().trim());
         dispatcher.setActive(request.active() == null || request.active());
         try {
             return toResponse(repository.saveAndFlush(dispatcher));
@@ -62,7 +60,7 @@ public class DispatcherService {
         dispatcher.setNormalizedName(normalize(name));
         dispatcher.setContactName(clean(request.contactName()));
         dispatcher.setPhone(clean(request.phone()));
-        dispatcher.setAddress(addressValidationService.validate(request.address().trim()));
+        dispatcher.setAddress(request.address().trim());
         if (request.active() != null) dispatcher.setActive(request.active());
         try {
             return toResponse(repository.saveAndFlush(dispatcher));
