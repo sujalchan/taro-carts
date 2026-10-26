@@ -346,10 +346,10 @@ GET  /dispatchers
 POST /dispatchers
 GET  /dispatchers/{id}
 PUT  /dispatchers/{id}
+GET  /google-places/config
 ```
 
-Dispatcher searching uses `GET /dispatchers?search=<value>`. Creation requires `name` and `address`; `contactName` and `phone` are optional.
-The `active` flag defaults to `true` when omitted on create; omitting it on update preserves the existing value. Browser forms require an address selected from Google Places suggestions; the API requires a nonblank address. Duplicate names return `409`. See the [Dispatcher Service Swagger UI](http://localhost:8084/swagger-ui/index.html) for request and response schemas.
+Dispatcher searching uses `GET /dispatchers?search=<value>` and checks name, contact name, phone, and address case-insensitively. `GET /google-places/config` returns the browser Places API key used by the forms. Creation requires `name` and `address`; `contactName` and `phone` are optional. The `active` flag defaults to `true` when omitted on create; omitting it on update preserves the existing value. On update, omitted contact or phone values are cleared. Duplicate names are rejected case-insensitively after whitespace is removed and return `409`. Browser forms require an address selected from Google Places suggestions; the API requires a nonblank address. See the [Dispatcher Service Swagger UI](http://localhost:8084/swagger-ui/index.html) for request and response schemas.
 
 ### Taro Service
 

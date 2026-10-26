@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 /** Exposes browser-safe configuration needed by the address autocomplete UI. */
 @RestController
 @RequestMapping("/api/v1/google-places")
-@Tag(name = "Address Validation Configuration", description = "Public browser configuration for address autocomplete")
+@Tag(name = "Google Places Configuration", description = "Public browser configuration for address autocomplete")
 public class GooglePlacesConfigController {
     private final String browserApiKey;
 

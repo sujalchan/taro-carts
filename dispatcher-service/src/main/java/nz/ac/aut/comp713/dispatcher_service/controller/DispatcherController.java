@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,15 +40,17 @@ public class DispatcherController {
         this.dispatcherService = dispatcherService;
     }
 
-    /** Lists dispatchers, optionally filtering across name, contact, phone, and address. */
-    @Operation(summary = "List dispatchers", description = "Returns all dispatchers, or filters by a case-insensitive substring in name, contact name, phone number, or address.")
+    /**
+     * Lists dispatchers, optionally filtering across name, contact, phone, and
+     * address.
+     */
+    @Operation(summary = "List dispatchers", description = "Returns active and inactive dispatchers, or filters by a case-insensitive substring in name, contact name, phone number, or address. Search does not filter by active state.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Dispatcher list returned", content = @Content(mediaType = "application/json", schema = @Schema(type = "array", implementation = DispatcherResponse.class)))
     })
     @GetMapping
     public List<DispatcherResponse> getAll(
-            @Parameter(description = "Optional text to search in dispatcher name, contact, phone, or address", example = "Mere")
-            @RequestParam(required = false) String search) {
+            @Parameter(description = "Optional text to search in dispatcher name, contact, phone, or address", example = "Mere") @RequestParam(required = false) String search) {
         return dispatcherService.getAll(search);
     }
 
@@ -63,13 +66,15 @@ public class DispatcherController {
         return dispatcherService.getById(id);
     }
 
-    /** Validates and creates a dispatcher, returning its location and representation. */
+    /**
+     * Validates the request fields and creates a dispatcher with its resource
+     * location.
+     */
     @Operation(summary = "Create a dispatcher", description = "Creates a dispatcher. Browser forms require an address selected from Google Places suggestions. Dispatcher names must be unique.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Dispatcher created", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DispatcherResponse.class))),
+            @ApiResponse(responseCode = "201", description = "Dispatcher created", headers = @Header(name = "Location", description = "URI of the new dispatcher resource", schema = @Schema(type = "string", format = "uri")), content = @Content(mediaType = "application/json", schema = @Schema(implementation = DispatcherResponse.class))),
             @ApiResponse(responseCode = "400", description = "Request data is invalid, including a missing address", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "409", description = "A dispatcher with this name already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "503", description = "Address validation service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "409", description = "A dispatcher with the same case- and whitespace-normalized name already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping
     public ResponseEntity<DispatcherResponse> create(@Valid @RequestBody DispatcherRequest request) {
@@ -79,14 +84,13 @@ public class DispatcherController {
         return ResponseEntity.created(location).body(created);
     }
 
-    /** Validates and updates the dispatcher identified by the path ID. */
-    @Operation(summary = "Update a dispatcher", description = "Replaces the dispatcher's editable details. Browser forms require a new address to be selected from Google Places suggestions. If active is omitted, the current active state is preserved.")
+    /** Validates the request fields and updates the dispatcher identified by its ID. */
+    @Operation(summary = "Update a dispatcher", description = "Updates the dispatcher's required name and address. Omitted contactName or phone values are cleared; omitted active preserves the current state. Browser forms require a changed address to be selected from Google Places suggestions.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Dispatcher updated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DispatcherResponse.class))),
             @ApiResponse(responseCode = "400", description = "Request data is invalid, including a missing address", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "Dispatcher not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "409", description = "Another dispatcher with this name already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "503", description = "Address validation service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "409", description = "Another dispatcher with the same case- and whitespace-normalized name already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
     })
     @PutMapping("/{id}")
     public DispatcherResponse update(

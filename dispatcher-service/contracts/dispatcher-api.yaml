@@ -3,32 +3,65 @@ openapi: 3.0.3
 info:
   title: Dispatcher Service API
   version: 1.0.0
-  description: Create, retrieve, and search dispatcher profiles.
+  description: >-
+    REST API for listing, searching, creating, and updating dispatcher profiles,
+    plus the browser configuration used by Google Places address suggestions.
 
 servers:
   - url: http://localhost:8084
     description: Local development server
 
+tags:
+  - name: Dispatchers
+    description: Dispatcher profile operations
+  - name: Google Places Configuration
+    description: Public browser configuration for dispatcher address forms
+
 paths:
   /api/v1/dispatchers:
     get:
-      summary: List dispatchers, optionally filtered by search text
+      tags: [Dispatchers]
+      summary: List dispatchers
+      description: >-
+        Returns active and inactive dispatchers. When search is supplied,
+        matches a case-insensitive substring in the name, contact name, phone,
+        or address. Search does not filter on active state.
+      operationId: getAllDispatchers
       parameters:
-        - in: query
-          name: search
+        - name: search
+          in: query
+          required: false
+          description: Optional substring to search across dispatcher details.
           schema:
             type: string
+          example: Auckland
       responses:
         "200":
-          description: Dispatcher list
+          description: Dispatcher list returned successfully.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/DispatcherResponse"
+              example:
+                - id: 1
+                  name: Auckland Dispatch
+                  contactName: Hana
+                  phone: "+64211234567"
+                  address: 20 Example Road, Auckland
+                  active: true
+
     post:
-      summary: Create a dispatcher profile
+      tags: [Dispatchers]
+      summary: Create a dispatcher
+      description: >-
+        Creates a dispatcher. Browser forms require a complete New Zealand
+        street address selected from Google Places; the REST API validates that
+        address is nonblank but does not call Google. Names are unique after
+        lowercasing and removing whitespace. If active is omitted, it defaults
+        to true.
+      operationId: createDispatcher
       requestBody:
         required: true
         content:
@@ -40,53 +73,171 @@ paths:
               contactName: Hana
               phone: "+64211234567"
               address: 20 Example Road, Auckland
+              active: true
       responses:
         "201":
-          description: Dispatcher created
+          description: Dispatcher created successfully.
           headers:
             Location:
+              description: URI of the newly created dispatcher resource.
               schema:
                 type: string
+                format: uri
+              example: http://localhost:8084/api/v1/dispatchers/1
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DispatcherResponse"
+              example:
+                id: 1
+                name: Auckland Dispatch
+                contactName: Hana
+                phone: "+64211234567"
+                address: 20 Example Road, Auckland
+                active: true
         "400":
-          description: Invalid dispatcher data
+          description: Request validation failed, including missing required fields or an invalid phone number.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: Dispatcher address is required
+                path: /api/v1/dispatchers
+        "409":
+          description: A dispatcher with the same normalized name already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: DISPATCHER_ALREADY_EXISTS
+                message: Dispatcher 'Auckland Dispatch' already exists.
+                path: /api/v1/dispatchers
+
+  /api/v1/dispatchers/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Dispatcher ID.
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+        example: 1
+    get:
+      tags: [Dispatchers]
+      summary: Retrieve a dispatcher by ID
+      operationId: getDispatcherById
+      responses:
+        "200":
+          description: Dispatcher retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DispatcherResponse"
+              example:
+                id: 1
+                name: Auckland Dispatch
+                contactName: Hana
+                phone: "+64211234567"
+                address: 20 Example Road, Auckland
+                active: true
+        "404":
+          description: No dispatcher exists with this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: DISPATCHER_NOT_FOUND
+                message: Dispatcher with ID 999 was not found.
+                path: /api/v1/dispatchers/999
+
+    put:
+      tags: [Dispatchers]
+      summary: Update a dispatcher
+      description: >-
+        Updates the required name and address. Omitted contactName or phone
+        values are cleared; omitted active preserves its existing value. A
+        supplied active value can activate or deactivate the dispatcher.
+        Browser forms require changed addresses to be selected from Google
+        Places; the REST API only requires a nonblank address. Names are unique
+        after lowercasing and removing whitespace.
+      operationId: updateDispatcher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DispatcherRequest"
+            example:
+              name: Auckland Dispatch
+              contactName: Hana
+              phone: "+64211234567"
+              address: 20 Example Road, Auckland
+              active: false
+      responses:
+        "200":
+          description: Dispatcher updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DispatcherResponse"
+              example:
+                id: 1
+                name: Auckland Dispatch
+                contactName: Hana
+                phone: "+64211234567"
+                address: 20 Example Road, Auckland
+                active: false
+        "400":
+          description: Request validation failed, including missing required fields or an invalid phone number.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: Dispatcher address is required
+                path: /api/v1/dispatchers/1
+        "404":
+          description: No dispatcher exists with this ID.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "409":
-          description: Dispatcher name already exists
+          description: Another dispatcher with the same normalized name already exists.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+              example:
+                code: DISPATCHER_ALREADY_EXISTS
+                message: Dispatcher 'Auckland Dispatch' already exists.
+                path: /api/v1/dispatchers/2
 
-  /api/v1/dispatchers/{id}:
+  /api/v1/google-places/config:
     get:
-      summary: Retrieve a dispatcher by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-            format: int64
+      tags: [Google Places Configuration]
+      summary: Get Google Places browser configuration
+      description: >-
+        Returns the browser API key used by address autocomplete. The key is an
+        empty string when it is not configured. This endpoint does not validate
+        addresses.
+      operationId: getGooglePlacesConfig
       responses:
         "200":
-          description: Dispatcher retrieved
+          description: Google Places browser configuration returned.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DispatcherResponse"
-        "404":
-          description: Dispatcher not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: "#/components/schemas/GooglePlacesConfigResponse"
+              example:
+                apiKey: browser-api-key
 
 components:
   schemas:
@@ -96,32 +247,96 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
           maxLength: 100
+          pattern: '\S'
+          description: Required dispatcher name. Names are unique after lowercasing and removing whitespace.
+          example: Auckland Dispatch
         contactName:
           type: string
+          nullable: true
           maxLength: 100
+          description: Optional contact person's name. A blank value is stored as null.
+          example: Hana
         phone:
           type: string
-          pattern: '^\+?[0-9]{7,15}$'
+          nullable: true
+          pattern: '^$|^\+?[0-9]{7,15}$'
+          description: Optional phone number with 7 to 15 digits, optionally prefixed by +. A blank value is stored as null.
+          example: "+64211234567"
+        address:
+          type: string
+          minLength: 1
+          maxLength: 500
+          pattern: '\S'
+          description: >-
+            Required nonblank address. Browser forms require a complete New
+            Zealand street address selected from Google Places; direct API
+            requests are not Google-validated.
+          example: 20 Example Road, Auckland
+        active:
+          type: boolean
+          nullable: true
+          description: Defaults to true on create; if omitted on update, the existing value is preserved.
+          example: true
+
+    DispatcherResponse:
+      type: object
+      required: [id, name, address, active]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Dispatcher ID.
+          example: 1
+        name:
+          type: string
+          maxLength: 100
+          description: Dispatcher name.
+          example: Auckland Dispatch
+        contactName:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Contact person's name, if provided.
+          example: Hana
+        phone:
+          type: string
+          nullable: true
+          pattern: '^$|^\+?[0-9]{7,15}$'
+          description: Phone number, if provided.
+          example: "+64211234567"
         address:
           type: string
           maxLength: 500
-    DispatcherResponse:
-      allOf:
-        - $ref: "#/components/schemas/DispatcherRequest"
-        - type: object
-          required: [id]
-          properties:
-            id:
-              type: integer
-              format: int64
+          description: Saved address.
+          example: 20 Example Road, Auckland
+        active:
+          type: boolean
+          description: Inactive dispatchers remain included in list and search results.
+          example: true
+
+    GooglePlacesConfigResponse:
+      type: object
+      required: [apiKey]
+      properties:
+        apiKey:
+          type: string
+          description: Browser API key for Google Places, or an empty string when unset.
+
     ApiError:
       type: object
       required: [code, message, path]
       properties:
         code:
           type: string
+          description: Stable error code.
+          example: DISPATCHER_NOT_FOUND
         message:
           type: string
+          description: Human-readable error message.
+          example: Dispatcher with ID 999 was not found.
         path:
           type: string
+          description: Request path that produced the error.
+          example: /api/v1/dispatchers/999

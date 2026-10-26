@@ -18,7 +18,7 @@ public record DispatcherRequest(
         @Schema(description = "Optional phone number with 7 to 15 digits, optionally prefixed by +", example = "+64211234567", pattern = "^$|^\\+?[0-9]{7,15}$")
         @Pattern(regexp = "^$|^\\+?[0-9]{7,15}$", message = "Phone number must contain 7 to 15 digits")
         String phone,
-        @Schema(description = "Complete street address; required and limited to 500 characters", example = "12 Example Road, Auckland 1010, New Zealand", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 500)
+        @Schema(description = "Nonblank address, limited to 500 characters. Browser forms require a complete New Zealand address selected from Google Places; direct API calls are not Google-validated.", example = "12 Example Road, Auckland 1010, New Zealand", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 500)
         @NotBlank(message = "Dispatcher address is required")
         @Size(max = 500, message = "Dispatcher address must be 500 characters or fewer")
         String address,

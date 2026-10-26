@@ -9,6 +9,6 @@ public record DispatcherResponse(
         @Schema(description = "Dispatcher's display name") String name,
         @Schema(description = "Contact person's name, if provided") String contactName,
         @Schema(description = "Phone number, if provided") String phone,
-        @Schema(description = "Validated dispatcher address") String address,
-        @Schema(description = "Whether the dispatcher is active") boolean active) {
+        @Schema(description = "Saved dispatcher address") String address,
+        @Schema(description = "Whether the dispatcher is active. Inactive dispatchers remain visible in list and search results.") boolean active) {
 }
