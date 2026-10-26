@@ -49,6 +49,7 @@
                 </div>
 
                 <form id="registration-form" method="post" th:action="${accountType == 'customer' ? '/register/customer' : '/register/dispatcher'}" action="/register/customer" autocomplete="on">
+                    <input type="hidden" name="csrf" th:value="${csrfToken}">
                     <fieldset class="wizard-step" data-wizard-step="2">
                         <legend>Account details</legend>
                         <div class="field-grid account-fields">

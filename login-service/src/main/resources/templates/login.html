@@ -36,17 +36,21 @@
                 <h2 id="login-title">Sign in</h2>
                 <p class="intro">Enter your details to continue to Taro Carts.</p>
 
+                <div class="form-error" role="alert" th:if="${loginError}" th:text="${loginError}">Sign-in failed.</div>
+                <div class="form-success" role="status" th:if="${passwordChanged}">Password changed. Sign in with your new password.</div>
+
                 <form method="post" action="/login" autocomplete="on">
+                    <input type="hidden" name="csrf" th:value="${csrfToken}">
+                    <input type="hidden" name="returnTo" th:value="${returnTo}">
                     <div class="field">
                         <label for="username">Username</label>
-                        <input id="username" name="username" type="text" autocomplete="username" required maxlength="100" placeholder="Your username">
+                        <input id="username" name="username" type="text" autocomplete="username" required maxlength="100" placeholder="Your username" th:value="${username}">
                     </div>
                     <div class="field">
                         <label for="password">Password</label>
                         <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Your password">
                     </div>
-                    <button class="primary-button" type="submit" disabled aria-describedby="phase-note">Sign in <span aria-hidden="true">→</span></button>
-                    <p class="phase-note" id="phase-note">Sign-in opens when account setup is complete.</p>
+                    <button class="primary-button" type="submit">Sign in <span aria-hidden="true">→</span></button>
                 </form>
 
                 <div class="form-divider"><span>New to Taro Carts?</span></div>

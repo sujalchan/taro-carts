@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import nz.ac.aut.comp713.login_service.model.RegistrationRequest;
 import nz.ac.aut.comp713.login_service.model.RegistrationRole;
+import nz.ac.aut.comp713.login_service.repository.AccountRepository;
 import nz.ac.aut.comp713.login_service.repository.RegistrationRequestRepository;
 import nz.ac.aut.comp713.login_service.web.RegistrationForm;
 
@@ -16,16 +17,21 @@ import nz.ac.aut.comp713.login_service.web.RegistrationForm;
 public class RegistrationRequestService {
 
     private final RegistrationRequestRepository repository;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final AccountRepository accounts;
+    private final BCryptPasswordEncoder passwordEncoder;
 
-    public RegistrationRequestService(RegistrationRequestRepository repository) {
+    public RegistrationRequestService(RegistrationRequestRepository repository,
+                                      AccountRepository accounts, BCryptPasswordEncoder passwordEncoder) {
         this.repository = repository;
+        this.accounts = accounts;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Long submit(RegistrationRole role, RegistrationForm form) {
         String username = form.getUsername().trim();
         String normalizedUsername = username.toLowerCase(Locale.ROOT);
-        if (normalizedUsername.equals("admin") || repository.existsByNormalizedUsername(normalizedUsername)) {
+        if (accounts.existsByNormalizedUsername(normalizedUsername)
+                || repository.existsByNormalizedUsername(normalizedUsername)) {
             throw new DuplicateUsernameException();
         }
 

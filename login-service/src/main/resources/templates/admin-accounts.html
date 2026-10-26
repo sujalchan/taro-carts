@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Account requests · Taro Carts</title>
+    <link rel="stylesheet" th:href="@{/css/auth.css}" href="/css/auth.css">
+</head>
+<body>
+<div class="page-shell">
+    <header class="site-header">
+        <a class="brand" th:href="@{/admin/accounts}" href="/admin/accounts" aria-label="Taro Carts account administration">
+            <span class="brand-mark" aria-hidden="true">T</span><span>Taro Carts</span>
+        </a>
+        <form method="post" th:action="@{/logout}" action="/logout">
+            <input type="hidden" name="csrf" th:value="${csrfToken}">
+            <button class="text-back" type="submit">Sign out <span aria-hidden="true">→</span></button>
+        </form>
+    </header>
+
+    <main class="admin-panel">
+        <span class="eyebrow">Account administration</span>
+        <h1>Account requests</h1>
+        <p class="intro">Review incoming requests. Approval is not available until private customer and dispatcher provisioning is connected.</p>
+
+        <section aria-labelledby="pending-title">
+            <h2 id="pending-title">Pending requests <span th:text="${#lists.size(requests)}">0</span></h2>
+            <div class="table-scroll" th:if="${!requests.isEmpty()}">
+                <table>
+                    <thead><tr><th scope="col">Reference</th><th scope="col">Username</th><th scope="col">Type</th><th scope="col">Profile name</th><th scope="col">Submitted</th><th scope="col">Status</th></tr></thead>
+                    <tbody><tr th:each="request : ${requests}">
+                        <td th:text="${request.id}">1</td>
+                        <td th:text="${request.username}">username</td>
+                        <td th:text="${request.role}">CUSTOMER</td>
+                        <td th:text="${request.name}">Profile</td>
+                        <td th:text="${#temporals.format(request.submittedAt, 'dd MMM yyyy HH:mm')}">Date</td>
+                        <td><span class="status-pill">Awaiting provisioning</span></td>
+                    </tr></tbody>
+                </table>
+            </div>
+            <p class="empty-state" th:if="${requests.isEmpty()}">No account requests yet.</p>
+        </section>
+
+        <section aria-labelledby="existing-title">
+            <h2 id="existing-title">Login accounts <span th:text="${#lists.size(accounts)}">1</span></h2>
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Profile ID</th><th scope="col">Status</th></tr></thead>
+                    <tbody><tr th:each="account : ${accounts}">
+                        <td th:text="${account.username}">admin</td>
+                        <td th:text="${account.role}">ADMIN</td>
+                        <td th:text="${account.profileId ?: '—'}">—</td>
+                        <td><span class="status-pill" th:text="${account.active ? 'Active' : 'Inactive'}">Active</span></td>
+                    </tr></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section aria-labelledby="password-title" class="admin-password-section">
+            <h2 id="password-title">Change admin password</h2>
+            <p class="intro">Change the initial development password before using this service with real data. Changing it signs out all sessions for this account.</p>
+            <div class="form-error" role="alert" th:if="${passwordError}">Password was not changed. Check your current password and enter a matching new password of 12–72 characters.</div>
+            <form method="post" th:action="@{/admin/password}" action="/admin/password" class="admin-password-form">
+                <input type="hidden" name="csrf" th:value="${csrfToken}">
+                <div class="field"><label for="currentPassword">Current password</label><input id="currentPassword" name="currentPassword" type="password" autocomplete="current-password" required></div>
+                <div class="field"><label for="newPassword">New password</label><input id="newPassword" name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="72" required></div>
+                <div class="field"><label for="confirmPassword">Confirm new password</label><input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="72" required></div>
+                <button class="primary-button" type="submit">Change password <span aria-hidden="true">→</span></button>
+            </form>
+        </section>
+    </main>
+    <footer class="site-footer"><span>© Taro Carts</span></footer>
+</div>
+</body>
+</html>

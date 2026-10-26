@@ -67,4 +67,9 @@ public class RegistrationRequest {
     public Long getId() {
         return id;
     }
+
+    public String getUsername() { return username; }
+    public RegistrationRole getRole() { return role; }
+    public String getName() { return name; }
+    public Instant getSubmittedAt() { return submittedAt; }
 }

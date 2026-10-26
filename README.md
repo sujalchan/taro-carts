@@ -64,7 +64,7 @@ Actions performed by one user can affect what the other user sees or can do.
 
 ## Architecture
 
-The project contains five independently running Spring Boot backend services and a native Android client. `login-service` currently saves registration requests and serves a sign-in page; authentication is a later phase.
+The project contains five independently running Spring Boot backend services and a native Android client. `login-service` now supports admin sign-in and sessions and saves customer/dispatcher registration requests. Cross-service authorization and account approval are not yet connected.
 
 ```text
 Web manager / Android worker ───→ allocation-service :8082 ───→ allocation.db
@@ -78,7 +78,7 @@ Web manager / Android worker ───→ allocation-service :8082 ───→ 
                                 customer.db        taro.db
 
 Browser ───→ dispatcher-service :8084 ───→ dispatcher.db
-Browser ───→ login-service :8085 (registration requests and sign-in page)
+Browser ───→ login-service :8085 (admin login and registration requests)
 ```
 
 Each backend service owns its own persistent data.
@@ -737,7 +737,7 @@ The Maven and Gradle wrappers included with the projects should be used where po
 
 ## Running the Backend
 
-The launchers start all five backend services, including `login-service` at `http://localhost:8085/login`. Registration submissions save pending requests; sign-in is not active yet.
+The launchers start all five backend services, including `login-service` at `http://localhost:8085/login`. The seeded development admin can sign in with `admin` / `admin1234!` and should immediately change that password at `/admin/accounts`. Registration submissions still save pending requests; customer/dispatcher login and approval wait for private profile provisioning.
 
 To launch all five services together:
 
@@ -864,7 +864,7 @@ types and whole-number quantities; the service applies its default
 deletion only for allocations requested through the customer app while they are
 still requested. The customer-request API checks requester, ownership, and status
 again. Customer selection is not authentication; this is a development workflow
-until login is added.
+until cross-service session authorization is added.
 
 For a customer's unpaid or overdue allocation, the app shows **Pay** after the
 requested stage and before cancellation. Confirming records `PAID` through the
