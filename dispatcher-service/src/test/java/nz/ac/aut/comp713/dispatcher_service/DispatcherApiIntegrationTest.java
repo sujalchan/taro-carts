@@ -103,7 +103,7 @@ class DispatcherApiIntegrationTest {
     }
 
     @Test
-    void readSearchUpdateAndDuplicateChecksStillWork() throws Exception {
+    void readSearchAndUpdateStillWork() throws Exception {
         provision(VALID);
         Long id = dispatchers.findAll().getFirst().getId();
         mvc.perform(get("/api/v1/dispatchers/{id}", id)).andExpect(status().isOk())
@@ -122,7 +122,8 @@ class DispatcherApiIntegrationTest {
                 .content("""
                         {"name":"aucklanddispatch","address":"24 Example Road, Auckland"}
                         """))
-                .andExpect(status().isConflict());
+                .andExpect(status().isCreated());
+        assertThat(dispatchers.count()).isEqualTo(2);
     }
 
     @Test
@@ -135,7 +136,7 @@ class DispatcherApiIntegrationTest {
     }
 
     @Test
-    void retryingTheSameRegistrationReturnsTheSameProfile() throws Exception {
+    void sameNameCanBeProvisionedAndRetryingTheSameRegistrationReturnsTheSameProfile() throws Exception {
         provision(VALID);
         Long firstId = dispatchers.findAll().getFirst().getId();
         mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "1")
@@ -143,7 +144,12 @@ class DispatcherApiIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content(VALID))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(firstId));
-        assertThat(dispatchers.count()).isEqualTo(1);
+        mvc.perform(post("/internal/v1/dispatchers").header("X-Registration-Request-Id", "2")
+                .header("X-Login-Provisioning-Key", SECRET)
+                .contentType(MediaType.APPLICATION_JSON).content(VALID))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.not(firstId)));
+        assertThat(dispatchers.count()).isEqualTo(2);
     }
 
     private void provision(String body) throws Exception {

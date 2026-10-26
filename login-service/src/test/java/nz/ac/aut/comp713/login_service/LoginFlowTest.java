@@ -126,8 +126,27 @@ class LoginFlowTest {
         mvc.perform(post("/api/v1/mobile/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"pending-mobile\",\"password\":\"validpassword123\"}"))
                 .andExpect(status().isForbidden())
-                .andExpect(content().string(containsString(
-                        "Your account is waiting for administrator activation.")));
+                .andExpect(jsonPath("$.code").value("ACCOUNT_AWAITING_ACTIVATION"))
+                .andExpect(jsonPath("$.message").value(
+                        "Your account is waiting for administrator activation. You can sign in once it has been enabled."))
+                .andExpect(jsonPath("$.path").value("/api/v1/mobile/login"));
+    }
+
+    @Test
+    void mobileApiFailuresUseTheSharedCodeMessageAndPathShape() throws Exception {
+        mvc.perform(post("/api/v1/mobile/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"incorrect\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value(
+                        "Sign-in failed. Check your details or account status and try again."))
+                .andExpect(jsonPath("$.path").value("/api/v1/mobile/login"));
+
+        mvc.perform(post("/api/v1/mobile/register/customer").contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.path").value("/api/v1/mobile/register/customer"));
     }
 
     @Test

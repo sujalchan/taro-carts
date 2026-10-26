@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import nz.ac.aut.comp713.login_service.model.Account;
 import nz.ac.aut.comp713.login_service.model.RegistrationRole;
+import nz.ac.aut.comp713.login_service.dto.ApiError;
 import nz.ac.aut.comp713.login_service.service.AuthenticationService;
 import nz.ac.aut.comp713.login_service.service.LoginAttemptLimiter;
 import nz.ac.aut.comp713.login_service.service.RegistrationRequestService;
@@ -25,7 +26,6 @@ public class MobileAuthenticationController {
     public record LoginRequest(@NotBlank @Size(max = 100) String username,
                                @NotBlank @Size(max = 72) String password) {}
     public record LoginResponse(String sessionToken, String username, String role, Long profileId) {}
-    public record LoginError(String code, String message) {}
     public record RegistrationResponse(long requestId, String status, String message) {}
     public record LogoutRequest(@NotBlank String sessionToken) {}
 
@@ -56,8 +56,9 @@ public class MobileAuthenticationController {
             SecurityAudit.denied("mobile.login.denied", "reason=inactive_account");
             limiter.failed(address, request.username());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).cacheControl(CacheControl.noStore())
-                    .body(new LoginError("ACCOUNT_AWAITING_ACTIVATION",
-                            "Your account is waiting for administrator activation. You can sign in once it has been enabled."));
+                    .body(new ApiError("ACCOUNT_AWAITING_ACTIVATION",
+                            "Your account is waiting for administrator activation. You can sign in once it has been enabled.",
+                            servletRequest.getRequestURI()));
         }
         Account account = result.account();
         if (account == null) {

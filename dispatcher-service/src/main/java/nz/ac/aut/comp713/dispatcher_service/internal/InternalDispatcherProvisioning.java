@@ -1,7 +1,5 @@
 package nz.ac.aut.comp713.dispatcher_service.internal;
 
-import java.util.Locale;
-
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.stereotype.Service;
@@ -31,7 +29,10 @@ class InternalDispatcherProvisioning {
         Dispatcher dispatcher = new Dispatcher();
         dispatcher.setProvisioningRequestId(registrationRequestId);
         dispatcher.setName(name);
-        dispatcher.setNormalizedName(name.toLowerCase(Locale.ROOT).replaceAll("\\s+", ""));
+        // Display names are not identities: two dispatchers can legitimately share a name.
+        // Keep the legacy unique column populated, but scope its value to this trusted
+        // registration request so a name collision cannot strand account provisioning.
+        dispatcher.setNormalizedName("registration:" + registrationRequestId);
         dispatcher.setContactName(clean(request.contactName()));
         dispatcher.setPhone(clean(request.phone()));
         dispatcher.setAddress(request.address().trim());
