@@ -41,13 +41,11 @@ public class LoginController {
                             @RequestParam(value = "passwordChanged", required = false) String passwordChanged,
                             HttpServletResponse response, Model model) {
         var existing = sessions.validate(sessionToken);
-        if (existing.isPresent()) {
-            return "redirect:" + destinations.destination(existing.get().getAccount().getRole(), returnTo);
-        }
         response.setHeader("Cache-Control", "no-store");
         model.addAttribute("csrfToken", cookies.issueCsrf(response));
         model.addAttribute("returnTo", destinations.permittedReturnTo(returnTo));
         model.addAttribute("passwordChanged", "1".equals(passwordChanged));
+        model.addAttribute("signedInUsername", existing.map(session -> session.getAccount().getUsername()).orElse(null));
         return "login";
     }
 
@@ -63,12 +61,12 @@ public class LoginController {
         }
         String address = request.getRemoteAddr();
         if (!limiter.allowed(address, username)) {
-            return loginError(model, username, returnTo, csrfCookie);
+            return loginError(model, username, returnTo, csrfCookie, oldSession);
         }
         var account = authentication.authenticate(username, password);
         if (account.isEmpty()) {
             limiter.failed(address, username);
-            return loginError(model, username, returnTo, csrfCookie);
+            return loginError(model, username, returnTo, csrfCookie, oldSession);
         }
         limiter.succeeded(address, username);
         sessions.revoke(oldSession);
@@ -91,11 +89,14 @@ public class LoginController {
         return "redirect:/login";
     }
 
-    private String loginError(Model model, String username, String returnTo, String csrfCookie) {
+    private String loginError(Model model, String username, String returnTo, String csrfCookie,
+                              String sessionToken) {
         model.addAttribute("loginError", "Sign-in failed. Check your details or account status and try again.");
         model.addAttribute("username", username);
         model.addAttribute("returnTo", destinations.permittedReturnTo(returnTo));
         model.addAttribute("csrfToken", csrfCookie);
+        model.addAttribute("signedInUsername", sessions.validate(sessionToken)
+                .map(session -> session.getAccount().getUsername()).orElse(null));
         return "login";
     }
 }

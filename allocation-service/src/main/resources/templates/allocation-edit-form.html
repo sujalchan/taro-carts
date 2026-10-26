@@ -39,6 +39,7 @@
     </div>
 
     <form th:action="@{/allocations/{id}/edit(id=${allocationId})}" method="post">
+        <input type="hidden" name="csrf" th:value="${csrfToken}">
 
         <div>
 

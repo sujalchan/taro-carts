@@ -8,6 +8,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +37,14 @@ class TaroTypeApiTest {
 	@SuppressWarnings("unused")
 	void resetDatabase() {
 		taroTypeRepository.deleteAll();
+	}
+
+	@Test
+	void missingBrowserPageUsesBrandedError() throws Exception {
+		mockMvc.perform(get("/missing-page").accept(MediaType.TEXT_HTML))
+				.andExpect(status().isNotFound())
+				.andExpect(content().string(containsString("Page not found")))
+				.andExpect(content().string(not(containsString("Whitelabel Error Page"))));
 	}
 
 	// test retrieving taro types when the database is empty

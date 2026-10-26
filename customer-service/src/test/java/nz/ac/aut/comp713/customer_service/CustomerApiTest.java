@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import jakarta.servlet.RequestDispatcher;
 
 import nz.ac.aut.comp713.customer_service.repository.CustomerRepository;
 
@@ -36,6 +37,29 @@ class CustomerApiTest {
     @BeforeEach
     void resetDatabase() {
         customers.deleteAll();
+    }
+
+    @Test
+    void browserGetsBrandedErrorPageButApiKeepsJsonErrors() throws Exception {
+        mvc.perform(get("/missing-page").accept(MediaType.TEXT_HTML))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString("Page not found")))
+                .andExpect(content().string(not(containsString("Whitelabel Error Page"))));
+        mvc.perform(get("/api/v1/customers/999").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CUSTOMER_NOT_FOUND"));
+        mvc.perform(get("/error").requestAttr(RequestDispatcher.ERROR_STATUS_CODE, 403)
+                .accept(MediaType.TEXT_HTML))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string(containsString("Access denied")));
+        mvc.perform(get("/error").requestAttr(RequestDispatcher.ERROR_STATUS_CODE, 503)
+                .accept(MediaType.TEXT_HTML))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().string(containsString("Service temporarily unavailable")));
+        mvc.perform(get("/error").requestAttr(RequestDispatcher.ERROR_STATUS_CODE, 500)
+                .accept(MediaType.TEXT_HTML))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(containsString("Something went wrong")));
     }
 
     @Test

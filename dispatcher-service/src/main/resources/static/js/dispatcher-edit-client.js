@@ -43,7 +43,7 @@ dispatcherForm.addEventListener("submit", async event => {
     try {
         const response = await fetch(`/api/v1/dispatchers/${encodeURIComponent(dispatcherId)}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...window.taroCsrfHeaders() },
             body: JSON.stringify(dispatcher)
         });
         if (!response.ok) {

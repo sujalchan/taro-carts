@@ -7,6 +7,19 @@ $originalDispatcherSecret = [Environment]::GetEnvironmentVariable("LOGIN_DISPATC
 $placesApiKey = $originalPlacesKey
 $customerSecret = $originalCustomerSecret
 $dispatcherSecret = $originalDispatcherSecret
+$secretNames = @(
+    "LOGIN_CUSTOMER_VALIDATION_SECRET", "LOGIN_DISPATCHER_VALIDATION_SECRET",
+    "LOGIN_ALLOCATION_VALIDATION_SECRET", "LOGIN_TARO_VALIDATION_SECRET",
+    "ALLOCATION_CUSTOMER_REFERENCE_SECRET", "ALLOCATION_DISPATCHER_REFERENCE_SECRET",
+    "ALLOCATION_TARO_REFERENCE_SECRET",
+    "ALLOCATION_CUSTOMER_ASSERTION_SECRET", "ALLOCATION_DISPATCHER_ASSERTION_SECRET"
+)
+$originalSecrets = @{}
+$serviceSecrets = @{}
+foreach ($secretName in $secretNames) {
+    $originalSecrets[$secretName] = [Environment]::GetEnvironmentVariable($secretName, "Process")
+    $serviceSecrets[$secretName] = $originalSecrets[$secretName]
+}
 $envFile = Join-Path $root ".env"
 if (Test-Path -LiteralPath $envFile) {
     foreach ($line in Get-Content -LiteralPath $envFile) {
@@ -19,6 +32,12 @@ if (Test-Path -LiteralPath $envFile) {
         if ([string]::IsNullOrWhiteSpace($dispatcherSecret) -and $line -match '^\s*LOGIN_DISPATCHER_PROVISIONING_SECRET\s*=\s*(.*?)\s*$') {
             $dispatcherSecret = $Matches[1].Trim('"', "'")
         }
+        foreach ($secretName in $secretNames) {
+            $match = [regex]::Match($line, '^\s*' + [regex]::Escape($secretName) + '\s*=\s*(.*?)\s*$')
+            if ([string]::IsNullOrWhiteSpace($serviceSecrets[$secretName]) -and $match.Success) {
+                $serviceSecrets[$secretName] = $match.Groups[1].Value.Trim('"', "'")
+            }
+        }
     }
 }
 function New-ProvisioningSecret {
@@ -27,13 +46,35 @@ function New-ProvisioningSecret {
     try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
     return [BitConverter]::ToString($bytes).Replace("-", "").ToLowerInvariant()
 }
-if ([string]::IsNullOrWhiteSpace($customerSecret)) { $customerSecret = New-ProvisioningSecret }
-if ([string]::IsNullOrWhiteSpace($dispatcherSecret)) { $dispatcherSecret = New-ProvisioningSecret }
+$generatedProvisioningSecret = $false
+if ([string]::IsNullOrWhiteSpace($customerSecret)) {
+    $customerSecret = New-ProvisioningSecret
+    $generatedProvisioningSecret = $true
+}
+if ([string]::IsNullOrWhiteSpace($dispatcherSecret)) {
+    $dispatcherSecret = New-ProvisioningSecret
+    $generatedProvisioningSecret = $true
+}
 if ($customerSecret.Length -lt 32 -or $dispatcherSecret.Length -lt 32) {
     throw "Provisioning secrets must contain at least 32 characters."
 }
 if ($customerSecret -ceq $dispatcherSecret) {
     throw "Customer and dispatcher provisioning secrets must be different."
+}
+$generatedSecrets = @()
+$seenSecrets = @($customerSecret, $dispatcherSecret)
+foreach ($secretName in $secretNames) {
+    if ([string]::IsNullOrWhiteSpace($serviceSecrets[$secretName])) {
+        $serviceSecrets[$secretName] = New-ProvisioningSecret
+        $generatedSecrets += $secretName
+    }
+    if ($serviceSecrets[$secretName].Length -lt 32) {
+        throw "$secretName must contain at least 32 characters."
+    }
+    if ($seenSecrets -ccontains $serviceSecrets[$secretName]) {
+        throw "All internal service secrets must be different."
+    }
+    $seenSecrets += $serviceSecrets[$secretName]
 }
 
 $services = @(
@@ -43,6 +84,14 @@ $services = @(
     @{ Name = "Taro Service"; Directory = "taro-service"; Port = 8083; ApplicationClass = "nz.ac.aut.comp713.taro_service.TaroServiceApplication" },
     @{ Name = "Allocation Service"; Directory = "allocation-service"; Port = 8082; ApplicationClass = "nz.ac.aut.comp713.allocation_service.AllocationServiceApplication" }
 )
+
+if ($generatedProvisioningSecret -or $generatedSecrets.Count -gt 0) {
+    foreach ($service in $services) {
+        if (@(Get-NetTCPConnection -LocalPort $service.Port -State Listen -ErrorAction SilentlyContinue).Count -gt 0) {
+            throw "A service is already listening on port $($service.Port). Set stable secrets in .env and restart the full stack before a partial launch."
+        }
+    }
+}
 
 $startedCount = 0
 try {
@@ -79,11 +128,42 @@ try {
         }
         [Environment]::SetEnvironmentVariable("LOGIN_CUSTOMER_PROVISIONING_SECRET", $null, "Process")
         [Environment]::SetEnvironmentVariable("LOGIN_DISPATCHER_PROVISIONING_SECRET", $null, "Process")
+        foreach ($secretName in $secretNames) {
+            [Environment]::SetEnvironmentVariable($secretName, $null, "Process")
+        }
         if ($service.Directory -eq "login-service" -or $service.Directory -eq "customer-service") {
             [Environment]::SetEnvironmentVariable("LOGIN_CUSTOMER_PROVISIONING_SECRET", $customerSecret, "Process")
         }
         if ($service.Directory -eq "login-service" -or $service.Directory -eq "dispatcher-service") {
             [Environment]::SetEnvironmentVariable("LOGIN_DISPATCHER_PROVISIONING_SECRET", $dispatcherSecret, "Process")
+        }
+        if ($service.Directory -eq "login-service") {
+            foreach ($secretName in @("LOGIN_CUSTOMER_VALIDATION_SECRET", "LOGIN_DISPATCHER_VALIDATION_SECRET", "LOGIN_ALLOCATION_VALIDATION_SECRET", "LOGIN_TARO_VALIDATION_SECRET")) {
+                [Environment]::SetEnvironmentVariable($secretName, $serviceSecrets[$secretName], "Process")
+            }
+        }
+        if ($service.Directory -eq "customer-service") {
+            [Environment]::SetEnvironmentVariable("LOGIN_CUSTOMER_VALIDATION_SECRET", $serviceSecrets["LOGIN_CUSTOMER_VALIDATION_SECRET"], "Process")
+            [Environment]::SetEnvironmentVariable("ALLOCATION_CUSTOMER_REFERENCE_SECRET", $serviceSecrets["ALLOCATION_CUSTOMER_REFERENCE_SECRET"], "Process")
+            [Environment]::SetEnvironmentVariable("ALLOCATION_CUSTOMER_ASSERTION_SECRET", $serviceSecrets["ALLOCATION_CUSTOMER_ASSERTION_SECRET"], "Process")
+        }
+        if ($service.Directory -eq "dispatcher-service") {
+            [Environment]::SetEnvironmentVariable("LOGIN_DISPATCHER_VALIDATION_SECRET", $serviceSecrets["LOGIN_DISPATCHER_VALIDATION_SECRET"], "Process")
+            [Environment]::SetEnvironmentVariable("ALLOCATION_DISPATCHER_REFERENCE_SECRET", $serviceSecrets["ALLOCATION_DISPATCHER_REFERENCE_SECRET"], "Process")
+            [Environment]::SetEnvironmentVariable("ALLOCATION_DISPATCHER_ASSERTION_SECRET", $serviceSecrets["ALLOCATION_DISPATCHER_ASSERTION_SECRET"], "Process")
+        }
+        if ($service.Directory -eq "allocation-service") {
+            [Environment]::SetEnvironmentVariable("LOGIN_ALLOCATION_VALIDATION_SECRET", $serviceSecrets["LOGIN_ALLOCATION_VALIDATION_SECRET"], "Process")
+            foreach ($secretName in @("ALLOCATION_CUSTOMER_REFERENCE_SECRET", "ALLOCATION_DISPATCHER_REFERENCE_SECRET", "ALLOCATION_TARO_REFERENCE_SECRET")) {
+                [Environment]::SetEnvironmentVariable($secretName, $serviceSecrets[$secretName], "Process")
+            }
+            foreach ($secretName in @("ALLOCATION_CUSTOMER_ASSERTION_SECRET", "ALLOCATION_DISPATCHER_ASSERTION_SECRET")) {
+                [Environment]::SetEnvironmentVariable($secretName, $serviceSecrets[$secretName], "Process")
+            }
+        }
+        if ($service.Directory -eq "taro-service") {
+            [Environment]::SetEnvironmentVariable("LOGIN_TARO_VALIDATION_SECRET", $serviceSecrets["LOGIN_TARO_VALIDATION_SECRET"], "Process")
+            [Environment]::SetEnvironmentVariable("ALLOCATION_TARO_REFERENCE_SECRET", $serviceSecrets["ALLOCATION_TARO_REFERENCE_SECRET"], "Process")
         }
 
         Start-Process -FilePath "cmd.exe" `
@@ -96,6 +176,9 @@ try {
     [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_BROWSER_API_KEY", $originalPlacesKey, "Process")
     [Environment]::SetEnvironmentVariable("LOGIN_CUSTOMER_PROVISIONING_SECRET", $originalCustomerSecret, "Process")
     [Environment]::SetEnvironmentVariable("LOGIN_DISPATCHER_PROVISIONING_SECRET", $originalDispatcherSecret, "Process")
+    foreach ($secretName in $secretNames) {
+        [Environment]::SetEnvironmentVariable($secretName, $originalSecrets[$secretName], "Process")
+    }
 }
 
 if ($startedCount -gt 0) {

@@ -31,7 +31,7 @@ class CustomerClientTest {
 
     @Test
     void retrievesCustomerFromCustomerService() {
-        server.expect(once(), requestTo("http://localhost:8081/api/v1/customers/7"))
+        server.expect(once(), requestTo("http://localhost:8081/internal/v1/allocation-reference/customers/7"))
                 .andRespond(withSuccess("""
                         {"id":7,"name":"Island Foods","contactName":"John",
                         "phoneNumber":"0211234567","active":true}
@@ -45,7 +45,7 @@ class CustomerClientTest {
 
     @Test
     void mapsMissingCustomerTo404Exception() {
-        server.expect(once(), requestTo("http://localhost:8081/api/v1/customers/999"))
+        server.expect(once(), requestTo("http://localhost:8081/internal/v1/allocation-reference/customers/999"))
                 .andRespond(withResourceNotFound());
         assertThrows(CustomerNotFoundException.class, () -> client.getCustomer(999L));
         server.verify();
@@ -53,7 +53,7 @@ class CustomerClientTest {
 
     @Test
     void mapsServerFailureToOwnUnavailableException() {
-        server.expect(once(), requestTo("http://localhost:8081/api/v1/customers"))
+        server.expect(once(), requestTo("http://localhost:8081/internal/v1/allocation-reference/customers"))
                 .andRespond(withServerError());
         assertThrows(CustomerServiceUnavailableException.class, () -> client.getCustomers());
         server.verify();
@@ -61,7 +61,7 @@ class CustomerClientTest {
 
     @Test
     void mapsUnexpectedClientErrorToOwnUnavailableException() {
-        server.expect(once(), requestTo("http://localhost:8081/api/v1/customers/7"))
+        server.expect(once(), requestTo("http://localhost:8081/internal/v1/allocation-reference/customers/7"))
                 .andRespond(withBadRequest());
         assertThrows(CustomerServiceUnavailableException.class, () -> client.getCustomer(7L));
         server.verify();
@@ -69,7 +69,7 @@ class CustomerClientTest {
 
     @Test
     void mapsEmptySingleResponseToOwnUnavailableException() {
-        server.expect(once(), requestTo("http://localhost:8081/api/v1/customers/7"))
+        server.expect(once(), requestTo("http://localhost:8081/internal/v1/allocation-reference/customers/7"))
                 .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
         assertThrows(CustomerServiceUnavailableException.class, () -> client.getCustomer(7L));
         server.verify();
@@ -77,7 +77,7 @@ class CustomerClientTest {
 
     @Test
     void mapsMalformedJsonToOwnUnavailableException() {
-        server.expect(once(), requestTo("http://localhost:8081/api/v1/customers/7"))
+        server.expect(once(), requestTo("http://localhost:8081/internal/v1/allocation-reference/customers/7"))
                 .andRespond(withSuccess("{not-json", MediaType.APPLICATION_JSON));
         assertThrows(CustomerServiceUnavailableException.class, () -> client.getCustomer(7L));
         server.verify();

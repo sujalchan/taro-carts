@@ -145,7 +145,8 @@ async function createAllocation(event) {
         const response = await fetch("/api/v1/allocations", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                ...window.taroCsrfHeaders()
             },
             body: JSON.stringify(requestBody)
         });

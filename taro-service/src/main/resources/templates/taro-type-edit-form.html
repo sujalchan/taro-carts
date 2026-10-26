@@ -39,6 +39,7 @@
     </div>
 
     <form th:action="@{/taro-types/{id}/edit(id=${taroTypeId})}" method="post">
+        <input type="hidden" name="csrf" th:value="${csrfToken}">
 
         <div>
             <label for="name">

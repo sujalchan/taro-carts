@@ -1,0 +1,46 @@
+package nz.ac.aut.comp713.customer_service.controller;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.stereotype.Component;
+import org.springframework.core.annotation.AnnotationUtils;
+
+/** Render safe HTML for browser failures while preserving the existing API error handlers. */
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
+public class BrowserErrorResolver implements HandlerExceptionResolver {
+    private static final Logger LOGGER = LoggerFactory.getLogger(BrowserErrorResolver.class);
+
+    @Override
+    public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response,
+            Object handler, Exception exception) {
+        String path = request.getRequestURI();
+        String accept = request.getHeader("Accept");
+        if (accept == null || !accept.contains("text/html")
+                || path.startsWith("/api/") || path.startsWith("/internal/")
+                || path.matches(".*\\.(js|css|png|svg|ico|map)$")) return null;
+
+        int status = HttpStatus.INTERNAL_SERVER_ERROR.value();
+        if (exception instanceof ErrorResponse error) {
+            status = error.getStatusCode().value();
+        } else {
+            ResponseStatus annotation = AnnotationUtils.findAnnotation(exception.getClass(), ResponseStatus.class);
+            if (annotation != null) status = annotation.code().value();
+        }
+        if (status >= 500) LOGGER.error("Browser request failed: {}", path, exception);
+        response.setStatus(status);
+        response.setHeader("Cache-Control", "no-store");
+        ModelAndView page = new ModelAndView("error");
+        page.addObject("status", status);
+        return page;
+    }
+}

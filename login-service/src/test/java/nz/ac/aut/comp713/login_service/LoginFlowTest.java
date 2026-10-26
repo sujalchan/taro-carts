@@ -2,11 +2,13 @@ package nz.ac.aut.comp713.login_service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.http.MediaType;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -72,6 +74,14 @@ class LoginFlowTest {
     }
 
     @Test
+    void missingBrowserPageUsesBrandedError() throws Exception {
+        mvc.perform(get("/missing-page").accept(MediaType.TEXT_HTML))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString("Page not found")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Whitelabel Error Page"))));
+    }
+
+    @Test
     void adminSeederIsIdempotentAndPasswordIsHashed() throws Exception {
         Account original = accounts.findByNormalizedUsername("admin").orElseThrow();
         String storedHash = original.getPasswordHash();
@@ -120,6 +130,90 @@ class LoginFlowTest {
         assertThat(sessions.findAll().getFirst().getRevokedAt()).isNotNull();
         mvc.perform(get("/admin/accounts").cookie(new Cookie(AuthCookies.SESSION, token)))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void signedInAccountWithoutAProfileCanReturnToLoginAndSignOut() throws Exception {
+        accounts.save(new Account("orphan", "orphan", passwords.encode("validpassword123"),
+                AccountRole.CUSTOMER, 99999L, true));
+        String csrf = csrfFromLoginPage();
+        MvcResult login = mvc.perform(post("/login")
+                        .cookie(new Cookie(AuthCookies.CSRF, csrf))
+                        .param("csrf", csrf)
+                        .param("username", "orphan")
+                        .param("password", "validpassword123"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String token = cookieValue(cookieHeader(login, AuthCookies.SESSION));
+
+        MvcResult loginPage = mvc.perform(get("/login")
+                        .cookie(new Cookie(AuthCookies.SESSION, token)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("You are signed in as")))
+                .andExpect(content().string(containsString("orphan")))
+                .andExpect(content().string(containsString("Sign out")))
+                .andReturn();
+        String logoutCsrf = cookieValue(cookieHeader(loginPage, AuthCookies.CSRF));
+        mvc.perform(post("/login")
+                        .cookie(new Cookie(AuthCookies.SESSION, token),
+                                new Cookie(AuthCookies.CSRF, logoutCsrf))
+                        .param("csrf", logoutCsrf)
+                        .param("username", "admin")
+                        .param("password", "incorrect"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sign out")));
+
+        mvc.perform(post("/logout")
+                        .cookie(new Cookie(AuthCookies.SESSION, token),
+                                new Cookie(AuthCookies.CSRF, logoutCsrf))
+                        .param("csrf", logoutCsrf))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/login"));
+        mvc.perform(get("/login").cookie(new Cookie(AuthCookies.SESSION, token)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("You are signed in as"))));
+    }
+
+    @Test
+    void introspectionRequiresServiceCredentialAndReturnsMinimumIdentity() throws Exception {
+        String csrf = csrfFromLoginPage();
+        MvcResult login = mvc.perform(post("/login")
+                        .cookie(new Cookie(AuthCookies.CSRF, csrf))
+                        .param("csrf", csrf).param("username", "admin").param("password", "admin1234!"))
+                .andExpect(status().is3xxRedirection()).andReturn();
+        String token = cookieValue(cookieHeader(login, AuthCookies.SESSION));
+        String body = "{\"token\":\"" + token + "\"}";
+
+        mvc.perform(post("/internal/v1/sessions/introspect")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/internal/v1/sessions/introspect")
+                        .header("X-Service-Validation-Key", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/internal/v1/sessions/introspect")
+                        .with(request -> { request.setRemoteAddr("192.0.2.10"); return request; })
+                        .header("X-Service-Validation-Key", "test-customer-validation-secret-0123456789abcdef0123456789abcdef")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+        MvcResult validated = mvc.perform(post("/internal/v1/sessions/introspect")
+                        .header("X-Service-Validation-Key", "test-customer-validation-secret-0123456789abcdef0123456789abcdef")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk()).andReturn();
+        assertThat(validated.getResponse().getContentAsString())
+                .contains("\"username\":\"admin\"", "\"role\":\"ADMIN\"", "\"active\":true")
+                .doesNotContain("passwordHash", "tokenHash", token);
+        mvc.perform(post("/internal/v1/sessions/introspect")
+                        .header("X-Service-Validation-Key", "test-customer-validation-secret-0123456789abcdef0123456789abcdef")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"invalid\"}"))
+                .andExpect(status().isUnauthorized());
+        var storedSession = sessions.findAll().getFirst();
+        storedSession.revokeAt(Instant.now());
+        sessions.save(storedSession);
+        mvc.perform(post("/internal/v1/sessions/introspect")
+                        .header("X-Service-Validation-Key", "test-customer-validation-secret-0123456789abcdef0123456789abcdef")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

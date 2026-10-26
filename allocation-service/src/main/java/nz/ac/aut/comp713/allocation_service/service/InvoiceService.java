@@ -26,6 +26,7 @@ import nz.ac.aut.comp713.allocation_service.model.WeeklyAllocation;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.InvoiceRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
+import nz.ac.aut.comp713.allocation_service.security.AllocationAccess;
 
 @Service
 public class InvoiceService {
@@ -47,21 +48,22 @@ public class InvoiceService {
         this.pdfGenerator = pdfGenerator;
     }
 
-    public boolean hasInvoice(Long allocationId) {
+    boolean hasInvoice(Long allocationId) {
         return invoiceRepository.existsByAllocationId(allocationId);
     }
 
     // Also handles allocations marked delivered before this feature was introduced.
     @Transactional
     public Download download(Long allocationId) {
+        WeeklyAllocation authorizedAllocation = allocationRepository.findById(allocationId)
+                .orElseThrow(() -> new WeeklyAllocationNotFoundException(allocationId));
+        AllocationAccess.view(authorizedAllocation);
         Invoice invoice = invoiceRepository.findByAllocationId(allocationId)
                 .orElseGet(() -> {
-                    WeeklyAllocation allocation = allocationRepository.findById(allocationId)
-                            .orElseThrow(() -> new WeeklyAllocationNotFoundException(allocationId));
-                    if (allocation.getDeliveryStatus() != DeliveryStatus.DELIVERED) {
+                    if (authorizedAllocation.getDeliveryStatus() != DeliveryStatus.DELIVERED) {
                         throw new InvoiceNotAvailableException(allocationId);
                     }
-                    return issueIfDelivered(allocation);
+                    return issueIfDelivered(authorizedAllocation);
                 });
         if (!Integer.valueOf(InvoicePdfGenerator.TEMPLATE_VERSION).equals(invoice.getPdfTemplateVersion())) {
             refreshPdf(invoice);
@@ -92,13 +94,13 @@ public class InvoiceService {
         invoiceRepository.saveAndFlush(invoice);
     }
 
-    public void refreshPaymentStatus(WeeklyAllocation allocation) {
+    void refreshPaymentStatus(WeeklyAllocation allocation) {
         invoiceRepository.findByAllocationId(allocation.getId())
                 .ifPresent(invoice -> refreshPdf(invoice, allocation));
     }
 
     @Transactional
-    public Invoice issueIfDelivered(WeeklyAllocation allocation) {
+    Invoice issueIfDelivered(WeeklyAllocation allocation) {
         if (allocation.getDeliveryStatus() != DeliveryStatus.DELIVERED) {
             throw new InvoiceNotAvailableException(allocation.getId());
         }

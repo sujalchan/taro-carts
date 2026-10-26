@@ -40,6 +40,14 @@ class DispatcherApiIntegrationTest {
     }
 
     @Test
+    void missingBrowserPageUsesBrandedError() throws Exception {
+        mvc.perform(get("/missing-page").accept(MediaType.TEXT_HTML))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString("Page not found")))
+                .andExpect(content().string(not(containsString("Whitelabel Error Page"))));
+    }
+
+    @Test
     void publicCreateRoutesAndPagesAreGone() throws Exception {
         mvc.perform(post("/api/v1/dispatchers").contentType(MediaType.APPLICATION_JSON).content(VALID))
                 .andExpect(status().isMethodNotAllowed());

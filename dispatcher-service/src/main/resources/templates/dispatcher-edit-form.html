@@ -28,6 +28,7 @@
         <ul><li th:each="error : ${errors}" th:text="${error}">Error message</li></ul>
     </div>
     <form th:action="@{/dispatchers/{id}/edit(id=${dispatcherId})}" method="post" autocomplete="off">
+        <input type="hidden" name="csrf" th:value="${csrfToken}">
         <div>
             <label for="name">Dispatcher Name</label>
             <input type="text" id="name" name="name" maxlength="100" required th:value="${name}">

@@ -170,6 +170,9 @@ a:hover { color: var(--green-dark); }
 .form-error { margin-bottom: 22px; padding: 14px 16px; border: 1px solid #d3a29a; border-radius: 9px; background: #fff3f1; color: #7f2820; font-size: .88rem; }
 .form-error ul { margin: 8px 0 0; padding-left: 22px; }
 .form-success { margin-bottom: 22px; padding: 14px 16px; border: 1px solid #a9c8b1; border-radius: 9px; background: #edf8ef; color: #18564c; font-size: .88rem; }
+.session-notice { margin-bottom: 22px; padding: 14px 16px; border: 1px solid #a9c8b1; border-radius: 9px; background: #edf8ef; color: #18564c; font-size: .88rem; }
+.session-notice p { margin: 0 0 10px; }
+.sign-out-button { padding: 0; border: 0; background: none; color: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .form-divider { display: flex; align-items: center; gap: 14px; margin: 32px 0 18px; color: var(--muted); font-size: .82rem; }
 .form-divider::before, .form-divider::after { flex: 1; height: 1px; background: var(--line); content: ""; }
 .switch-link { margin: 0; color: var(--muted); text-align: center; font-size: .9rem; }

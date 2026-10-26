@@ -144,6 +144,7 @@
 
         <form th:unless="${allocation.invoiceAvailable}"
               th:action="@{/allocations/{id}/delete(id=${allocation.id})}" method="post" class="delete-form">
+            <input type="hidden" name="csrf" th:value="${csrfToken}">
             <button type="submit" onclick="return confirm('Delete this weekly allocation?');">
                 Delete Allocation
             </button>

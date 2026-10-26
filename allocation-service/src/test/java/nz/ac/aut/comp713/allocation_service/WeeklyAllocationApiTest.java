@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,8 @@ import nz.ac.aut.comp713.allocation_service.repository.InvoiceRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
 import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
+import nz.ac.aut.comp713.allocation_service.security.LoginClient;
+import nz.ac.aut.comp713.allocation_service.security.SessionAuthenticationFilter;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -116,6 +119,58 @@ class WeeklyAllocationApiTest {
 				.thenReturn(java.util.List.of(new DispatcherResponse(1L, "Auckland Dispatch", "Hana", "+64211234567", "20 Example Road")));
 		when(dispatcherClient.getDispatcher(1L))
 				.thenReturn(new DispatcherResponse(1L, "Auckland Dispatch", "Hana", "+64211234567", "20 Example Road"));
+	}
+
+	@Test
+	void missingBrowserPageUsesBrandedError() throws Exception {
+		mockMvc.perform(get("/missing-page").accept(MediaType.TEXT_HTML))
+				.andExpect(status().isNotFound())
+				.andExpect(content().string(containsString("Page not found")))
+				.andExpect(content().string(not(containsString("Whitelabel Error Page"))));
+	}
+
+	@Test
+	void customerApiUsesSessionIdentityRatherThanSubmittedIds() throws Exception {
+		var customer = new LoginClient.SessionPrincipal(11L, "customer-a", "CUSTOMER", 1L,
+				true, Instant.now().plusSeconds(300));
+		mockMvc.perform(post("/api/v1/allocations/customer-request")
+				.requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"weekStart":"2026-09-14","allocationItems":[{"taroTypeId":1,"quantity":100}]}
+						"""))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.customerId").value(1))
+				.andExpect(jsonPath("$.requestedByCustomerId").value(1));
+		createCustomerAllocation(2L, "2026-09-14", 1L, 100);
+		Long otherId = weeklyAllocationRepository.findByCustomerId(2L).getFirst().getId();
+		mockMvc.perform(get("/api/v1/allocations")
+				.requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(1)))
+				.andExpect(jsonPath("$[0].customerId").value(1));
+		mockMvc.perform(get("/api/v1/allocations/{id}", otherId)
+				.requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(get("/api/v1/allocations/{id}/invoice.pdf", otherId)
+				.requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(post("/api/v1/allocations/{id}/pay", otherId)
+				.requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(delete("/api/v1/allocations/{id}/customer-request", otherId)
+				.requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(post("/api/v1/allocations/customer-request")
+				.requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"customerId":2,"weekStart":"2026-09-21","allocationItems":[{"taroTypeId":1,"quantity":100}]}
+						"""))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(delete("/api/v1/allocations/{id}", otherId)
+				.requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer))
+				.andExpect(status().isForbidden());
 	}
 
 	@Test

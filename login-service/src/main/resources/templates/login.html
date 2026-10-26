@@ -38,6 +38,13 @@
 
                 <div class="form-error" role="alert" th:if="${loginError}" th:text="${loginError}">Sign-in failed.</div>
                 <div class="form-success" role="status" th:if="${passwordChanged}">Password changed. Sign in with your new password.</div>
+                <div class="session-notice" th:if="${signedInUsername}">
+                    <p>You are signed in as <strong th:text="${signedInUsername}">username</strong>. You can sign in below with another account, or sign out.</p>
+                    <form method="post" action="/logout">
+                        <input type="hidden" name="csrf" th:value="${csrfToken}">
+                        <button class="sign-out-button" type="submit">Sign out</button>
+                    </form>
+                </div>
 
                 <form method="post" action="/login" autocomplete="on">
                     <input type="hidden" name="csrf" th:value="${csrfToken}">

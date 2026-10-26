@@ -39,6 +39,7 @@
     </div>
 
     <form action="/taro-types/new" method="post">
+        <input type="hidden" name="csrf" th:value="${csrfToken}">
 
         <div>
             <label for="name">

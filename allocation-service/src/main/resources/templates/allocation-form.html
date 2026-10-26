@@ -39,6 +39,7 @@
     </div>
 
     <form action="/allocations/new" method="post">
+        <input type="hidden" name="csrf" th:value="${csrfToken}">
 
         <div>
 

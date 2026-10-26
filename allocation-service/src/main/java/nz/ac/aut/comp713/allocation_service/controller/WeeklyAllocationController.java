@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationRequest;
+import nz.ac.aut.comp713.allocation_service.dto.CustomerAllocationRequest;
+import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationResponse;
 import nz.ac.aut.comp713.allocation_service.service.WeeklyAllocationService;
 
@@ -45,7 +47,7 @@ public class WeeklyAllocationController {
 	}
 
 	/** Returns all allocations, optionally restricted to one customer. */
-	@Operation(summary = "Retrieve weekly allocations", description = "Optionally filter allocations by a positive customer ID. Returned records include dispatcherId when assigned.")
+	@Operation(summary = "Retrieve weekly allocations", description = "Customers see their own allocations, dispatchers see assigned deliveries, and admins may filter by customer ID.")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Weekly allocations retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "array", implementation = WeeklyAllocationResponse.class))),
 			@ApiResponse(responseCode = "400", description = "Customer ID filter must be a positive integer", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
@@ -83,15 +85,28 @@ public class WeeklyAllocationController {
 	}
 
 	/** Returns allocations assigned to one dispatcher. */
-	@Operation(summary = "Retrieve a dispatcher's allocations", description = "Returns only allocations whose dispatcherId matches the requested dispatcher.")
+	@Operation(summary = "Retrieve a dispatcher's allocations", description = "A dispatcher may only use their own ID; an admin may select a dispatcher.")
 	@GetMapping("/dispatcher/{dispatcherId}")
 	public ResponseEntity<List<WeeklyAllocationResponse>> getWeeklyAllocationsForDispatcher(
 			@PathVariable Long dispatcherId) {
 		return ResponseEntity.ok(weeklyAllocationService.getWeeklyAllocationsForDispatcher(dispatcherId));
 	}
 
+	@GetMapping("/dispatcher/me")
+	public ResponseEntity<List<WeeklyAllocationResponse>> getMyDeliveries() {
+		return ResponseEntity.ok(weeklyAllocationService.getWeeklyAllocationsForDispatcher(null));
+	}
+
+	public record DeliveryUpdate(DeliveryStatus deliveryStatus) {}
+
+	@PutMapping("/{id}/delivery-status")
+	public ResponseEntity<WeeklyAllocationResponse> advanceDelivery(
+			@PathVariable Long id, @RequestBody DeliveryUpdate update) {
+		return ResponseEntity.ok(weeklyAllocationService.advanceDelivery(id, update.deliveryStatus()));
+	}
+
 	/** Marks an allocation as paid for its owning customer. */
-	@Operation(summary = "Record a customer's allocation as paid", description = "Marks an eligible allocation as paid after verifying the supplied customer owns it.")
+	@Operation(summary = "Record a customer's allocation as paid", description = "Derives the acting customer from the session; an admin may act on the allocation's owner.")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Allocation marked as paid", content = @Content(mediaType = "application/json", schema = @Schema(implementation = WeeklyAllocationResponse.class))),
 			@ApiResponse(responseCode = "400", description = "Customer ID must be positive", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
@@ -102,9 +117,9 @@ public class WeeklyAllocationController {
 	@PostMapping("/{id}/pay")
 	public ResponseEntity<WeeklyAllocationResponse> recordCustomerPayment(
 			@Parameter(description = "Allocation identifier", required = true, schema = @Schema(type = "integer", format = "int64", minimum = "1")) @PathVariable Long id,
-			@Parameter(description = "Customer claiming payment; must be a positive ID and own the allocation", required = true, schema = @Schema(type = "integer", format = "int64", minimum = "1"))
-			@RequestParam Long customerId) {
-		if (customerId <= 0) {
+			@Parameter(description = "Deprecated optional customer ID; cannot override session identity", schema = @Schema(type = "integer", format = "int64", minimum = "1"))
+			@RequestParam(required = false) Long customerId) {
+		if (customerId != null && customerId <= 0) {
 			throw new InvalidActingCustomerException();
 		}
 		return ResponseEntity.ok(weeklyAllocationService.recordCustomerPayment(id, customerId));
@@ -135,7 +150,7 @@ public class WeeklyAllocationController {
 	}
 
 	/** Creates an allocation request through the customer-facing API. */
-	@Operation(summary = "Request a weekly allocation as a customer", description = "Creates a customer allocation request. Delivery and payment statuses are assigned by the service.")
+	@Operation(summary = "Request a weekly allocation as a customer", description = "Derives the customer ID from the session. Admins must select a customer explicitly. Delivery and payment statuses are assigned by the service.")
 	@PostMapping("/customer-request")
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "Customer allocation request created", content = @Content(mediaType = "application/json", schema = @Schema(implementation = WeeklyAllocationResponse.class))),
@@ -145,7 +160,7 @@ public class WeeklyAllocationController {
 			@ApiResponse(responseCode = "503", description = "Customer or taro service is unavailable", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
 	})
 	public ResponseEntity<WeeklyAllocationResponse> createCustomerRequest(
-			@Valid @RequestBody WeeklyAllocationRequest request) {
+			@Valid @RequestBody CustomerAllocationRequest request) {
 		WeeklyAllocationResponse response = weeklyAllocationService.createCustomerRequest(request);
 		return ResponseEntity.created(URI.create("/api/v1/allocations/" + response.id())).body(response);
 	}
@@ -182,9 +197,9 @@ public class WeeklyAllocationController {
 	@DeleteMapping("/{id}/customer-request")
 	public ResponseEntity<Void> deleteCustomerRequest(
 			@Parameter(description = "Allocation identifier", required = true, schema = @Schema(type = "integer", format = "int64", minimum = "1")) @PathVariable Long id,
-			@Parameter(description = "Customer requesting cancellation; must be a positive ID", required = true, schema = @Schema(type = "integer", format = "int64", minimum = "1"))
-			@RequestParam Long customerId) {
-		if (customerId <= 0) {
+			@Parameter(description = "Deprecated optional customer ID; cannot override session identity", schema = @Schema(type = "integer", format = "int64", minimum = "1"))
+			@RequestParam(required = false) Long customerId) {
+		if (customerId != null && customerId <= 0) {
 			throw new InvalidActingCustomerException();
 		}
 		weeklyAllocationService.deleteCustomerRequest(id, customerId);

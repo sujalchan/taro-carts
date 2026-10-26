@@ -25,6 +25,7 @@ import nz.ac.aut.comp713.allocation_service.client.TaroTypeResponse;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemRequest;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemResponse;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationRequest;
+import nz.ac.aut.comp713.allocation_service.dto.CustomerAllocationRequest;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationResponse;
 import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerAllocationOwnershipException;
@@ -35,6 +36,8 @@ import nz.ac.aut.comp713.allocation_service.exception.AllocationAlreadyPaidExcep
 import nz.ac.aut.comp713.allocation_service.exception.AllocationNotRequestedException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidQuantityException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidDeliveryStatusException;
+import nz.ac.aut.comp713.allocation_service.exception.InvalidCustomerFilterException;
+import nz.ac.aut.comp713.allocation_service.exception.InvalidDispatcherTransitionException;
 import nz.ac.aut.comp713.allocation_service.exception.InvalidPaymentStatusException;
 import nz.ac.aut.comp713.allocation_service.exception.IssuedInvoiceConflictException;
 import nz.ac.aut.comp713.allocation_service.exception.WeeklyAllocationAlreadyExistsException;
@@ -45,6 +48,7 @@ import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 import nz.ac.aut.comp713.allocation_service.model.WeeklyAllocation;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
+import nz.ac.aut.comp713.allocation_service.security.AllocationAccess;
 
 // service layer containing weekly allocation business logic
 @Service
@@ -80,6 +84,11 @@ public class WeeklyAllocationService {
 
     // get all weekly allocations, optionally limited to one customer
     public List<WeeklyAllocationResponse> getWeeklyAllocations(Long customerId) {
+        if (AllocationAccess.isDispatcher()) {
+            if (customerId != null) throw new AllocationAccess.Denied();
+            return getWeeklyAllocationsForDispatcher(null);
+        }
+        customerId = AllocationAccess.customerForList(customerId);
         List<WeeklyAllocation> allocations = customerId == null
                 ? weeklyAllocationRepository.findAll()
                 : weeklyAllocationRepository.findByCustomerId(customerId);
@@ -98,6 +107,8 @@ public class WeeklyAllocationService {
 
     // Fetch assigned records before enriching them with customer and taro data.
     public List<WeeklyAllocationResponse> getWeeklyAllocationsForDispatcher(Long dispatcherId) {
+        dispatcherId = AllocationAccess.dispatcherForList(dispatcherId);
+        if (dispatcherId == null) throw new AllocationAccess.Denied();
         Map<Long, CustomerResponse> customers = new HashMap<>();
         Map<Long, TaroTypeResponse> taroTypes = new HashMap<>();
         return weeklyAllocationRepository.findByDispatcherId(dispatcherId).stream()
@@ -109,14 +120,35 @@ public class WeeklyAllocationService {
     public WeeklyAllocationResponse getWeeklyAllocationById(Long id) {
         WeeklyAllocation weeklyAllocation = weeklyAllocationRepository.findById(id)
                 .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        AllocationAccess.view(weeklyAllocation);
 
         return toResponse(weeklyAllocation);
+    }
+
+    /** Narrow delivery action for an assigned dispatcher (or an administrator). */
+    @Transactional
+    public WeeklyAllocationResponse advanceDelivery(Long id, DeliveryStatus next) {
+        WeeklyAllocation allocation = weeklyAllocationRepository.findById(id)
+                .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        AllocationAccess.dispatcherAction(allocation);
+        DeliveryStatus current = allocation.getDeliveryStatus();
+        if (!((current == DeliveryStatus.AWAITING_DISPATCH && next == DeliveryStatus.IN_TRANSIT)
+                || (current == DeliveryStatus.IN_TRANSIT && next == DeliveryStatus.DELIVERED))) {
+            throw new InvalidDispatcherTransitionException();
+        }
+        allocation.setDeliveryStatus(next);
+        WeeklyAllocation saved = weeklyAllocationRepository.saveAndFlush(allocation);
+        if (next == DeliveryStatus.DELIVERED) invoiceService.issueIfDelivered(saved);
+        return toResponse(saved);
     }
 
     @Transactional
     public WeeklyAllocationResponse recordCustomerPayment(Long id, Long actingCustomerId) {
         WeeklyAllocation allocation = weeklyAllocationRepository.findById(id)
                 .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        AllocationAccess.customerAction(allocation);
+        actingCustomerId = AllocationAccess.actingCustomer(actingCustomerId);
+        if (actingCustomerId == null) actingCustomerId = allocation.getCustomerId();
         if (!allocation.getCustomerId().equals(actingCustomerId)) {
             throw new CustomerPaymentOwnershipException();
         }
@@ -140,16 +172,23 @@ public class WeeklyAllocationService {
     @Transactional
     public WeeklyAllocationResponse createWeeklyAllocation(
             WeeklyAllocationRequest request) {
+        AllocationAccess.admin();
         return createAllocation(request, null);
     }
 
     @Transactional
-    public WeeklyAllocationResponse createCustomerRequest(WeeklyAllocationRequest request) {
-        return createAllocation(request, request.customerId());
+    public WeeklyAllocationResponse createCustomerRequest(CustomerAllocationRequest request) {
+        Long customerId = AllocationAccess.actingCustomer(request.customerId());
+        if (customerId == null || customerId <= 0) throw new AllocationAccess.Denied();
+        return createAllocation(request.forCustomer(customerId), customerId);
     }
 
     private WeeklyAllocationResponse createAllocation(
             WeeklyAllocationRequest request, Long requestedByCustomerId) {
+
+        if (request.customerId() == null || request.customerId() <= 0) {
+            throw new InvalidCustomerFilterException();
+        }
 
         // status can only be changed after the allocation has been created
         if (request.deliveryStatus() != null) {
@@ -242,6 +281,10 @@ public class WeeklyAllocationService {
     public WeeklyAllocationResponse updateWeeklyAllocation(
             Long id,
             WeeklyAllocationRequest request) {
+        AllocationAccess.admin();
+        if (request.customerId() == null || request.customerId() <= 0) {
+            throw new InvalidCustomerFilterException();
+        }
 
         // confirm the allocation exists
         WeeklyAllocation weeklyAllocation = weeklyAllocationRepository.findById(id)
@@ -381,6 +424,7 @@ public class WeeklyAllocationService {
     // delete a weekly allocation
     @Transactional
     public void deleteWeeklyAllocation(Long id) {
+        AllocationAccess.admin();
 
         WeeklyAllocation weeklyAllocation = weeklyAllocationRepository.findById(id)
                 .orElseThrow(
@@ -389,11 +433,13 @@ public class WeeklyAllocationService {
         deleteAllocation(weeklyAllocation);
     }
 
-    // Customer selection is a temporary acting identity until authentication is added.
     @Transactional
     public void deleteCustomerRequest(Long id, Long actingCustomerId) {
         WeeklyAllocation weeklyAllocation = weeklyAllocationRepository.findById(id)
                 .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        AllocationAccess.customerAction(weeklyAllocation);
+        actingCustomerId = AllocationAccess.actingCustomer(actingCustomerId);
+        if (actingCustomerId == null) actingCustomerId = weeklyAllocation.getCustomerId();
         if (!weeklyAllocation.getCustomerId().equals(actingCustomerId)
                 || !actingCustomerId.equals(weeklyAllocation.getRequestedByCustomerId())) {
             throw new CustomerAllocationOwnershipException();

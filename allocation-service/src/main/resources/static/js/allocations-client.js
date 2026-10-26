@@ -181,7 +181,8 @@ async function deleteAllocation(allocationId, customerName) {
 
     try {
         const response = await fetch(`/api/v1/allocations/${allocationId}`, {
-            method: "DELETE"
+            method: "DELETE",
+            headers: window.taroCsrfHeaders()
         });
 
         if (!response.ok) {

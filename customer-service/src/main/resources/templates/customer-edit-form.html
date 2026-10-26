@@ -39,6 +39,7 @@
     </div>
 
     <form th:action="@{/customers/{id}/edit(id=${customerId})}" method="post" autocomplete="off">
+        <input type="hidden" name="csrf" th:value="${csrfToken}">
 
         <div>
             <label for="name">

@@ -16,10 +16,25 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.servlet.http.HttpServletRequest;
 import nz.ac.aut.comp713.allocation_service.dto.ApiError;
+import nz.ac.aut.comp713.allocation_service.security.AllocationAccess;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+	@ExceptionHandler(AllocationAccess.Denied.class)
+	public ResponseEntity<ApiError> handleAccessDenied(AllocationAccess.Denied exception,
+			HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(new ApiError("ACCESS_DENIED", "Access denied", request.getRequestURI()));
+	}
+
+	@ExceptionHandler(InvalidDispatcherTransitionException.class)
+	public ResponseEntity<ApiError> handleInvalidDispatcherTransition(
+			InvalidDispatcherTransitionException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiError("INVALID_DISPATCHER_TRANSITION", exception.getMessage(), request.getRequestURI()));
+	}
 
 	@ExceptionHandler(CustomerPaymentOwnershipException.class)
 	public ResponseEntity<ApiError> handleCustomerPaymentOwnership(

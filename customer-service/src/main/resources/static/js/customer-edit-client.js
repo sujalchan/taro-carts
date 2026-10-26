@@ -59,7 +59,8 @@ form.addEventListener("submit", async function (event) {
             {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    ...window.taroCsrfHeaders()
                 },
                 body: JSON.stringify(customer)
             }

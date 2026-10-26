@@ -64,10 +64,10 @@ Actions performed by one user can affect what the other user sees or can do.
 
 ## Architecture
 
-The project contains five independently running Spring Boot backend services and a native Android client. `login-service` handles registration, provisions inactive customer/dispatcher profiles, and lets the seeded admin enable or disable linked accounts. Session validation and role-based protection in the other services are planned for the next phase.
+The project contains five independently running Spring Boot backend services and a native Android client. `login-service` handles registration, provisions inactive customer/dispatcher profiles, and lets the seeded admin enable or disable linked accounts. The other services validate its opaque session on each protected request; existing management routes require an admin session. Allocation ownership is enforced in allocation-service; the role-specific web portals are a later phase.
 
 ```text
-Web manager / Android worker ───→ allocation-service :8082 ───→ allocation.db
+Web manager (admin session) ──────→ allocation-service :8082 ───→ allocation.db
                                        │          │
                                      HTTP       HTTP
                                        ↓          ↓
@@ -86,7 +86,7 @@ Browser ───→ login-service :8085 (registration, login, admin approval)
 
 Each backend service owns its own persistent data.
 
-`allocation-service` stores customer and taro type IDs only. It retrieves customer data from `customer-service` and taro type data from `taro-service` over HTTP; it does not access either database directly.
+`allocation-service` stores customer and taro type IDs only. It retrieves minimal customer and dispatcher reference data through service-key-protected internal endpoints, and taro type data from `taro-service` over HTTP; it does not access their databases directly.
 
 ---
 
@@ -387,12 +387,14 @@ Allocation operations include:
 ```text
 GET     /allocations?customerId={customerId}
 GET     /allocations/dispatcher/{dispatcherId}
+GET     /allocations/dispatcher/me
 POST    /allocations
 POST    /allocations/customer-request
 GET     /allocations/{id}
 PUT     /allocations/{id}
-POST    /allocations/{id}/pay?customerId={customerId}
-DELETE  /allocations/{id}/customer-request?customerId={customerId}
+POST    /allocations/{id}/pay
+DELETE  /allocations/{id}/customer-request
+PUT     /allocations/{id}/delivery-status
 DELETE  /allocations/{id}
 GET     /allocations/{id}/invoice.pdf?inline={true|false}
 GET     /customer-service-reference/customers?includeInactive={true|false}
@@ -402,7 +404,7 @@ GET     /dispatcher-service-reference/dispatchers
 
 When updating an allocation to `AWAITING_DISPATCH`, `IN_TRANSIT`, or `DELIVERED`, include a valid `dispatcherId` in the JSON body. Allocation-service verifies the ID with dispatcher-service and returns `DISPATCHER_REQUIRED` (400) when it is missing or `DISPATCHER_NOT_FOUND` (404) when it does not identify an existing dispatcher. Allocation responses include `dispatcherId` when assigned. The edit pages show dispatcher names in the dropdown and submit each dispatcher's ID.
 
-The dispatcher allocation endpoint returns only records assigned to that dispatcher ID.
+Customer/dispatcher sessions can only list and open their own or assigned allocations; admins can use explicit customer or dispatcher filters. The customer request body may omit `customerId`: allocation-service derives it from the authenticated profile and rejects a forged ID. Payment and cancellation similarly derive the acting customer, so the old `customerId` query parameter is optional and cannot grant access. Only admins can use general create, update, and delete endpoints. An assigned dispatcher can advance `AWAITING_DISPATCH` to `IN_TRANSIT` and then `DELIVERED` through the narrow delivery-status endpoint (`{"deliveryStatus":"IN_TRANSIT"}`); general updates remain admin-only. Invoice downloads enforce the same ownership check before accessing an existing PDF.
 
 ---
 
@@ -742,7 +744,13 @@ The Maven and Gradle wrappers included with the projects should be used where po
 
 The launchers start all five backend services, including `login-service` at `http://localhost:8085/login`. The seeded development admin can sign in with `admin` / `admin1234!` and should immediately change that password at `/admin/accounts`. Registration provisions an inactive customer or dispatcher profile and linked account; the admin enables it from `/admin/accounts`. If provisioning is temporarily unavailable, the request remains visible there for retry.
 
-The launcher supplies separate customer and dispatcher provisioning secrets. Set `LOGIN_CUSTOMER_PROVISIONING_SECRET` and `LOGIN_DISPATCHER_PROVISIONING_SECRET` to distinct random values of at least 32 characters in the ignored root `.env` file for stable restarts; if either is unset, the launcher generates an ephemeral value for that run. Direct service startup requires the relevant secret in its environment. The private endpoints accept the credential only from loopback in local development; use TLS and private networking when deploying beyond one host. Restart the services together if you rely on ephemeral launcher secrets.
+The launcher supplies separate provisioning, session-validation, allocation-reference, and portal assertion secrets. See `.env.example` for their names. Set each to a distinct random value of at least 32 characters in the ignored root `.env` file for stable restarts; unset values are generated for a full launcher run. Direct service startup requires the relevant secrets in its environment. Private endpoints accept credentials only from loopback in local development; use TLS and a local trusted proxy/network boundary for deployment beyond one host. Restart the full stack if you rely on ephemeral launcher secrets.
+
+Browser management pages and APIs now require an admin `SESSION` cookie from login-service. Existing POST/PUT/DELETE forms and JavaScript requests also require a service CSRF token. Missing or expired sessions return 401 for APIs (browser pages redirect to login), wrong roles return 403, and login-service outages return 503. Allocation-service's internal reads from customer-, dispatcher-, and taro-service use separate reference keys rather than the browser cookie.
+
+All five services show a branded browser error page for access denied, missing pages, unavailable services, and unexpected failures. API and internal endpoints keep their JSON error responses; error pages do not expose stack traces or internal exception messages.
+
+Future customer/dispatcher portal controllers must validate the browser session locally, then sign each allocation-service request with `X-Allocation-Identity-Assertion`. The HMAC assertion includes origin, account/role/profile, issued/expiry time, HTTP method/path, and a one-use nonce. It expires within 45 seconds and is never a browser credential. The root launchers share separate customer and dispatcher assertion keys only with the matching portal service and allocation-service.
 
 To launch all five services together:
 
@@ -862,14 +870,11 @@ week start, order and payment statuses, and item quantities and prices. Start th
 allocation, customer, and taro services before opening the list in the app. The API
 base URL is defined by `API_BASE_URL` in `android-app/app/src/main/java/nz/ac/aut/comp713/tarocartmobile/data/AllocationApi.kt`.
 
-On launch, the Android app asks which active customer to act as. It then lists only
-that customer's allocations. The customer can request a week with one or more taro
-types and whole-number quantities; the service applies its default
-`REQUESTED_ALLOCATION` and `UNPAID` statuses and standard prices. The app offers
-deletion only for allocations requested through the customer app while they are
-still requested. The customer-request API checks requester, ownership, and status
-again. Customer selection is not authentication; this is a development workflow
-until cross-service session authorization is added.
+The Android app currently asks which active customer to act as and has a
+selection-based allocation workflow. Customer selection is not authentication.
+Because Phase 4 now protects the backend APIs, the current Android app receives
+401 until a mobile login/session flow is implemented; its older workflow cannot
+be used against the protected services.
 
 For a customer's unpaid or overdue allocation, the app shows **Pay** after the
 requested stage and before cancellation. Confirming records `PAID` through the
