@@ -1,0 +1,54 @@
+package nz.ac.aut.comp713.dispatcher_service.exception;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import nz.ac.aut.comp713.dispatcher_service.dto.ApiError;
+import nz.ac.aut.comp713.dispatcher_service.exception.AddressNotValidException;
+import nz.ac.aut.comp713.dispatcher_service.exception.AddressValidationUnavailableException;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(DispatcherAlreadyExistsException.class)
+    public ResponseEntity<ApiError> duplicate(DispatcherAlreadyExistsException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiError("DISPATCHER_ALREADY_EXISTS", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(DispatcherNotFoundException.class)
+    public ResponseEntity<ApiError> notFound(DispatcherNotFoundException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiError("DISPATCHER_NOT_FOUND", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(AddressNotValidException.class)
+    public ResponseEntity<ApiError> invalidAddress(AddressNotValidException ex, HttpServletRequest request) {
+        return ResponseEntity.badRequest()
+                .body(new ApiError("ADDRESS_NOT_VALID", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(AddressValidationUnavailableException.class)
+    public ResponseEntity<ApiError> addressValidationUnavailable(AddressValidationUnavailableException ex,
+            HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ApiError("ADDRESS_VALIDATION_UNAVAILABLE", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> validation(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        String message = ex.getBindingResult().getFieldErrors().stream().findFirst()
+                .map(error -> error.getDefaultMessage()).orElse("Validation failed");
+        return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR", message, request.getRequestURI()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> conflict(DataIntegrityViolationException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiError("DISPATCHER_ALREADY_EXISTS", "Dispatcher already exists", request.getRequestURI()));
+    }
+}

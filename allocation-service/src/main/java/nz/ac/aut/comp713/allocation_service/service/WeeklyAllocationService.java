@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;
 import nz.ac.aut.comp713.allocation_service.client.CustomerResponse;
+import nz.ac.aut.comp713.allocation_service.client.DispatcherClient;
 import nz.ac.aut.comp713.allocation_service.client.TaroTypeResponse;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemRequest;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemResponse;
@@ -27,6 +28,7 @@ import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationRequest;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationResponse;
 import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerAllocationOwnershipException;
+import nz.ac.aut.comp713.allocation_service.exception.DispatcherRequiredException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerPaymentOwnershipException;
 import nz.ac.aut.comp713.allocation_service.exception.PaymentNotAllowedException;
 import nz.ac.aut.comp713.allocation_service.exception.AllocationAlreadyPaidException;
@@ -51,6 +53,7 @@ public class WeeklyAllocationService {
     private final WeeklyAllocationRepository weeklyAllocationRepository;
     private final AllocationItemRepository allocationItemRepository;
     private final CustomerClient customerClient;
+    private final DispatcherClient dispatcherClient;
     private final TaroClient taroClient;
     private final InvoiceService invoiceService;
 
@@ -58,12 +61,14 @@ public class WeeklyAllocationService {
             WeeklyAllocationRepository weeklyAllocationRepository,
             AllocationItemRepository allocationItemRepository,
             CustomerClient customerClient,
+            DispatcherClient dispatcherClient,
             TaroClient taroClient,
             InvoiceService invoiceService) {
 
         this.weeklyAllocationRepository = weeklyAllocationRepository;
         this.allocationItemRepository = allocationItemRepository;
         this.customerClient = customerClient;
+        this.dispatcherClient = dispatcherClient;
         this.taroClient = taroClient;
         this.invoiceService = invoiceService;
     }
@@ -258,6 +263,19 @@ public class WeeklyAllocationService {
         // confirm the customer exists in customer-service
         CustomerResponse customer = customerClient.getCustomer(request.customerId());
 
+        DeliveryStatus targetStatus = request.deliveryStatus() == null
+                ? weeklyAllocation.getDeliveryStatus()
+                : request.deliveryStatus();
+        if (requiresDispatcher(targetStatus)) {
+            if (request.dispatcherId() == null || request.dispatcherId() <= 0) {
+                throw new DispatcherRequiredException();
+            }
+            dispatcherClient.getDispatcher(request.dispatcherId());
+            weeklyAllocation.setDispatcherId(request.dispatcherId());
+        } else {
+            weeklyAllocation.setDispatcherId(null);
+        }
+
         // make sure another allocation does not already use this customer and week
         if (weeklyAllocationRepository.existsByCustomerIdAndWeekStartAndIdNot(
                 request.customerId(),
@@ -437,7 +455,8 @@ public class WeeklyAllocationService {
                 weeklyAllocation.getPaymentStatus(),
                 weeklyAllocation.getDeliveryStatus() == DeliveryStatus.DELIVERED
                         || invoiceService.hasInvoice(weeklyAllocation.getId()),
-                allocationItemResponses);
+                allocationItemResponses,
+                weeklyAllocation.getDispatcherId());
     }
 
     // convert an allocation item entity into an enriched response dto
@@ -460,6 +479,12 @@ public class WeeklyAllocationService {
     // normalize any date to the monday of its week
     private LocalDate normalizeWeekStart(LocalDate date) {
         return date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+    }
+
+    private boolean requiresDispatcher(DeliveryStatus status) {
+        return status == DeliveryStatus.AWAITING_DISPATCH
+                || status == DeliveryStatus.IN_TRANSIT
+                || status == DeliveryStatus.DELIVERED;
     }
 
     // validate quantity and convert it to an integer

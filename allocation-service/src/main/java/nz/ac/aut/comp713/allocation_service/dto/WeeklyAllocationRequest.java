@@ -8,25 +8,39 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
 import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-// request DTO used when creating or updating a weekly allocation
+/** Request body for creating a weekly allocation or updating its workflow state. */
+@Schema(description = "Allocation details. dispatcherId is required when updating to AWAITING_DISPATCH, IN_TRANSIT, or DELIVERED.")
 public record WeeklyAllocationRequest(
 
+		@Schema(description = "ID of the customer receiving the allocation", example = "12", minimum = "1")
 		@NotNull(message = "Customer ID is required") Long customerId,
 
+		@Schema(description = "Date within the allocation week; normalized to that week's Monday", example = "2026-10-26")
 		@NotNull(message = "Week start is required") LocalDate weekStart,
 
+		@Schema(description = "One or more requested taro types and quantities")
 		@NotEmpty(message = "At least one allocation item is required") List<@Valid AllocationItemRequest> allocationItems,
 
-		// supplied only when updating an existing allocation
+		@Schema(description = "Delivery workflow status; supplied when updating an existing allocation")
 		DeliveryStatus deliveryStatus,
 
-		// supplied only when updating an existing allocation
-		PaymentStatus paymentStatus) {
+		@Schema(description = "Payment status; supplied when updating an existing allocation")
+		PaymentStatus paymentStatus,
 
-	// creation requests leave the status unset so the service applies its default
+		@Schema(description = "ID of an existing dispatcher. Required for AWAITING_DISPATCH, IN_TRANSIT, or DELIVERED delivery status.", example = "4", minimum = "1")
+		Long dispatcherId) {
+
+	/** Creates a new-allocation request with workflow defaults left to the service. */
+	/** Creates an allocation request with explicit workflow statuses and no dispatcher. */
 	public WeeklyAllocationRequest(Long customerId, LocalDate weekStart,
 			List<AllocationItemRequest> allocationItems) {
-		this(customerId, weekStart, allocationItems, null, null);
+		this(customerId, weekStart, allocationItems, null, null, null);
+	}
+
+	public WeeklyAllocationRequest(Long customerId, LocalDate weekStart,
+			List<AllocationItemRequest> allocationItems, DeliveryStatus deliveryStatus, PaymentStatus paymentStatus) {
+		this(customerId, weekStart, allocationItems, deliveryStatus, paymentStatus, null);
 	}
 }

@@ -32,6 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
 import nz.ac.aut.comp713.allocation_service.client.CustomerResponse;
+import nz.ac.aut.comp713.allocation_service.client.DispatcherClient;
+import nz.ac.aut.comp713.allocation_service.client.DispatcherResponse;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;
 import nz.ac.aut.comp713.allocation_service.client.TaroTypeResponse;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
@@ -58,6 +60,8 @@ class InvoiceApiTest {
     CustomerClient customerClient;
     @MockitoBean
     TaroClient taroClient;
+    @MockitoBean
+    DispatcherClient dispatcherClient;
 
     @BeforeEach
     void setUp() {
@@ -68,6 +72,8 @@ class InvoiceApiTest {
                 .thenReturn(new CustomerResponse(1L, "Island Foods", "12 Market Street, Auckland", "John", "0211234567", true));
         when(taroClient.getTaroType(1L))
                 .thenReturn(new TaroTypeResponse(1L, "Samoan Taro", "", new BigDecimal("50.00")));
+        when(dispatcherClient.getDispatcher(1L))
+                .thenReturn(new DispatcherResponse(1L, "Auckland Dispatch", "Hana", "+64211234567", "20 Example Road"));
     }
 
     @Test
@@ -340,6 +346,7 @@ class InvoiceApiTest {
         return """
                 {"customerId":1,"weekStart":"2026-09-14",
                  "deliveryStatus":"%s",
+                 "dispatcherId":1,
                  "allocationItems":[{"taroTypeId":1,"quantity":%d,"pricePerKg":50.00}]}
                 """.formatted(status, quantity);
     }

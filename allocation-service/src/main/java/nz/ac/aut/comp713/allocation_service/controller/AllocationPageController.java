@@ -20,12 +20,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
+import nz.ac.aut.comp713.allocation_service.client.DispatcherClient;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemRequest;
 import nz.ac.aut.comp713.allocation_service.dto.WeeklyAllocationRequest;
 
 import nz.ac.aut.comp713.allocation_service.exception.CustomerNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerServiceUnavailableException;
+import nz.ac.aut.comp713.allocation_service.exception.DispatcherNotFoundException;
+import nz.ac.aut.comp713.allocation_service.exception.DispatcherRequiredException;
+import nz.ac.aut.comp713.allocation_service.exception.DispatcherServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
@@ -45,6 +49,7 @@ public class AllocationPageController {
 
 	private final WeeklyAllocationService weeklyAllocationService;
 	private final CustomerClient customerClient;
+	private final DispatcherClient dispatcherClient;
 	private final TaroClient taroClient;
 	private final Validator validator;
 
@@ -52,11 +57,13 @@ public class AllocationPageController {
 	public AllocationPageController(
 			WeeklyAllocationService weeklyAllocationService,
 			CustomerClient customerClient,
+			DispatcherClient dispatcherClient,
 			TaroClient taroClient,
 			Validator validator) {
 
 		this.weeklyAllocationService = weeklyAllocationService;
 		this.customerClient = customerClient;
+		this.dispatcherClient = dispatcherClient;
 		this.taroClient = taroClient;
 		this.validator = validator;
 	}
@@ -238,6 +245,7 @@ public class AllocationPageController {
 					allocation.weekStart(),
 					allocation.deliveryStatus(),
 					allocation.paymentStatus(),
+					allocation.dispatcherId(),
 					allocationRows,
 					new ArrayList<>());
 
@@ -254,6 +262,7 @@ public class AllocationPageController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
 			@RequestParam(required = false) DeliveryStatus deliveryStatus,
 			@RequestParam(required = false) PaymentStatus paymentStatus,
+			@RequestParam(required = false) Long dispatcherId,
 			@RequestParam(name = "taroTypeId", required = false) List<Long> taroTypeIds,
 			@RequestParam(name = "quantity", required = false) List<BigDecimal> quantities,
 			@RequestParam(name = "pricePerKg", required = false) List<String> prices,
@@ -291,7 +300,8 @@ public class AllocationPageController {
 				weekStart,
 				allocationItems,
 				deliveryStatus,
-				paymentStatus);
+				paymentStatus,
+				dispatcherId);
 
 		// run the same validation rules used by the REST API
 		validator.validate(request)
@@ -307,6 +317,7 @@ public class AllocationPageController {
 					weekStart,
 					deliveryStatus,
 					paymentStatus,
+					dispatcherId,
 					formRows,
 					errors);
 		}
@@ -326,6 +337,9 @@ public class AllocationPageController {
 				| TaroTypeNotFoundException
 				| CustomerServiceUnavailableException
 				| TaroServiceUnavailableException
+				| DispatcherRequiredException
+				| DispatcherNotFoundException
+				| DispatcherServiceUnavailableException
 				| WeeklyAllocationNotFoundException exception) {
 
 			errors.add(exception.getMessage());
@@ -337,6 +351,7 @@ public class AllocationPageController {
 					weekStart,
 					deliveryStatus,
 					paymentStatus,
+					dispatcherId,
 					formRows,
 					errors);
 		}
@@ -424,6 +439,7 @@ public class AllocationPageController {
 			LocalDate weekStart,
 			DeliveryStatus deliveryStatus,
 			PaymentStatus paymentStatus,
+			Long selectedDispatcherId,
 			List<AllocationFormRow> allocationRows,
 			List<String> errors) {
 
@@ -443,6 +459,7 @@ public class AllocationPageController {
 		model.addAttribute("deliveryStatuses", DeliveryStatus.values());
 		model.addAttribute("paymentStatus", paymentStatus);
 		model.addAttribute("paymentStatuses", PaymentStatus.values());
+		model.addAttribute("selectedDispatcherId", selectedDispatcherId);
 
 		model.addAttribute(
 				"allocationRows",
@@ -464,7 +481,10 @@ public class AllocationPageController {
 					"taroTypes",
 					taroClient.getTaroTypes());
 
-		} catch (CustomerServiceUnavailableException | TaroServiceUnavailableException exception) {
+			model.addAttribute("dispatchers", dispatcherClient.getDispatchers());
+
+		} catch (CustomerServiceUnavailableException | TaroServiceUnavailableException
+				| DispatcherServiceUnavailableException exception) {
 			model.addAttribute(
 					"customers",
 					List.of());
@@ -472,6 +492,7 @@ public class AllocationPageController {
 			model.addAttribute(
 					"taroTypes",
 					List.of());
+			model.addAttribute("dispatchers", List.of());
 
 			if (!errors.contains(exception.getMessage())) {
 				errors.add(

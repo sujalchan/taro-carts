@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import nz.ac.aut.comp713.customer_service.dto.CustomerRequest;
+import nz.ac.aut.comp713.customer_service.exception.AddressNotValidException;
+import nz.ac.aut.comp713.customer_service.exception.AddressValidationUnavailableException;
 import nz.ac.aut.comp713.customer_service.exception.CustomerAlreadyExistsException;
 import nz.ac.aut.comp713.customer_service.service.CustomerService;
 
@@ -85,7 +87,8 @@ public class CustomerPageController {
         // show the duplicate customer error without losing the entered form data
         try {
             customerService.createCustomer(request);
-        } catch (CustomerAlreadyExistsException exception) {
+        } catch (CustomerAlreadyExistsException | AddressNotValidException
+                | AddressValidationUnavailableException exception) {
 
             addFormValues(
                     model,

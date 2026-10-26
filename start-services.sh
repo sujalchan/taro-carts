@@ -6,17 +6,21 @@ ROOT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
-places_api_key="${GOOGLE_MAPS_BROWSER_API_KEY:-}"
-if [[ -z "$places_api_key" && -f "$ROOT_DIR/.env" ]]; then
+browser_places_api_key="${GOOGLE_MAPS_BROWSER_API_KEY:-}"
+server_places_api_key="${GOOGLE_MAPS_SERVER_API_KEY:-}"
+if [[ ( -z "$browser_places_api_key" || -z "$server_places_api_key" ) && -f "$ROOT_DIR/.env" ]]; then
     while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ "$line" == GOOGLE_MAPS_BROWSER_API_KEY=* ]]; then
-            places_api_key="${line#*=}"
-            places_api_key="${places_api_key%$'\r'}"
-            break
+        if [[ -z "$browser_places_api_key" && "$line" == GOOGLE_MAPS_BROWSER_API_KEY=* ]]; then
+            browser_places_api_key="${line#*=}"
+            browser_places_api_key="${browser_places_api_key%$'\r'}"
+        elif [[ -z "$server_places_api_key" && "$line" == GOOGLE_MAPS_SERVER_API_KEY=* ]]; then
+            server_places_api_key="${line#*=}"
+            server_places_api_key="${server_places_api_key%$'\r'}"
         fi
     done < "$ROOT_DIR/.env"
 fi
 unset GOOGLE_MAPS_BROWSER_API_KEY
+unset GOOGLE_MAPS_SERVER_API_KEY
 
 service_pids=()
 
@@ -27,8 +31,13 @@ start_service() {
 
     (
         cd "$ROOT_DIR/$directory"
-        if [[ "$directory" == "customer-service" && -n "$places_api_key" ]]; then
-            export GOOGLE_MAPS_BROWSER_API_KEY="$places_api_key"
+        if [[ "$directory" == "customer-service" || "$directory" == "dispatcher-service" ]]; then
+            if [[ -n "$browser_places_api_key" ]]; then
+                export GOOGLE_MAPS_BROWSER_API_KEY="$browser_places_api_key"
+            fi
+            if [[ -n "$server_places_api_key" ]]; then
+                export GOOGLE_MAPS_SERVER_API_KEY="$server_places_api_key"
+            fi
         fi
         exec ./mvnw spring-boot:run
     ) >"$LOG_DIR/$name.log" 2>&1 &
@@ -51,13 +60,14 @@ stop_services() {
 trap stop_services INT TERM EXIT
 
 start_service customer-service customer-service
+start_service dispatcher-service dispatcher-service
 start_service taro-service taro-service
 start_service allocation-service allocation-service
 
 printf '\nServices are starting. Press Ctrl+C to stop all of them.\n'
-printf 'Customer:    http://localhost:8081\nTaro:        http://localhost:8083\nAllocations: http://localhost:8082\n\n'
+printf 'Customer:    http://localhost:8081\nDispatcher:  http://localhost:8084/dispatchers\nTaro:        http://localhost:8083\nAllocations: http://localhost:8082\n\n'
 printf 'Streaming service logs below.\n'
-tail -n 20 -f "$LOG_DIR/customer-service.log" "$LOG_DIR/taro-service.log" "$LOG_DIR/allocation-service.log" &
+tail -n 20 -f "$LOG_DIR/customer-service.log" "$LOG_DIR/dispatcher-service.log" "$LOG_DIR/taro-service.log" "$LOG_DIR/allocation-service.log" &
 tail_pid=$!
 service_pids+=("$tail_pid")
 

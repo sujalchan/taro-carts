@@ -3,6 +3,8 @@ const allocationForm = document.getElementById("allocationForm");
 const customerSelect = document.getElementById("customerId");
 const weekStartInput = document.getElementById("weekStart");
 const deliveryStatusSelect = document.getElementById("deliveryStatus");
+const dispatcherField = document.getElementById("dispatcherField");
+const dispatcherSelect = document.getElementById("dispatcherId");
 const paymentStatusSelect = document.getElementById("paymentStatus");
 const allocationItemsContainer = document.getElementById("allocationItems");
 const addItemButton = document.getElementById("addItemButton");
@@ -13,12 +15,15 @@ const params = new URLSearchParams(window.location.search);
 const allocationId = params.get("id");
 
 let taroTypes = [];
+let dispatchers = [];
+const dispatcherRequiredStatuses = new Set(["AWAITING_DISPATCH", "IN_TRANSIT", "DELIVERED"]);
 
 // loads the selected allocation and form reference data
 loadPage();
 
 // adds another allocation item row
 addItemButton.addEventListener("click", () => addAllocationItem());
+deliveryStatusSelect.addEventListener("change", updateDispatcherRequirement);
 // submits changes to the selected allocation
 allocationForm.addEventListener("submit", updateAllocation);
 
@@ -40,10 +45,11 @@ async function loadPage() {
     }
 
     try {
-        const [allocationResponse, customerResponse, taroResponse] = await Promise.all([
+        const [allocationResponse, customerResponse, taroResponse, dispatcherResponse] = await Promise.all([
             fetch(`/api/v1/allocations/${allocationId}`),
             fetch("/api/v1/customer-service-reference/customers"),
-            fetch("/api/v1/taro-service-reference/taro-types")
+            fetch("/api/v1/taro-service-reference/taro-types"),
+            fetch("/api/v1/dispatcher-service-reference/dispatchers")
         ]);
 
         if (!allocationResponse.ok) {
@@ -53,8 +59,8 @@ async function loadPage() {
             return;
         }
 
-        if (!customerResponse.ok || !taroResponse.ok) {
-            showError("Unable to load customer or taro type data.");
+        if (!customerResponse.ok || !taroResponse.ok || !dispatcherResponse.ok) {
+            showError("Unable to load customer, taro type, or dispatcher data.");
             allocationForm.hidden = true;
             return;
         }
@@ -62,12 +68,15 @@ async function loadPage() {
         const allocation = await allocationResponse.json();
         const customers = await customerResponse.json();
         taroTypes = await taroResponse.json();
+        dispatchers = await dispatcherResponse.json();
 
         populateCustomers(customers, allocation.customerId);
+        populateDispatcherSelect(dispatchers, allocation.dispatcherId);
         weekStartInput.value = allocation.weekStart;
         // show the saved status when editing an existing allocation
         deliveryStatusSelect.value = allocation.deliveryStatus;
         paymentStatusSelect.value = allocation.paymentStatus;
+        updateDispatcherRequirement();
 
         allocation.allocationItems.forEach(item => {
             addAllocationItem(item);
@@ -77,6 +86,24 @@ async function loadPage() {
         showError("Unable to load allocation data.");
         allocationForm.hidden = true;
     }
+}
+
+// shows dispatcher names while retaining their IDs as option values
+function populateDispatcherSelect(dispatcherRecords, selectedDispatcherId = null) {
+    dispatcherSelect.replaceChildren(new Option("Select Dispatcher", ""));
+
+    dispatcherRecords.forEach(dispatcher => {
+        const option = new Option(dispatcher.name, dispatcher.id);
+        option.selected = Number(dispatcher.id) === Number(selectedDispatcherId);
+        dispatcherSelect.add(option);
+    });
+}
+
+// requires a dispatcher only for statuses that represent active delivery
+function updateDispatcherRequirement() {
+    const required = dispatcherRequiredStatuses.has(deliveryStatusSelect.value);
+    dispatcherSelect.required = required;
+    dispatcherField.hidden = !required;
 }
 
 // fills the customer selector and preserves the selected customer
@@ -207,6 +234,9 @@ async function updateAllocation(event) {
         // status changes are submitted with the allocation update
         deliveryStatus: deliveryStatusSelect.value,
         paymentStatus: paymentStatusSelect.value,
+        dispatcherId: dispatcherRequiredStatuses.has(deliveryStatusSelect.value)
+            ? Number(dispatcherSelect.value)
+            : null,
         allocationItems: allocationItems
     };
 

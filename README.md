@@ -64,7 +64,7 @@ Actions performed by one user can affect what the other user sees or can do.
 
 ## Architecture
 
-The project contains three independently running Spring Boot backend services and a native Android client.
+The project contains four independently running Spring Boot backend services and a native Android client.
 
 ```text
 Web manager / Android worker ───→ allocation-service :8082 ───→ allocation.db
@@ -76,6 +76,8 @@ Web manager / Android worker ───→ allocation-service :8082 ───→ 
                                      │                │
                                      ↓                ↓
                                 customer.db        taro.db
+
+Browser ───→ dispatcher-service :8084 ───→ dispatcher.db
 ```
 
 Each backend service owns its own persistent data.
@@ -90,6 +92,11 @@ Each backend service owns its own persistent data.
 taro-carts/
 │
 ├── customer-service/
+│   ├── pom.xml
+│   ├── mvnw
+│   └── src/
+│
+├── dispatcher-service/
 │   ├── pom.xml
 │   ├── mvnw
 │   └── src/
@@ -176,17 +183,28 @@ It owns customer records and supports customer creation, retrieval, updates, sea
 New customers require an address. Existing customers without one can be viewed and must enter an address when edited.
 Its SQLite database is `customer.db`.
 
-### Google Places address suggestions
+### Dispatcher Service
 
-Enable **Maps JavaScript API** and **Places API (New)** in a billing-enabled Google Cloud project. One unrestricted key can be used for both the website and Android app during development: put the same key in both settings below. Separate keys are recommended later so the website key can be restricted to the customer-service website and the Android key to app package `nz.ac.aut.comp713.tarocartmobile` and its signing certificate. One key cannot have both website and Android application restrictions.
+`dispatcher-service` runs on:
 
-For the web customer create and edit forms, put the key in the ignored repository-root `.env` file:
+```text
+http://localhost:8084
+```
+
+It creates, lists, searches, and edits dispatcher profiles with dispatcher name, contact, phone number, address, and active status. New dispatchers are active by default. Its SQLite database is `dispatcher.db`. Server-rendered pages are `/dispatchers`, `/dispatchers/new`, and `/dispatchers/{id}/edit`; client-rendered pages are `/dispatchers-client.html`, `/dispatcher-new-client.html`, and `/dispatcher-edit-client.html`. Create and edit forms use Google Places address suggestions when the browser key is configured.
+
+### Google Maps address suggestions and validation
+
+Enable **Maps JavaScript API**, **Places API (New)**, and **Address Validation API** in a billing-enabled Google Cloud project. The web forms use Places for suggestions. Before saving a customer or dispatcher, the server validates the submitted address using Address Validation API and only accepts complete premise-level matches without inferred, replaced, spell-corrected, or unconfirmed components. The server stores Google's formatted address.
+
+Use separate keys for browser suggestions and server validation in the ignored repository-root `.env` file:
 
 ```properties
 GOOGLE_MAPS_BROWSER_API_KEY=your-google-api-key
+GOOGLE_MAPS_SERVER_API_KEY=your-server-api-key
 ```
 
-The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read this file and pass the key only to `customer-service`. An existing `GOOGLE_MAPS_BROWSER_API_KEY` environment variable takes precedence. If starting `customer-service` directly, set that environment variable first.
+Restrict the browser key to the customer-service and dispatcher-service web origins and the Maps JavaScript API and Places API (New). Restrict the server key to the Address Validation API and the server's allowed network where possible. The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read both keys and pass them to `customer-service` and `dispatcher-service`; environment variables take precedence. When starting either service directly, set `GOOGLE_MAPS_BROWSER_API_KEY` for suggestions and `GOOGLE_MAPS_SERVER_API_KEY` for required server-side validation. Without the server key, creation fails closed with an address-validation unavailable error.
 
 For Android customer editing, add this line to the ignored `android-app/local.properties` file, then sync and rebuild the app:
 
@@ -320,6 +338,20 @@ Customer searching:
 GET /customers?search=<value>
 ```
 
+### Dispatcher Service
+
+Base URL: `http://localhost:8084/api/v1`
+
+```text
+GET  /dispatchers
+POST /dispatchers
+GET  /dispatchers/{id}
+PUT  /dispatchers/{id}
+```
+
+Dispatcher searching uses `GET /dispatchers?search=<value>`. Creation requires `name` and `address`; `contactName` and `phone` are optional.
+The `active` flag defaults to `true` when omitted on create; omitting it on update preserves the existing value. The server validates each submitted address with the address validation API and rejects addresses that do not produce a complete match. Validation errors return `400`, duplicate names return `409`, and address-validation outages return `503`. See the [Dispatcher Service Swagger UI](http://localhost:8084/swagger-ui/index.html) for request and response schemas.
+
 ### Taro Service
 
 Base URL: `http://localhost:8083/api/v1`
@@ -350,12 +382,21 @@ http://localhost:8082/api/v1
 Allocation operations include:
 
 ```text
-GET     /allocations
+GET     /allocations?customerId={customerId}
 POST    /allocations
+POST    /allocations/customer-request
 GET     /allocations/{id}
 PUT     /allocations/{id}
+POST    /allocations/{id}/pay?customerId={customerId}
+DELETE  /allocations/{id}/customer-request?customerId={customerId}
 DELETE  /allocations/{id}
+GET     /allocations/{id}/invoice.pdf?inline={true|false}
+GET     /customer-service-reference/customers?includeInactive={true|false}
+GET     /taro-service-reference/taro-types
+GET     /dispatcher-service-reference/dispatchers
 ```
+
+When updating an allocation to `AWAITING_DISPATCH`, `IN_TRANSIT`, or `DELIVERED`, include a valid `dispatcherId` in the JSON body. Allocation-service verifies the ID with dispatcher-service and returns `DISPATCHER_REQUIRED` (400) when it is missing or `DISPATCHER_NOT_FOUND` (404) when it does not identify an existing dispatcher. Allocation responses include `dispatcherId` when assigned. The edit pages show dispatcher names in the dropdown and submit each dispatcher's ID.
 
 ---
 
@@ -365,6 +406,18 @@ Customer Service:
 
 ```text
 http://localhost:8081/swagger-ui/index.html
+```
+
+Dispatcher Service:
+
+```text
+http://localhost:8084/swagger-ui/index.html
+```
+
+Allocation Service:
+
+```text
+http://localhost:8082/swagger-ui/index.html
 ```
 
 Taro Service:
@@ -383,6 +436,7 @@ Raw OpenAPI definitions are available at:
 
 ```text
 http://localhost:8081/v3/api-docs
+http://localhost:8084/v3/api-docs
 http://localhost:8083/v3/api-docs
 http://localhost:8082/v3/api-docs
 ```
@@ -391,7 +445,7 @@ http://localhost:8082/v3/api-docs
 
 ## Data Model
 
-The current system contains four main persistent entities.
+The current system contains five main persistent entities.
 
 ### Customer
 
@@ -402,6 +456,16 @@ Stores information including:
 - Contact name
 - Phone number
 - Active status
+
+### Dispatcher
+
+Stores:
+
+- ID
+- Dispatcher name
+- Contact name
+- Phone number
+- Address
 
 ### TaroType
 
@@ -650,7 +714,7 @@ customer-service + taro-service
 
 External clients will continue using REST.
 
-A `.proto` contract will define the communication between the three backend services.
+A `.proto` contract will define the communication between the allocation, customer, and taro services.
 
 ---
 
@@ -670,9 +734,9 @@ The Maven and Gradle wrappers included with the projects should be used where po
 
 ## Running the Backend
 
-All three backend services should be running for the complete system to operate.
+All four backend services should be running for the complete system to operate.
 
-To launch all three services together:
+To launch all four services together:
 
 - macOS/Linux: run `./start-services.sh` from the repository root. Logs are written to `logs/`; press Ctrl+C to stop the services.
 - Windows: run `start-services.bat` from the repository root. Each service opens in its own Command Prompt window; close the windows to stop them.
@@ -694,7 +758,18 @@ Customer-service will start on:
 http://localhost:8081
 ```
 
-### 2. Start Taro Service
+### 2. Start Dispatcher Service
+
+From the repository root:
+
+```bash
+cd dispatcher-service
+./mvnw spring-boot:run
+```
+
+Dispatcher-service starts on `http://localhost:8084`.
+
+### 3. Start Taro Service
 
 In another terminal:
 
@@ -715,7 +790,7 @@ sqlite3 taro-service/taro.db "ATTACH DATABASE 'customer-service/customer.db' AS 
 
 Verify the migrated rows before removing the legacy `taro_type` table from `customer-service/customer.db`. New installations have no data to migrate.
 
-### 3. Start Allocation Service
+### 4. Start Allocation Service
 
 In another terminal:
 

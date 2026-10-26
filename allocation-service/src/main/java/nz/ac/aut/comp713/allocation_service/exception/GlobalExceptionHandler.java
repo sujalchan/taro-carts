@@ -101,6 +101,13 @@ public class GlobalExceptionHandler {
 				.body(new ApiError("INVALID_PAYMENT_STATUS", exception.getMessage(), request.getRequestURI()));
 	}
 
+	@ExceptionHandler(DispatcherRequiredException.class)
+	public ResponseEntity<ApiError> handleDispatcherRequired(
+			DispatcherRequiredException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiError("DISPATCHER_REQUIRED", exception.getMessage(), request.getRequestURI()));
+	}
+
 	// return a validation error for malformed JSON or an unknown enum value
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	public ResponseEntity<ApiError> handleUnreadableRequest(
@@ -165,6 +172,14 @@ public class GlobalExceptionHandler {
 				.status(HttpStatus.NOT_FOUND)
 				.contentType(MediaType.APPLICATION_JSON)
 				.body(error);
+	}
+
+	@ExceptionHandler(DispatcherNotFoundException.class)
+	public ResponseEntity<ApiError> handleDispatcherNotFound(
+			DispatcherNotFoundException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(new ApiError("DISPATCHER_NOT_FOUND", exception.getMessage(), request.getRequestURI()));
 	}
 
 	// handle an allocation that does not exist
@@ -240,6 +255,14 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
 				.contentType(MediaType.APPLICATION_JSON)
 				.body(new ApiError("TARO_SERVICE_UNAVAILABLE", exception.getMessage(), request.getRequestURI()));
+	}
+
+	@ExceptionHandler(DispatcherServiceUnavailableException.class)
+	public ResponseEntity<ApiError> handleDispatcherServiceUnavailable(
+			DispatcherServiceUnavailableException exception, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(new ApiError("DISPATCHER_SERVICE_UNAVAILABLE", exception.getMessage(), request.getRequestURI()));
 	}
 
 	// handle invalid allocation quantity

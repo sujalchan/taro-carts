@@ -30,11 +30,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
+import nz.ac.aut.comp713.allocation_service.client.DispatcherClient;
+import nz.ac.aut.comp713.allocation_service.client.DispatcherResponse;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;
 import nz.ac.aut.comp713.allocation_service.client.CustomerResponse;
 import nz.ac.aut.comp713.allocation_service.client.TaroTypeResponse;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerServiceUnavailableException;
+import nz.ac.aut.comp713.allocation_service.exception.DispatcherNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroTypeNotFoundException;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
@@ -64,6 +67,9 @@ class WeeklyAllocationApiTest {
 
 	@MockitoBean
 	private TaroClient taroClient;
+
+	@MockitoBean
+	private DispatcherClient dispatcherClient;
 
 	@BeforeEach
 	void setUp() {
@@ -105,6 +111,11 @@ class WeeklyAllocationApiTest {
 						"Fiji Taro",
 						"Fijian taro",
 						new BigDecimal("45.00")));
+
+		when(dispatcherClient.getDispatchers())
+				.thenReturn(java.util.List.of(new DispatcherResponse(1L, "Auckland Dispatch", "Hana", "+64211234567", "20 Example Road")));
+		when(dispatcherClient.getDispatcher(1L))
+				.thenReturn(new DispatcherResponse(1L, "Auckland Dispatch", "Hana", "+64211234567", "20 Example Road"));
 	}
 
 	@Test
@@ -743,6 +754,7 @@ class WeeklyAllocationApiTest {
 				{
 				  "customerId": 1,
 				  "weekStart": "2026-09-14",
+				  "dispatcherId": 1,
 				  "allocationItems": [{"taroTypeId": 1, "quantity": 150}]
 				}
 				""";
@@ -763,7 +775,8 @@ class WeeklyAllocationApiTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(updateWithoutStatus.replace("\"allocationItems\"", "\"deliveryStatus\": \"DELIVERED\", \"allocationItems\"")))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.deliveryStatus").value("DELIVERED"));
+				.andExpect(jsonPath("$.deliveryStatus").value("DELIVERED"))
+				.andExpect(jsonPath("$.dispatcherId").value(1));
 
 		mockMvc.perform(get("/api/v1/allocations/{id}", id))
 				.andExpect(status().isOk())
@@ -864,6 +877,7 @@ class WeeklyAllocationApiTest {
 							{
 							  "customerId": 1,
 							  "weekStart": "2026-09-14",
+							  "dispatcherId": 1,
 							  "deliveryStatus": "%s",
 							  "allocationItems": [{"taroTypeId": 1, "quantity": 100}]
 							}
@@ -875,6 +889,39 @@ class WeeklyAllocationApiTest {
 					.andExpect(status().isOk())
 					.andExpect(jsonPath("$.deliveryStatus").value(orderStatus));
 		}
+	}
+
+	@Test
+	void deliveryStatusRequiresAnExistingDispatcherId() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		String updateWithoutDispatcher = """
+				{"customerId":1,"weekStart":"2026-09-14","deliveryStatus":"AWAITING_DISPATCH","allocationItems":[{"taroTypeId":1,"quantity":100}]}
+				""";
+
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(updateWithoutDispatcher))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("DISPATCHER_REQUIRED"));
+
+		when(dispatcherClient.getDispatcher(999L)).thenThrow(new DispatcherNotFoundException(999L));
+		String updateWithUnknownDispatcher = updateWithoutDispatcher
+				.replace("AWAITING_DISPATCH", "IN_TRANSIT")
+				.replace("\"deliveryStatus\"", "\"dispatcherId\":999,\"deliveryStatus\"");
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(updateWithUnknownDispatcher))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("DISPATCHER_NOT_FOUND"));
+
+		String updateWithDispatcher = updateWithoutDispatcher
+				.replace("\"deliveryStatus\"", "\"dispatcherId\":1,\"deliveryStatus\"");
+		mockMvc.perform(put("/api/v1/allocations/{id}", id)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(updateWithDispatcher))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.dispatcherId").value(1));
 	}
 
 	@Test

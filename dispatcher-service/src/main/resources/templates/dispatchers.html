@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/service-navigation.js"></script>
+    <title>Dispatchers (Server-rendered)</title>
+</head>
+<body class="page-list">
+    <nav class="app-nav" aria-label="Service navigation">
+        <a class="app-nav__brand" href="/dispatchers">Taro Allocation System</a>
+        <button class="app-nav__toggle" type="button" aria-expanded="false" aria-controls="service-navigation">
+            <span aria-hidden="true">☰</span> Menu
+        </button>
+        <div class="app-nav__links" id="service-navigation">
+            <a href="http://localhost:8081/customers">Customer Service</a>
+            <a href="http://localhost:8084/dispatchers" aria-current="page">Dispatcher Service</a>
+            <a href="http://localhost:8083/taro-types">Taro Service</a>
+            <a href="http://localhost:8082/allocations">Allocation Service</a>
+        </div>
+    </nav>
+    <h1>Dispatchers (Server-rendered)</h1>
+    <p><a href="/dispatchers-client.html">Client-rendered dispatcher page</a></p>
+    <form action="/dispatchers" method="get" class="search-form" autocomplete="off">
+        <div class="search-box">
+            <input type="search" name="search" th:value="${search}" placeholder="Search dispatchers">
+            <button type="submit">Search</button>
+            <a href="/dispatchers" class="search-clear">Clear</a>
+        </div>
+    </form>
+    <p><a class="button-primary" href="/dispatchers/new">Create Dispatcher</a></p>
+    <p th:if="${#lists.isEmpty(dispatchers)}">No dispatchers found.</p>
+    <div class="table-scroll" role="region" aria-label="Dispatcher table" tabindex="0">
+        <table th:if="${!#lists.isEmpty(dispatchers)}" border="1">
+            <thead><tr><th>ID</th><th>Dispatcher Name</th><th>Contact</th><th>Phone Number</th><th>Address</th><th>Active</th><th>Actions</th></tr></thead>
+            <tbody>
+                <tr th:each="dispatcher : ${dispatchers}">
+                    <td th:text="${dispatcher.id}"></td>
+                    <td th:text="${dispatcher.name}"></td>
+                    <td th:text="${dispatcher.contactName}"></td>
+                    <td th:text="${dispatcher.phone}"></td>
+                    <td th:text="${dispatcher.address}"></td>
+                    <td th:text="${dispatcher.active ? 'Yes' : 'No'}"></td>
+                    <td><a th:href="@{/dispatchers/{id}/edit(id=${dispatcher.id})}">Edit</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
