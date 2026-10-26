@@ -181,6 +181,7 @@ a:hover {
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
+textarea:focus-visible,
 select:focus-visible,
 .table-scroll:focus-visible {
     outline: 3px solid var(--accent);
@@ -265,6 +266,7 @@ label {
 }
 
 input:not([type="checkbox"]),
+textarea,
 select {
     display: block;
     width: 100%;
@@ -280,8 +282,67 @@ select {
 }
 
 input:hover,
+textarea:hover,
 select:hover {
     border-color: var(--accent);
+}
+
+.address-field {
+    position: relative;
+}
+
+.address-suggestions {
+    position: absolute;
+    z-index: 10;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: 0 4px 12px rgba(20, 45, 43, 0.12);
+}
+
+#addressSuggestions {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.address-suggestion {
+    display: block;
+    width: 100%;
+    min-height: 0;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    font-weight: 400;
+}
+
+.address-suggestion:hover,
+.address-suggestion:focus-visible {
+    background: #eaf0ef;
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.address-attribution {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px;
+}
+
+.address-attribution img {
+    display: block;
+    height: 18px;
+    width: auto;
+}
+
+.form-hint:not(:empty) {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
 }
 
 input[type="checkbox"] {

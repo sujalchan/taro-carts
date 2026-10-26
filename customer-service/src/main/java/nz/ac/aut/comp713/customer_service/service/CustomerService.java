@@ -50,6 +50,7 @@ public class CustomerService {
 
         Customer customer = new Customer();
         customer.setName(name);
+        customer.setAddress(request.address().trim());
         customer.setNormalizedName(normalizedName);
         customer.setContactName(request.contactName());
         customer.setPhone(request.phone());
@@ -79,6 +80,7 @@ public class CustomerService {
         String normalizedName = name.toLowerCase().replaceAll("\\s+", "");
 
         customer.setName(name);
+        customer.setAddress(request.address().trim());
         customer.setNormalizedName(normalizedName);
         customer.setContactName(request.contactName());
         customer.setPhone(request.phone());
@@ -102,12 +104,13 @@ public class CustomerService {
         return new CustomerResponse(
                 customer.getId(),
                 customer.getName(),
+                customer.getAddress(),
                 customer.getContactName(),
                 customer.getPhone(),
                 customer.isActive());
     }
 
-    // match the search query against customer name, contact name, or phone
+    // match the search query against customer name, address, contact name, or phone
     private boolean matchesSearch(Customer customer, String search) {
         // no search value means every customer should be returned
         if (search == null || search.isBlank()) {
@@ -117,6 +120,8 @@ public class CustomerService {
         String query = search.trim().toLowerCase();
 
         return customer.getName().toLowerCase().contains(query)
+                || (customer.getAddress() != null
+                        && customer.getAddress().toLowerCase().contains(query))
                 || (customer.getContactName() != null
                         && customer.getContactName().toLowerCase().contains(query))
                 || (customer.getPhone() != null

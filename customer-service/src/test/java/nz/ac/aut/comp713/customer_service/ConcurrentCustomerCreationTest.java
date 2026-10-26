@@ -43,6 +43,7 @@ class ConcurrentCustomerCreationTest {
 		String requestBody = """
 				{
 				"name": "Island Foods",
+				"address": "12 Market Street, Auckland",
 				"contactName": "John",
 				"phone": "0211234567",
 				"active": true

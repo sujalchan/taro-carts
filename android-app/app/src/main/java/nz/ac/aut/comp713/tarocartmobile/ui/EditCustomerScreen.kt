@@ -1,6 +1,10 @@
 package nz.ac.aut.comp713.tarocartmobile.ui
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -28,10 +33,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.kotlin.awaitFetchPlace
+import com.google.android.libraries.places.widget.PlaceAutocomplete
+import com.google.android.libraries.places.widget.PlaceAutocompleteActivity
+import nz.ac.aut.comp713.tarocartmobile.BuildConfig
 import nz.ac.aut.comp713.tarocartmobile.data.AllocationApi
 import nz.ac.aut.comp713.tarocartmobile.data.Customer
 
@@ -39,13 +51,42 @@ import nz.ac.aut.comp713.tarocartmobile.data.Customer
 @OptIn(ExperimentalMaterial3Api::class)
 // allows the acting customer to update the information stored by customer-service
 fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Customer) -> Unit) {
+    val context = LocalContext.current
     var name by remember(customer.id) { mutableStateOf(customer.name) }
+    var address by remember(customer.id) { mutableStateOf(customer.address) }
     var contactName by remember(customer.id) { mutableStateOf(customer.contactName) }
     var phone by remember(customer.id) { mutableStateOf(customer.phone) }
     var active by remember(customer.id) { mutableStateOf(customer.active) }
     var saving by remember(customer.id) { mutableStateOf(false) }
     var error by remember(customer.id) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val addressSearch = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val intent: Intent = result.data ?: return@rememberLauncherForActivityResult
+        if (result.resultCode != PlaceAutocompleteActivity.RESULT_OK) return@rememberLauncherForActivityResult
+        val prediction = PlaceAutocomplete.getPredictionFromIntent(intent)
+            ?: return@rememberLauncherForActivityResult
+        val token = PlaceAutocomplete.getSessionTokenFromIntent(intent)
+        scope.launch {
+            try {
+                val response = Places.createClient(context).awaitFetchPlace(
+                    prediction.placeId, listOf(Place.Field.FORMATTED_ADDRESS)
+                ) {
+                    sessionToken = token
+                }
+                val selectedAddress = response.place.formattedAddress
+                if (selectedAddress.isNullOrBlank() || selectedAddress.length > 500) {
+                    error = "Please enter this address manually."
+                } else {
+                    address = selectedAddress
+                    error = null
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                error = exception.message ?: "Could not load the selected address."
+            }
+        }
+    }
 
     // keeps system back navigation consistent with the app bar action
     BackHandler(enabled = !saving, onBack = onBack)
@@ -64,7 +105,8 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding)
-                .padding(20.dp),
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             OutlinedTextField(
@@ -75,6 +117,29 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
                 enabled = !saving,
                 modifier = Modifier.fillMaxWidth()
             )
+            OutlinedTextField(
+                value = address,
+                onValueChange = { if (it.length <= 500) address = it },
+                label = { Text("Address") },
+                enabled = !saving,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (BuildConfig.PLACES_API_KEY.isNotBlank()) {
+                TextButton(onClick = {
+                    try {
+                        if (!Places.isInitialized()) {
+                            Places.initializeWithNewPlacesApiEnabled(context, BuildConfig.PLACES_API_KEY)
+                        }
+                        addressSearch.launch(
+                            PlaceAutocomplete.IntentBuilder()
+                                .setCountries(listOf("NZ"))
+                                .build(context)
+                        )
+                    } catch (exception: Exception) {
+                        error = exception.message ?: "Could not open address search."
+                    }
+                }) { Text("Search address with Google") }
+            }
             OutlinedTextField(
                 value = contactName,
                 onValueChange = { contactName = it },
@@ -108,6 +173,10 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
                             error = "Customer name is required."
                             return@Button
                         }
+                        if (address.isBlank()) {
+                            error = "Customer address is required."
+                            return@Button
+                        }
 
                         // submits normalized text while preserving the customer's identity
                         saving = true
@@ -117,6 +186,7 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
                                 val updated = AllocationApi.updateCustomer(
                                     customer.copy(
                                         name = trimmedName,
+                                        address = address.trim(),
                                         contactName = contactName.trim(),
                                         phone = phone.trim(),
                                         active = active

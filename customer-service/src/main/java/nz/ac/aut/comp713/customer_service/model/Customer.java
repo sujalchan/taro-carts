@@ -27,6 +27,9 @@ public class Customer {
 
     private String contactName;
     private String phone;
+    // Nullable so existing SQLite customer rows remain readable after the column is added.
+    @Column(length = 500)
+    private String address;
 
     // customers are active by default
     private boolean active = true;
@@ -35,8 +38,9 @@ public class Customer {
     }
 
     // override constructor for creating a new active customer
-    public Customer(String name, String contactName, String phone) {
+    public Customer(String name, String address, String contactName, String phone) {
         this.name = name;
+        this.address = address;
         this.contactName = contactName;
         this.phone = phone;
         this.active = true;
@@ -80,6 +84,14 @@ public class Customer {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public boolean isActive() {

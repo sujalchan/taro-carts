@@ -63,6 +63,7 @@
                 <tr>
                     <th>ID</th>
                     <th>Business Name</th>
+                    <th>Address</th>
                     <th>Contact Name</th>
                     <th>Phone</th>
                     <th>Active</th>
@@ -81,6 +82,8 @@
                     <td th:text="${customer.name}">
                         Island Foods
                     </td>
+
+                    <td th:text="${customer.address}"></td>
 
                     <td th:text="${customer.contactName}">
                         John

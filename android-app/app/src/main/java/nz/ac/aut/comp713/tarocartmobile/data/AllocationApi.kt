@@ -17,6 +17,7 @@ private const val CUSTOMER_API_BASE_URL = "http://10.0.2.2:8081"
 data class Customer(
     val id: Long,
     val name: String,
+    val address: String,
     val contactName: String,
     val phone: String,
     val active: Boolean
@@ -92,6 +93,7 @@ object AllocationApi {
     suspend fun updateCustomer(customer: Customer): Customer = withContext(Dispatchers.IO) {
         val body = JSONObject().apply {
             put("name", customer.name)
+            put("address", customer.address)
             put("contactName", customer.contactName)
             put("phone", customer.phone)
             put("active", customer.active)
@@ -181,6 +183,7 @@ object AllocationApi {
     private fun JSONObject.toCustomer(): Customer = Customer(
         id = getLong("id"),
         name = optString("name", "Customer"),
+        address = optString("address", ""),
         contactName = optString("contactName", ""),
         phone = optString("phone", ""),
         active = optBoolean("active", true)

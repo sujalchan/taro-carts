@@ -176,7 +176,30 @@ http://localhost:8081
 ```
 
 It owns customer records and supports customer creation, retrieval, updates, search, and activation.
+New customers require an address. Existing customers without one can be viewed and must enter an address when edited.
 Its SQLite database is `customer.db`.
+
+### Google Places address suggestions
+
+Enable **Maps JavaScript API** and **Places API (New)** in a billing-enabled Google Cloud project. One unrestricted key can be used for both the website and Android app during development: put the same key in both settings below. Separate keys are recommended later so the website key can be restricted to the customer-service website and the Android key to app package `nz.ac.aut.comp713.tarocartmobile` and its signing certificate. One key cannot have both website and Android application restrictions.
+
+For the web customer create and edit forms, put the key in the ignored repository-root `.env` file:
+
+```properties
+GOOGLE_MAPS_BROWSER_API_KEY=your-google-api-key
+```
+
+The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read this file and pass the key only to `customer-service`. An existing `GOOGLE_MAPS_BROWSER_API_KEY` environment variable takes precedence. If starting `customer-service` directly, set that environment variable first.
+
+For Android customer editing, add this line to the ignored `android-app/local.properties` file, then sync and rebuild the app:
+
+```properties
+GOOGLE_MAPS_ANDROID_API_KEY=your-google-api-key
+```
+
+The address remains editable on both platforms. If a key is not configured or Google cannot find the address, users can enter it manually. Android currently edits customers but does not create them.
+
+If the Android build runs out of Java heap while merging dex files, set `org.gradle.jvmargs=-Xmx3g` in the ignored `android-app/gradle.properties` file and rebuild.
 
 ### Taro Service
 

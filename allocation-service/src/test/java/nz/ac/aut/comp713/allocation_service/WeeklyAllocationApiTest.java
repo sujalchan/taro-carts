@@ -78,6 +78,7 @@ class WeeklyAllocationApiTest {
 				.thenReturn(new CustomerResponse(
 						1L,
 						"Island Foods",
+						"12 Market Street, Auckland",
 						"John",
 						"0211234567",
 						true));
@@ -86,6 +87,7 @@ class WeeklyAllocationApiTest {
 				.thenReturn(new CustomerResponse(
 						2L,
 						"Fresh Choice",
+						"12 Market Street, Auckland",
 						"Sarah",
 						"0215555555",
 						true));
@@ -153,8 +155,8 @@ class WeeklyAllocationApiTest {
 		createAllocation(1L, "2026-09-14", 1L, 100);
 		createAllocation(2L, "2026-09-14", 2L, 50);
 		when(customerClient.getCustomers()).thenReturn(java.util.List.of(
-				new CustomerResponse(1L, "Island Foods", "John", "0211234567", true),
-				new CustomerResponse(2L, "Fresh Choice", "Sarah", "0215555555", true)));
+				new CustomerResponse(1L, "Island Foods", "12 Market Street, Auckland", "John", "0211234567", true),
+				new CustomerResponse(2L, "Fresh Choice", "12 Market Street, Auckland", "Sarah", "0215555555", true)));
 
 		mockMvc.perform(get("/allocations").param("customerId", "2"))
 				.andExpect(status().isOk())
@@ -191,8 +193,8 @@ class WeeklyAllocationApiTest {
 	@Test
 	void customerFilterReferenceIncludesInactiveCustomers() throws Exception {
 		when(customerClient.getCustomers()).thenReturn(java.util.List.of(
-				new CustomerResponse(1L, "Island Foods", "John", "0211234567", true),
-				new CustomerResponse(2L, "Former Customer", "Sarah", "0215555555", false)));
+				new CustomerResponse(1L, "Island Foods", "12 Market Street, Auckland", "John", "0211234567", true),
+				new CustomerResponse(2L, "Former Customer", "12 Market Street, Auckland", "Sarah", "0215555555", false)));
 		mockMvc.perform(get("/api/v1/customer-service-reference/customers").param("includeInactive", "true"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(2)))
@@ -1579,12 +1581,13 @@ class WeeklyAllocationApiTest {
 	@Test
 	void referenceEndpointsUseSeparateClients() throws Exception {
 		when(customerClient.getCustomers()).thenReturn(java.util.List.of(
-				new CustomerResponse(1L, "Island Foods", "John", "0211234567", true)));
+				new CustomerResponse(1L, "Island Foods", "12 Market Street, Auckland", "John", "0211234567", true)));
 		when(taroClient.getTaroTypes()).thenReturn(java.util.List.of(
 				new TaroTypeResponse(1L, "Samoan Taro", "Large premium taro", new BigDecimal("50.00"))));
 		mockMvc.perform(get("/api/v1/customer-service-reference/customers"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$[0].name").value("Island Foods"));
+				.andExpect(jsonPath("$[0].name").value("Island Foods"))
+				.andExpect(jsonPath("$[0].address").value("12 Market Street, Auckland"));
 		mockMvc.perform(get("/api/v1/taro-service-reference/taro-types"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].name").value("Samoan Taro"));

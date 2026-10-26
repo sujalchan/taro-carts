@@ -61,6 +61,7 @@ class ConcurrentWeeklyAllocationTest {
 				.thenReturn(new CustomerResponse(
 						1L,
 						"Island Foods",
+						"12 Market Street, Auckland",
 						"John",
 						"0211234567",
 						true));

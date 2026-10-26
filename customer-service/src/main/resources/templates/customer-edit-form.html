@@ -48,6 +48,22 @@
         </div>
 
         <br>
+        <div>
+            <label for="address">Address</label>
+            <div class="address-field">
+                <input type="text" id="address" name="address" maxlength="500" required
+                       th:value="${address}" placeholder="Search or enter a New Zealand address"
+                       autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="addressSuggestions"
+                       aria-expanded="false">
+                <div id="addressAutocomplete" class="address-suggestions" hidden>
+                    <div id="addressSuggestions" role="listbox" aria-label="Suggested addresses"></div>
+                    <div class="address-attribution"><img src="/images/google-maps-logo.svg" alt="Google Maps"></div>
+                </div>
+            </div>
+            <p id="addressAutocompleteStatus" class="form-hint" role="status" aria-live="polite"></p>
+        </div>
+
+        <br>
 
         <div>
             <label for="contactName">
@@ -88,6 +104,8 @@
         </a>
 
     </form>
+
+    <script src="/js/address-autocomplete.js"></script>
 
 </body>
 

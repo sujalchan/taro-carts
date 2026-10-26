@@ -48,6 +48,7 @@ public class CustomerPageController {
     @PostMapping("/customers/new")
     public String createCustomer(
             @RequestParam String name,
+            @RequestParam(defaultValue = "") String address,
             @RequestParam(required = false) String contactName,
             @RequestParam(required = false) String phone,
             @RequestParam(defaultValue = "false") boolean active,
@@ -55,6 +56,7 @@ public class CustomerPageController {
 
         CustomerRequest request = new CustomerRequest(
                 name,
+                address,
                 contactName,
                 phone,
                 active);
@@ -71,6 +73,7 @@ public class CustomerPageController {
             addFormValues(
                     model,
                     name,
+                    address,
                     contactName,
                     phone,
                     active);
@@ -87,6 +90,7 @@ public class CustomerPageController {
             addFormValues(
                     model,
                     name,
+                    address,
                     contactName,
                     phone,
                     active);
@@ -102,11 +106,13 @@ public class CustomerPageController {
     private void addFormValues(
             Model model,
             String name,
+            String address,
             String contactName,
             String phone,
             boolean active) {
 
         model.addAttribute("name", name);
+        model.addAttribute("address", address);
         model.addAttribute("contactName", contactName);
         model.addAttribute("phone", phone);
         model.addAttribute("active", active);
@@ -122,6 +128,7 @@ public class CustomerPageController {
 
         model.addAttribute("customerId", customer.id());
         model.addAttribute("name", customer.name());
+        model.addAttribute("address", customer.address());
         model.addAttribute("contactName", customer.contactName());
         model.addAttribute("phone", customer.phone());
         model.addAttribute("active", customer.active());
@@ -134,6 +141,7 @@ public class CustomerPageController {
     public String updateCustomer(
             @PathVariable Long id,
             @RequestParam String name,
+            @RequestParam(defaultValue = "") String address,
             @RequestParam(required = false) String contactName,
             @RequestParam(required = false) String phone,
             @RequestParam(defaultValue = "false") boolean active,
@@ -141,6 +149,7 @@ public class CustomerPageController {
 
         CustomerRequest request = new CustomerRequest(
                 name,
+                address,
                 contactName,
                 phone,
                 active);
@@ -159,6 +168,7 @@ public class CustomerPageController {
                     model,
                     id,
                     name,
+                    address,
                     contactName,
                     phone,
                     active);
@@ -177,6 +187,7 @@ public class CustomerPageController {
                     model,
                     id,
                     name,
+                    address,
                     contactName,
                     phone,
                     active);
@@ -196,12 +207,14 @@ public class CustomerPageController {
             Model model,
             Long customerId,
             String name,
+            String address,
             String contactName,
             String phone,
             boolean active) {
 
         model.addAttribute("customerId", customerId);
         model.addAttribute("name", name);
+        model.addAttribute("address", address);
         model.addAttribute("contactName", contactName);
         model.addAttribute("phone", phone);
         model.addAttribute("active", active);

@@ -38,6 +38,7 @@ paths:
               $ref: "#/components/schemas/CustomerRequest"
             example:
               name: Island Foods
+              address: 12 Market Street, Auckland
               contactName: John
               phone: "0211234567"
               active: true
@@ -59,6 +60,7 @@ paths:
               example:
                 id: 1
                 name: Island Foods
+                address: 12 Market Street, Auckland
                 contactName: John
                 phone: "0211234567"
                 active: true
@@ -110,6 +112,7 @@ paths:
               example:
                 id: 1
                 name: Island Foods
+                address: 12 Market Street, Auckland
                 contactName: John
                 phone: "0211234567"
                 active: true
@@ -147,6 +150,7 @@ paths:
               $ref: "#/components/schemas/CustomerRequest"
             example:
               name: Island Foods
+              address: 12 Market Street, Auckland
               contactName: James
               phone: "0219999999"
               active: true
@@ -161,6 +165,7 @@ paths:
               example:
                 id: 1
                 name: Island Foods
+                address: 12 Market Street, Auckland
                 contactName: James
                 phone: "0219999999"
                 active: true
@@ -205,12 +210,19 @@ components:
 
       required:
         - name
+        - address
 
       properties:
         name:
           type: string
           minLength: 1
           example: Island Foods
+
+        address:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: 12 Market Street, Auckland
 
         contactName:
           type: string
@@ -244,6 +256,12 @@ components:
         name:
           type: string
           example: Island Foods
+
+        address:
+          type: string
+          nullable: true
+          description: Existing customers may have no address until edited.
+          example: 12 Market Street, Auckland
 
         contactName:
           type: string

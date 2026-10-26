@@ -66,6 +66,7 @@ fun AllocationsScreen() {
     // saves the acting customer's basic details so rotation does not restart selection
     var selectedCustomerId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedCustomerName by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedCustomerAddress by rememberSaveable { mutableStateOf("") }
     var selectedCustomerContactName by rememberSaveable { mutableStateOf("") }
     var selectedCustomerPhone by rememberSaveable { mutableStateOf("") }
     var selectedCustomerActive by rememberSaveable { mutableStateOf(true) }
@@ -109,6 +110,7 @@ fun AllocationsScreen() {
                 Customer(
                     customerId,
                     customerName,
+                    selectedCustomerAddress,
                     selectedCustomerContactName,
                     selectedCustomerPhone,
                     selectedCustomerActive
@@ -125,6 +127,7 @@ fun AllocationsScreen() {
                 // stores only saveable values rather than the complete customer object
                 selectedCustomerId = it.id
                 selectedCustomerName = it.name
+                selectedCustomerAddress = it.address
                 selectedCustomerContactName = it.contactName
                 selectedCustomerPhone = it.phone
                 selectedCustomerActive = it.active
@@ -156,6 +159,7 @@ fun AllocationsScreen() {
             onBack = { editingCustomer = false },
             onSaved = { updatedCustomer ->
                 selectedCustomerName = updatedCustomer.name
+                selectedCustomerAddress = updatedCustomer.address
                 selectedCustomerContactName = updatedCustomer.contactName
                 selectedCustomerPhone = updatedCustomer.phone
                 selectedCustomerActive = updatedCustomer.active
@@ -286,6 +290,7 @@ fun AllocationsScreen() {
                             drawerState.close()
                             selectedCustomerId = null
                             selectedCustomerName = null
+                            selectedCustomerAddress = ""
                             selectedCustomerContactName = ""
                             selectedCustomerPhone = ""
                             selectedCustomerActive = true

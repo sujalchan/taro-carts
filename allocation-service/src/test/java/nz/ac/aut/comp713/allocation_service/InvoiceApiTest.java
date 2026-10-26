@@ -65,7 +65,7 @@ class InvoiceApiTest {
         itemRepository.deleteAll();
         allocationRepository.deleteAll();
         when(customerClient.getCustomer(1L))
-                .thenReturn(new CustomerResponse(1L, "Island Foods", "John", "0211234567", true));
+                .thenReturn(new CustomerResponse(1L, "Island Foods", "12 Market Street, Auckland", "John", "0211234567", true));
         when(taroClient.getTaroType(1L))
                 .thenReturn(new TaroTypeResponse(1L, "Samoan Taro", "", new BigDecimal("50.00")));
     }

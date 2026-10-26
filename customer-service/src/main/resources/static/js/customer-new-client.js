@@ -8,6 +8,7 @@ form.addEventListener("submit", async function (event) {
 
     const customer = {
         name: document.getElementById("name").value,
+        address: document.getElementById("address").value.trim(),
         contactName: document.getElementById("contactName").value,
         phone: document.getElementById("phone").value,
         active: document.getElementById("active").checked

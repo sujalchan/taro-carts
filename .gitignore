@@ -34,9 +34,10 @@ Thumbs.db
 *.db-wal
 *.db-journal
 
-# environment variables and secrets
+# Local environment files, including the Google Maps key in the root .env
 .env
 .env.*
+!.env.example
+
 # Machine-specific Android Gradle settings
 /android-app/gradle.properties
-!.env.example

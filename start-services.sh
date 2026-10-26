@@ -6,6 +6,18 @@ ROOT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
+places_api_key="${GOOGLE_MAPS_BROWSER_API_KEY:-}"
+if [[ -z "$places_api_key" && -f "$ROOT_DIR/.env" ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" == GOOGLE_MAPS_BROWSER_API_KEY=* ]]; then
+            places_api_key="${line#*=}"
+            places_api_key="${places_api_key%$'\r'}"
+            break
+        fi
+    done < "$ROOT_DIR/.env"
+fi
+unset GOOGLE_MAPS_BROWSER_API_KEY
+
 service_pids=()
 
 start_service() {
@@ -15,6 +27,9 @@ start_service() {
 
     (
         cd "$ROOT_DIR/$directory"
+        if [[ "$directory" == "customer-service" && -n "$places_api_key" ]]; then
+            export GOOGLE_MAPS_BROWSER_API_KEY="$places_api_key"
+        fi
         exec ./mvnw spring-boot:run
     ) >"$LOG_DIR/$name.log" 2>&1 &
     pid=$!

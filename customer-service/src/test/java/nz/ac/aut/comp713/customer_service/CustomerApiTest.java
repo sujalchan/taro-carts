@@ -55,6 +55,7 @@ class CustomerApiTest {
 		String requestBody = """
 				{
 				"name": "Island Foods",
+				"address": "12 Market Street, Auckland",
 				"contactName": "John",
 				"phone": "0211234567",
 				"active": true
@@ -67,6 +68,7 @@ class CustomerApiTest {
 				.andExpect(status().isCreated())
 				.andExpect(header().exists("Location"))
 				.andExpect(jsonPath("$.name").value("Island Foods"))
+				.andExpect(jsonPath("$.address").value("12 Market Street, Auckland"))
 				.andExpect(jsonPath("$.contactName").value("John"))
 				.andExpect(jsonPath("$.phone").value("0211234567"))
 				.andExpect(jsonPath("$.active").value(true))
@@ -79,6 +81,7 @@ class CustomerApiTest {
 		String requestBody = """
 				{
 				"name": "Island Foods",
+				"address": "12 Market Street, Auckland",
 				"contactName": "John",
 				"phone": "0211234567",
 				"active": true
@@ -96,9 +99,22 @@ class CustomerApiTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(customerId))
 				.andExpect(jsonPath("$.name").value("Island Foods"))
+				.andExpect(jsonPath("$.address").value("12 Market Street, Auckland"))
 				.andExpect(jsonPath("$.contactName").value("John"))
 				.andExpect(jsonPath("$.phone").value("0211234567"))
 				.andExpect(jsonPath("$.active").value(true));
+	}
+
+	// creation requires a nonblank address even when other fields are valid
+	@Test
+	void missingOrBlankAddressReturnsBadRequest() throws Exception {
+		for (String addressField : new String[] { "", ", \"address\": \"   \"" }) {
+			mockMvc.perform(post("/api/v1/customers")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"name\":\"Island Foods\"" + addressField + "}"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value("Customer address is required"));
+		}
 	}
 
 	// test retrieving a customer that does not exist
@@ -119,6 +135,7 @@ class CustomerApiTest {
 		String requestBody = """
 				{
 				"name": "",
+				"address": "12 Market Street, Auckland",
 				"contactName": "Sarah",
 				"phone": "0219876543",
 				"active": true
@@ -142,6 +159,7 @@ class CustomerApiTest {
 		String requestBody = """
 				{
 				"name": "Island Foods",
+				"address": "12 Market Street, Auckland",
 				"contactName": "John",
 				"phone": "0211234567",
 				"active": true
@@ -178,6 +196,7 @@ class CustomerApiTest {
 				.content("""
 						{
 						"name": "Test Customer",
+						"address": "12 Market Street, Auckland",
 						"contactName": "Sujal",
 						"phone": "Sujal",
 						"active": true
@@ -196,6 +215,7 @@ class CustomerApiTest {
 		String createRequest = """
 				{
 				"name": "Island Foods",
+				"address": "12 Market Street, Auckland",
 				"contactName": "John",
 				"phone": "0211234567",
 				"active": true
@@ -212,6 +232,7 @@ class CustomerApiTest {
 		String updateRequest = """
 				{
 				"name": "Island Foods",
+				"address": "44 Queen Street, Auckland",
 				"contactName": "James",
 				"phone": "0219999999",
 				"active": true
@@ -224,6 +245,7 @@ class CustomerApiTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(customerId))
 				.andExpect(jsonPath("$.name").value("Island Foods"))
+				.andExpect(jsonPath("$.address").value("44 Queen Street, Auckland"))
 				.andExpect(jsonPath("$.contactName").value("James"))
 				.andExpect(jsonPath("$.phone").value("0219999999"))
 				.andExpect(jsonPath("$.active").value(true));
@@ -231,6 +253,7 @@ class CustomerApiTest {
 		// confirm that the updated values were persisted
 		mockMvc.perform(get("/api/v1/customers/{id}", customerId))
 				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.address").value("44 Queen Street, Auckland"))
 				.andExpect(jsonPath("$.contactName").value("James"))
 				.andExpect(jsonPath("$.phone").value("0219999999"));
 	}
@@ -241,6 +264,7 @@ class CustomerApiTest {
 		String requestBody = """
 				{
 				"name": "Test Customer",
+				"address": "12 Market Street, Auckland",
 				"contactName": "John",
 				"phone": "0210000000",
 				"active": true
@@ -264,6 +288,7 @@ class CustomerApiTest {
 		String createRequest = """
 				{
 				"name": "Island Foods",
+				"address": "12 Market Street, Auckland",
 				"contactName": "John",
 				"phone": "0211234567",
 				"active": true
@@ -280,6 +305,7 @@ class CustomerApiTest {
 		String invalidUpdate = """
 				{
 				"name": "",
+				"address": "12 Market Street, Auckland",
 				"contactName": "James",
 				"phone": "0219999999",
 				"active": true
@@ -303,6 +329,7 @@ class CustomerApiTest {
 		String islandFoodsRequest = """
 				{
 				"name": "Island Foods",
+				"address": "12 Market Street, Auckland",
 				"contactName": "John",
 				"phone": "0211234567",
 				"active": true
@@ -312,6 +339,7 @@ class CustomerApiTest {
 		String freshChoiceRequest = """
 				{
 				"name": "Fresh Choice",
+				"address": "12 Market Street, Auckland",
 				"contactName": "Sarah",
 				"phone": "0215555555",
 				"active": true
@@ -339,6 +367,7 @@ class CustomerApiTest {
 		String conflictingUpdate = """
 				{
 				"name": "Island Foods",
+				"address": "12 Market Street, Auckland",
 				"contactName": "Sarah",
 				"phone": "0215555555",
 				"active": true

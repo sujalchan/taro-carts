@@ -42,6 +42,7 @@ async function loadCustomers(search = "") {
 
             row.innerHTML = `
                 <td>${escapeHtml(customer.name)}</td>
+                <td>${escapeHtml(customer.address ?? "")}</td>
                 <td>${escapeHtml(customer.contactName ?? "")}</td>
                 <td>${escapeHtml(customer.phone ?? "")}</td>
                 <td>${customer.active ? "Yes" : "No"}</td>
