@@ -1,6 +1,9 @@
 package nz.ac.aut.comp713.tarocartmobile.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,26 +15,37 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import nz.ac.aut.comp713.tarocartmobile.data.AllocationApi
 import nz.ac.aut.comp713.tarocartmobile.data.AssignedDelivery
 import nz.ac.aut.comp713.tarocartmobile.data.Dispatcher
@@ -52,6 +66,8 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
     var loadingDeliveries by remember { mutableStateOf(false) }
     var deliveriesError by remember { mutableStateOf<String?>(null) }
     var deliveriesRefresh by remember { mutableStateOf(0) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(selectedId) { onAccountSelected(selectedId != null) }
 
@@ -91,17 +107,47 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
         onAccountSelected(false)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (selectedId == null) "Choose a dispatcher" else selectedName) },
-                actions = {
-                    if (selectedId != null) {
-                        TextButton(onClick = {
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = selectedId != null,
+        drawerContent = {
+            ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                Text("Dispatcher menu", style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp))
+                NavigationDrawerItem(
+                    label = { Text("Switch dispatcher") },
+                    selected = false,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
                             deliveries = emptyList()
                             selectedId = null
                             onAccountSelected(false)
-                        }) { Text("Switch user") }
+                        }
+                    }
+                )
+            }
+        }
+    ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    if (selectedId != null) {
+                        Column {
+                            Text("Taro Allocation System", style = MaterialTheme.typography.titleMedium)
+                            Text("Assigned Deliveries", style = MaterialTheme.typography.bodySmall)
+                        }
+                    } else {
+                        Text("Choose a dispatcher")
+                    }
+                },
+                navigationIcon = {
+                    if (selectedId != null) {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Text("☰", style = MaterialTheme.typography.headlineSmall)
+                        }
                     }
                 }
             )
@@ -140,10 +186,11 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
                     }
                 }
             } else {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Assigned deliveries", style = MaterialTheme.typography.titleLarge)
-                    TextButton(onClick = { deliveriesRefresh++ }) { Text("Refresh") }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Acting as $selectedName", style = MaterialTheme.typography.titleMedium)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(onClick = { deliveriesRefresh++ }) { Text("Refresh") }
+                    }
                 }
                 when {
                     loadingDeliveries -> CircularProgressIndicator(Modifier.padding(top = 20.dp))
@@ -166,21 +213,35 @@ fun DispatcherScreen(onAccountSelected: (Boolean) -> Unit = {}) {
             }
         }
     }
+    }
 }
 
 @Composable
 private fun DeliveryCard(delivery: AssignedDelivery) {
     val allocation = delivery.allocation
-    Card(Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(delivery.customer.name, style = MaterialTheme.typography.titleMedium,
+            Text(allocation.customerName, style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold)
-            Text("Address", style = MaterialTheme.typography.labelMedium)
-            Text(delivery.customer.address.ifBlank { "No address recorded" })
-            Text("Delivery week", style = MaterialTheme.typography.labelMedium)
+            Text("Delivery address", style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold)
+            Text(allocation.deliveryAddress ?: "No delivery address set")
+            Text("Delivery week", style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold)
             Text(formatDeliveryWeek(allocation.weekStart))
-            Text("Status: ${allocation.deliveryStatus.lowercase().replace('_', ' ')}")
-            Text("Taro allocation", style = MaterialTheme.typography.labelMedium)
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Status", style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold)
+                DeliveryStatusBadge(allocation.deliveryStatus)
+            }
+            Text("Taro allocation", style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold)
             if (allocation.items.isEmpty()) {
                 Text("No taro items recorded")
             } else {
@@ -189,6 +250,35 @@ private fun DeliveryCard(delivery: AssignedDelivery) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DeliveryStatusBadge(status: String) {
+    val dark = isSystemInDarkTheme()
+    val (background, foreground) = when (status) {
+        "REQUESTED_ALLOCATION" -> if (dark) Color(0xFF3A4440) to Color(0xFFE9F0EC)
+            else Color(0xFFE5E7EB) to Color(0xFF374151)
+        "APPROVED_ALLOCATION" -> if (dark) Color(0xFF164E42) to Color(0xFFC5F2E5)
+            else Color(0xFFD7F2EC) to Color(0xFF075E4E)
+        "PREPARING_ALLOCATION" -> if (dark) Color(0xFF5A430C) to Color(0xFFFFDEA0)
+            else Color(0xFFFFF1C2) to Color(0xFF6B4F00)
+        "AWAITING_DISPATCH" -> if (dark) Color(0xFF66371F) to Color(0xFFFFCFB3)
+            else Color(0xFFFFE4D1) to Color(0xFF8A390C)
+        "IN_TRANSIT" -> if (dark) Color(0xFF1F4568) to Color(0xFFD6E9FF)
+            else Color(0xFFDCEBFF) to Color(0xFF174E83)
+        "DELIVERED" -> if (dark) Color(0xFF245132) to Color(0xFFCEF1D0)
+            else Color(0xFFDCF5DF) to Color(0xFF1B5E20)
+        "CANCELLED" -> if (dark) Color(0xFF632E2B) to Color(0xFFFFDAD7)
+            else Color(0xFFFCE3E1) to Color(0xFF9C2F28)
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh to MaterialTheme.colorScheme.onSurface
+    }
+    val label = status.lowercase(Locale.ENGLISH).replace('_', ' ')
+        .replaceFirstChar { it.titlecase(Locale.ENGLISH) }
+    Box(Modifier.clip(RoundedCornerShape(8.dp)).background(background)
+        .padding(horizontal = 10.dp, vertical = 5.dp)) {
+        Text(label, color = foreground, style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold)
     }
 }
 

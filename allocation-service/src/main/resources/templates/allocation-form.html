@@ -79,6 +79,12 @@
 
         </div>
 
+        <div>
+            <label for="deliveryAddress">Delivery address</label>
+            <textarea id="deliveryAddress" name="deliveryAddress" maxlength="500" rows="3" th:text="${deliveryAddress}"></textarea>
+            <small>Leave blank to use the customer's address from Customer Service.</small>
+        </div>
+
         <hr>
 
         <h2>Allocation Items</h2>

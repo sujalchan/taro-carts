@@ -200,6 +200,9 @@ public class WeeklyAllocationService {
         weeklyAllocation.setCustomerId(request.customerId());
         weeklyAllocation.setRequestedByCustomerId(requestedByCustomerId);
         weeklyAllocation.setWeekStart(normalizedWeekStart);
+        weeklyAllocation.setDeliveryAddress(normalizeAddress(
+                request.deliveryAddress() == null || request.deliveryAddress().isBlank()
+                        ? customer.address() : request.deliveryAddress()));
 
         // every new allocation begins in the requested state
         weeklyAllocation.setDeliveryStatus(DeliveryStatus.REQUESTED_ALLOCATION);
@@ -271,6 +274,12 @@ public class WeeklyAllocationService {
 
         // confirm the customer exists in customer-service
         CustomerResponse customer = customerClient.getCustomer(request.customerId());
+        boolean customerChanged = !weeklyAllocation.getCustomerId().equals(request.customerId());
+        if (request.deliveryAddress() != null) {
+            weeklyAllocation.setDeliveryAddress(normalizeAddress(request.deliveryAddress()));
+        } else if (customerChanged) {
+            weeklyAllocation.setDeliveryAddress(normalizeAddress(customer.address()));
+        }
 
         DeliveryStatus targetStatus = request.deliveryStatus() == null
                 ? weeklyAllocation.getDeliveryStatus()
@@ -465,7 +474,10 @@ public class WeeklyAllocationService {
                 weeklyAllocation.getDeliveryStatus() == DeliveryStatus.DELIVERED
                         || invoiceService.hasInvoice(weeklyAllocation.getId()),
                 allocationItemResponses,
-                weeklyAllocation.getDispatcherId());
+                weeklyAllocation.getDispatcherId(),
+                weeklyAllocation.getDeliveryAddress() == null
+                        ? normalizeAddress(customer.address())
+                        : weeklyAllocation.getDeliveryAddress());
     }
 
     // convert an allocation item entity into an enriched response dto
@@ -494,6 +506,10 @@ public class WeeklyAllocationService {
         return status == DeliveryStatus.AWAITING_DISPATCH
                 || status == DeliveryStatus.IN_TRANSIT
                 || status == DeliveryStatus.DELIVERED;
+    }
+
+    private String normalizeAddress(String address) {
+        return address == null || address.isBlank() ? null : address.trim();
     }
 
     // validate quantity and convert it to an integer

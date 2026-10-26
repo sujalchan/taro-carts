@@ -93,18 +93,11 @@ private enum class AppView {
 private fun TaroCartApp() {
     // preserves the selected view when the activity is recreated, such as after rotation
     var selectedView by rememberSaveable { mutableStateOf(AppView.CUSTOMER) }
-    var customerSelected by rememberSaveable { mutableStateOf(false) }
-    var dispatcherSelected by rememberSaveable { mutableStateOf(false) }
     val viewStateHolder = rememberSaveableStateHolder()
-    val showRoleChoices = when (selectedView) {
-        AppView.CUSTOMER -> !customerSelected
-        AppView.DISPATCHER -> !dispatcherSelected
-    }
 
     Scaffold(
         bottomBar = {
-            if (showRoleChoices) {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                     NavigationBarItem(
                         selected = selectedView == AppView.CUSTOMER,
                         onClick = { selectedView = AppView.CUSTOMER },
@@ -117,7 +110,6 @@ private fun TaroCartApp() {
                         icon = { Text("🚚") },
                         label = { Text("Dispatcher") }
                     )
-                }
             }
         }
     ) { contentPadding ->
@@ -125,12 +117,12 @@ private fun TaroCartApp() {
         when (selectedView) {
             AppView.CUSTOMER -> viewStateHolder.SaveableStateProvider(AppView.CUSTOMER) {
                 Column(Modifier.fillMaxSize().padding(contentPadding)) {
-                    AllocationsScreen(onAccountSelected = { customerSelected = it })
+                    AllocationsScreen()
                 }
             }
             AppView.DISPATCHER -> viewStateHolder.SaveableStateProvider(AppView.DISPATCHER) {
                 Column(Modifier.fillMaxSize().padding(contentPadding)) {
-                    DispatcherScreen(onAccountSelected = { dispatcherSelected = it })
+                    DispatcherScreen()
                 }
             }
         }

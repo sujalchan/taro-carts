@@ -28,7 +28,7 @@ data class TaroType(val id: Long, val name: String, val standardPrice: Double)
 
 data class Dispatcher(val id: Long, val name: String, val active: Boolean)
 
-data class AssignedDelivery(val allocation: Allocation, val customer: Customer)
+data class AssignedDelivery(val allocation: Allocation)
 
 data class RequestedItem(val taroTypeId: Long, val quantity: Int)
 
@@ -39,6 +39,7 @@ data class Allocation(
     val customerName: String,
     val weekStart: String,
     val dispatcherId: Long?,
+    val deliveryAddress: String?,
     val deliveryStatus: String,
     val paymentStatus: String,
     val invoiceAvailable: Boolean,
@@ -72,11 +73,7 @@ object AllocationApi {
         val assigned = (0 until json.length()).map { index ->
             json.getJSONObject(index).toAllocation()
         }.filter { it.dispatcherId == dispatcherId }
-        val customers = assigned.map { it.customerId }.distinct().associateWith { customerId ->
-            (getJson("/api/v1/customers/$customerId", CUSTOMER_API_BASE_URL) as? JSONObject)
-                ?.toCustomer() ?: throw IOException("The server returned an unexpected customer response.")
-        }
-        assigned.map { allocation -> AssignedDelivery(allocation, customers.getValue(allocation.customerId)) }
+        assigned.map { allocation -> AssignedDelivery(allocation) }
             .sortedWith(compareBy<AssignedDelivery> { it.allocation.weekStart }.thenBy { it.allocation.id })
     }
 
@@ -199,6 +196,7 @@ object AllocationApi {
             customerName = optString("customerName", "Unknown customer"),
             weekStart = optString("weekStart", ""),
             dispatcherId = if (isNull("dispatcherId")) null else getLong("dispatcherId"),
+            deliveryAddress = optString("deliveryAddress", "").takeIf { it.isNotBlank() },
             deliveryStatus = optString("deliveryStatus", "UNKNOWN"),
             paymentStatus = optString("paymentStatus", "UNKNOWN"),
             invoiceAvailable = optBoolean("invoiceAvailable", false),

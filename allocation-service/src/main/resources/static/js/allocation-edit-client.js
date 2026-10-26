@@ -5,6 +5,7 @@ const weekStartInput = document.getElementById("weekStart");
 const deliveryStatusSelect = document.getElementById("deliveryStatus");
 const dispatcherField = document.getElementById("dispatcherField");
 const dispatcherSelect = document.getElementById("dispatcherId");
+const deliveryAddressInput = document.getElementById("deliveryAddress");
 const paymentStatusSelect = document.getElementById("paymentStatus");
 const allocationItemsContainer = document.getElementById("allocationItems");
 const addItemButton = document.getElementById("addItemButton");
@@ -76,6 +77,7 @@ async function loadPage() {
         // show the saved status when editing an existing allocation
         deliveryStatusSelect.value = allocation.deliveryStatus;
         paymentStatusSelect.value = allocation.paymentStatus;
+        deliveryAddressInput.value = allocation.deliveryAddress || "";
         updateDispatcherRequirement();
 
         allocation.allocationItems.forEach(item => {
@@ -237,6 +239,7 @@ async function updateAllocation(event) {
         dispatcherId: dispatcherRequiredStatuses.has(deliveryStatusSelect.value)
             ? Number(dispatcherSelect.value)
             : null,
+        deliveryAddress: deliveryAddressInput.value,
         allocationItems: allocationItems
     };
 

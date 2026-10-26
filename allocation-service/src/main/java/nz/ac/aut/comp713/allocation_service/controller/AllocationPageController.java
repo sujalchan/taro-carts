@@ -126,6 +126,7 @@ public class AllocationPageController {
 				model,
 				null,
 				null,
+				null,
 				List.of(
 						new AllocationFormRow(
 								null,
@@ -139,6 +140,7 @@ public class AllocationPageController {
 	public String createAllocation(
 			@RequestParam(required = false) Long customerId,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+			@RequestParam(required = false) String deliveryAddress,
 			@RequestParam(name = "taroTypeId", required = false) List<Long> taroTypeIds,
 			@RequestParam(name = "quantity", required = false) List<BigDecimal> quantities,
 			@RequestParam(name = "pricePerKg", required = false) List<String> prices,
@@ -177,7 +179,7 @@ public class AllocationPageController {
 		WeeklyAllocationRequest request = new WeeklyAllocationRequest(
 				customerId,
 				weekStart,
-				allocationItems);
+				allocationItems, null, null, null, deliveryAddress);
 
 		// run the same validation rules used by the REST API
 		validator.validate(request)
@@ -190,6 +192,7 @@ public class AllocationPageController {
 					model,
 					customerId,
 					weekStart,
+					deliveryAddress,
 					formRows,
 					errors);
 		}
@@ -213,6 +216,7 @@ public class AllocationPageController {
 					model,
 					customerId,
 					weekStart,
+					deliveryAddress,
 					formRows,
 					errors);
 		}
@@ -246,6 +250,7 @@ public class AllocationPageController {
 					allocation.deliveryStatus(),
 					allocation.paymentStatus(),
 					allocation.dispatcherId(),
+					allocation.deliveryAddress(),
 					allocationRows,
 					new ArrayList<>());
 
@@ -263,6 +268,7 @@ public class AllocationPageController {
 			@RequestParam(required = false) DeliveryStatus deliveryStatus,
 			@RequestParam(required = false) PaymentStatus paymentStatus,
 			@RequestParam(required = false) Long dispatcherId,
+			@RequestParam(required = false) String deliveryAddress,
 			@RequestParam(name = "taroTypeId", required = false) List<Long> taroTypeIds,
 			@RequestParam(name = "quantity", required = false) List<BigDecimal> quantities,
 			@RequestParam(name = "pricePerKg", required = false) List<String> prices,
@@ -301,7 +307,8 @@ public class AllocationPageController {
 				allocationItems,
 				deliveryStatus,
 				paymentStatus,
-				dispatcherId);
+				dispatcherId,
+				deliveryAddress);
 
 		// run the same validation rules used by the REST API
 		validator.validate(request)
@@ -318,6 +325,7 @@ public class AllocationPageController {
 					deliveryStatus,
 					paymentStatus,
 					dispatcherId,
+					deliveryAddress,
 					formRows,
 					errors);
 		}
@@ -352,6 +360,7 @@ public class AllocationPageController {
 					deliveryStatus,
 					paymentStatus,
 					dispatcherId,
+					deliveryAddress,
 					formRows,
 					errors);
 		}
@@ -381,6 +390,7 @@ public class AllocationPageController {
 			Model model,
 			Long selectedCustomerId,
 			LocalDate weekStart,
+			String deliveryAddress,
 			List<AllocationFormRow> allocationRows,
 			List<String> errors) {
 
@@ -391,6 +401,7 @@ public class AllocationPageController {
 		model.addAttribute(
 				"weekStart",
 				weekStart);
+		model.addAttribute("deliveryAddress", deliveryAddress);
 
 		model.addAttribute(
 				"allocationRows",
@@ -440,6 +451,7 @@ public class AllocationPageController {
 			DeliveryStatus deliveryStatus,
 			PaymentStatus paymentStatus,
 			Long selectedDispatcherId,
+			String deliveryAddress,
 			List<AllocationFormRow> allocationRows,
 			List<String> errors) {
 
@@ -460,6 +472,7 @@ public class AllocationPageController {
 		model.addAttribute("paymentStatus", paymentStatus);
 		model.addAttribute("paymentStatuses", PaymentStatus.values());
 		model.addAttribute("selectedDispatcherId", selectedDispatcherId);
+		model.addAttribute("deliveryAddress", deliveryAddress);
 
 		model.addAttribute(
 				"allocationRows",

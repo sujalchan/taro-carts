@@ -163,10 +163,44 @@ class WeeklyAllocationApiTest {
 				.andExpect(jsonPath("$", hasSize(1)))
 				.andExpect(jsonPath("$[0].customerId").value(1))
 				.andExpect(jsonPath("$[0].dispatcherId").value(1))
+				.andExpect(jsonPath("$[0].deliveryAddress").value("12 Market Street, Auckland"))
 				.andExpect(jsonPath("$[0].allocationItems[0].quantity").value(100));
 		mockMvc.perform(get("/api/v1/allocations/dispatcher/999"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(0)));
+	}
+
+	@Test
+	void dispatcherGetsAllocationDestinationBeforeCustomerProfileAddress() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		var allocation = weeklyAllocationRepository.findAll().getFirst();
+		allocation.setDispatcherId(1L);
+		allocation.setDeliveryStatus(DeliveryStatus.AWAITING_DISPATCH);
+		allocation.setDeliveryAddress("45 Delivery Road, Auckland");
+		weeklyAllocationRepository.saveAndFlush(allocation);
+
+		mockMvc.perform(get("/api/v1/allocations/dispatcher/1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].deliveryAddress").value("45 Delivery Road, Auckland"));
+
+		allocation.setDeliveryAddress(null); // legacy allocation: read from customer-service
+		weeklyAllocationRepository.saveAndFlush(allocation);
+		mockMvc.perform(get("/api/v1/allocations/dispatcher/1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].deliveryAddress").value("12 Market Street, Auckland"));
+
+		mockMvc.perform(put("/api/v1/allocations/{id}", allocation.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"customerId":1,"weekStart":"2026-09-14","dispatcherId":1,
+						 "deliveryStatus":"AWAITING_DISPATCH","deliveryAddress":" 99 New Road, Auckland ",
+						 "allocationItems":[{"taroTypeId":1,"quantity":100}]}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.deliveryAddress").value("99 New Road, Auckland"));
+		mockMvc.perform(get("/api/v1/allocations/dispatcher/1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].deliveryAddress").value("99 New Road, Auckland"));
 	}
 
 	@Test

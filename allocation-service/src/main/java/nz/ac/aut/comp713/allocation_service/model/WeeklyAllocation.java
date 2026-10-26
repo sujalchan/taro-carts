@@ -36,6 +36,10 @@ public class WeeklyAllocation {
     @Column(name = "dispatcher_id")
     private Long dispatcherId;
 
+    // Destination for this delivery. Older allocations can use the customer's current address.
+    @Column(name = "delivery_address", length = 500)
+    private String deliveryAddress;
+
     // normalized to the Monday of the allocation week by the service layer
     @Column(name = "week_start", nullable = false)
     private LocalDate weekStart;
@@ -79,6 +83,14 @@ public class WeeklyAllocation {
 
     public void setDispatcherId(Long dispatcherId) {
         this.dispatcherId = dispatcherId;
+    }
+
+    public String getDeliveryAddress() {
+        return deliveryAddress;
+    }
+
+    public void setDeliveryAddress(String deliveryAddress) {
+        this.deliveryAddress = deliveryAddress;
     }
 
     public LocalDate getWeekStart() {

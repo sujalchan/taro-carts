@@ -6,6 +6,7 @@ import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
 import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,17 +31,26 @@ public record WeeklyAllocationRequest(
 		PaymentStatus paymentStatus,
 
 		@Schema(description = "ID of an existing dispatcher. Required for AWAITING_DISPATCH, IN_TRANSIT, or DELIVERED delivery status.", example = "4", minimum = "1")
-		Long dispatcherId) {
+		Long dispatcherId,
+
+		@Schema(description = "Address for this delivery; defaults to the customer's address when omitted", example = "12 Market Street, Auckland")
+		@Size(max = 500, message = "Delivery address must be 500 characters or fewer") String deliveryAddress) {
 
 	/** Creates a new-allocation request with workflow defaults left to the service. */
 	/** Creates an allocation request with explicit workflow statuses and no dispatcher. */
 	public WeeklyAllocationRequest(Long customerId, LocalDate weekStart,
 			List<AllocationItemRequest> allocationItems) {
-		this(customerId, weekStart, allocationItems, null, null, null);
+		this(customerId, weekStart, allocationItems, null, null, null, null);
 	}
 
 	public WeeklyAllocationRequest(Long customerId, LocalDate weekStart,
 			List<AllocationItemRequest> allocationItems, DeliveryStatus deliveryStatus, PaymentStatus paymentStatus) {
-		this(customerId, weekStart, allocationItems, deliveryStatus, paymentStatus, null);
+		this(customerId, weekStart, allocationItems, deliveryStatus, paymentStatus, null, null);
+	}
+
+	public WeeklyAllocationRequest(Long customerId, LocalDate weekStart,
+			List<AllocationItemRequest> allocationItems, DeliveryStatus deliveryStatus,
+			PaymentStatus paymentStatus, Long dispatcherId) {
+		this(customerId, weekStart, allocationItems, deliveryStatus, paymentStatus, dispatcherId, null);
 	}
 }

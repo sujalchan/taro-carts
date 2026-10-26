@@ -28,5 +28,7 @@ public record WeeklyAllocationResponse(
 		@Schema(description = "Taro items in this allocation")
 		List<AllocationItemResponse> allocationItems,
 		@Schema(description = "Assigned dispatcher ID, or null when no dispatcher is assigned")
-		Long dispatcherId) {
+		Long dispatcherId,
+		@Schema(description = "Delivery destination for this allocation, or null if neither the allocation nor customer has an address")
+		String deliveryAddress) {
 }

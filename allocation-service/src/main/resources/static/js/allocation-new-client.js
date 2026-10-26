@@ -2,6 +2,7 @@
 const allocationForm = document.getElementById("allocationForm");
 const customerSelect = document.getElementById("customerId");
 const weekStartInput = document.getElementById("weekStart");
+const deliveryAddressInput = document.getElementById("deliveryAddress");
 const allocationItemsContainer = document.getElementById("allocationItems");
 const addItemButton = document.getElementById("addItemButton");
 const errorContainer = document.getElementById("errorContainer");
@@ -136,6 +137,7 @@ async function createAllocation(event) {
     const requestBody = {
         customerId: Number(customerSelect.value),
         weekStart: weekStartInput.value,
+        deliveryAddress: deliveryAddressInput.value,
         allocationItems: allocationItems
     };
 
