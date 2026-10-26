@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My allocations · Taro Carts</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/service-navigation.js"></script>
+</head>
+<body class="page-list portal-page">
+<nav class="app-nav" aria-label="Portal navigation" th:attr="data-nav-role=${admin ? 'admin' : 'customer'}">
+    <a class="app-nav__brand" href="/portal/allocations">Taro Carts</a>
+    <div class="app-nav__links">
+        <a href="/portal/allocations" aria-current="page">Allocations</a>
+        <a href="http://localhost:8085/logout">Sign out</a>
+        <a th:if="${admin}" href="http://localhost:8085/admin/accounts">Admin accounts</a>
+    </div>
+</nav>
+<main>
+    <p class="portal-eyebrow">Customer portal</p>
+    <h1 th:text="${admin ? 'Customer allocations' : 'Your allocations'}">Your allocations</h1>
+    <p class="portal-intro" th:if="${!admin}">See your weekly taro requests, payments and invoices in one place.</p>
+
+    <form class="portal-select" th:if="${admin}" method="get" action="/portal/allocations">
+        <label for="customerId">Choose a customer to view</label>
+        <select id="customerId" name="customerId" required>
+            <option value="">Select customer</option>
+            <option th:each="customer : ${customers}" th:value="${customer.id}" th:text="${customer.name}"
+                    th:selected="${customerId == customer.id}">Customer</option>
+        </select>
+        <button type="submit">View allocations</button>
+    </form>
+
+    <section th:if="${selectedCustomer != null}">
+        <div class="portal-heading">
+            <div>
+                <p class="portal-eyebrow" th:text="${selectedCustomer.name}">Customer</p>
+                <h2>Weekly allocations</h2>
+            </div>
+            <a class="button-primary" th:href="@{/portal/allocations/request(customerId=${admin ? customerId : null})}">Request allocation</a>
+        </div>
+        <p class="portal-empty" th:if="${allocations == null or #lists.isEmpty(allocations)}">No allocations yet. Request your first weekly allocation to get started.</p>
+        <div class="table-scroll" th:if="${allocations != null and !#lists.isEmpty(allocations)}">
+            <table>
+                <thead><tr><th>Week starting</th><th>Delivery</th><th>Payment</th><th>Items</th><th>Details</th><th>Invoice</th></tr></thead>
+                <tbody>
+                <tr th:each="allocation : ${allocations}">
+                    <td th:text="${allocation.weekStart}">2026-10-26</td>
+                    <td th:text="${#strings.replace(allocation.deliveryStatus, '_', ' ')}">Requested</td>
+                    <td th:text="${#strings.replace(allocation.paymentStatus, '_', ' ')}">Unpaid</td>
+                    <td th:text="${#lists.size(allocation.allocationItems)}">1</td>
+                    <td><a th:href="@{/portal/allocations/{id}(id=${allocation.id},customerId=${admin ? customerId : null})}">View</a></td>
+                    <td><a th:if="${allocation.invoiceAvailable}" th:href="@{/portal/allocations/{id}/invoice.pdf(id=${allocation.id},customerId=${admin ? customerId : null},inline=true)}" target="_blank" rel="noopener">View invoice</a><span th:unless="${allocation.invoiceAvailable}">—</span></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <p class="portal-empty" th:if="${admin and selectedCustomer == null}">Select a customer to see their allocations and make a request on their behalf.</p>
+</main>
+</body>
+</html>

@@ -21,6 +21,7 @@ import nz.ac.aut.comp713.allocation_service.client.CustomerClient;
 import nz.ac.aut.comp713.allocation_service.client.TaroClient;
 import nz.ac.aut.comp713.allocation_service.client.CustomerResponse;
 import nz.ac.aut.comp713.allocation_service.client.DispatcherClient;
+import nz.ac.aut.comp713.allocation_service.client.DispatcherResponse;
 import nz.ac.aut.comp713.allocation_service.client.TaroTypeResponse;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemRequest;
 import nz.ac.aut.comp713.allocation_service.dto.AllocationItemResponse;
@@ -140,6 +141,25 @@ public class WeeklyAllocationService {
         WeeklyAllocation saved = weeklyAllocationRepository.saveAndFlush(allocation);
         if (next == DeliveryStatus.DELIVERED) invoiceService.issueIfDelivered(saved);
         return toResponse(saved);
+    }
+
+    /** Admin assignment starts (or reassigns) a delivery without changing its items or invoice. */
+    @Transactional
+    public WeeklyAllocationResponse assignDispatcher(Long id, Long dispatcherId) {
+        AllocationAccess.admin();
+        if (dispatcherId == null || dispatcherId <= 0) throw new DispatcherRequiredException();
+        WeeklyAllocation allocation = weeklyAllocationRepository.findById(id)
+                .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        if (allocation.getDeliveryStatus() == DeliveryStatus.DELIVERED
+                || allocation.getDeliveryStatus() == DeliveryStatus.CANCELLED
+                || allocation.getDeliveryStatus() == DeliveryStatus.IN_TRANSIT) {
+            throw new InvalidDispatcherTransitionException();
+        }
+        DispatcherResponse dispatcher = dispatcherClient.getDispatcher(dispatcherId);
+        if (!dispatcher.active()) throw new InvalidDispatcherTransitionException("Choose an active dispatcher.");
+        allocation.setDispatcherId(dispatcherId);
+        allocation.setDeliveryStatus(DeliveryStatus.AWAITING_DISPATCH);
+        return toResponse(weeklyAllocationRepository.saveAndFlush(allocation));
     }
 
     @Transactional
@@ -331,7 +351,8 @@ public class WeeklyAllocationService {
             if (request.dispatcherId() == null || request.dispatcherId() <= 0) {
                 throw new DispatcherRequiredException();
             }
-            dispatcherClient.getDispatcher(request.dispatcherId());
+            DispatcherResponse dispatcher = dispatcherClient.getDispatcher(request.dispatcherId());
+            if (!dispatcher.active()) throw new InvalidDispatcherTransitionException("Choose an active dispatcher.");
             weeklyAllocation.setDispatcherId(request.dispatcherId());
         } else {
             weeklyAllocation.setDispatcherId(null);

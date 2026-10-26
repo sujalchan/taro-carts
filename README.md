@@ -64,7 +64,7 @@ Actions performed by one user can affect what the other user sees or can do.
 
 ## Architecture
 
-The project contains five independently running Spring Boot backend services and a native Android client. `login-service` handles registration, provisions inactive customer/dispatcher profiles, and lets the seeded admin enable or disable linked accounts. The other services validate its opaque session on each protected request; existing management routes require an admin session. Allocation ownership is enforced in allocation-service; the role-specific web portals are a later phase.
+The project contains five independently running Spring Boot backend services and a native Android client. `login-service` handles registration, provisions inactive customer/dispatcher profiles, and lets the seeded admin enable or disable linked accounts. The other services validate its opaque session on each protected request; existing management routes require an admin session. Customers use `http://localhost:8081/portal/allocations` to view and request their own allocations; dispatchers use `http://localhost:8084/portal/deliveries` to view and advance assigned deliveries. Allocation ownership is enforced in allocation-service.
 
 ```text
 Web manager (admin session) ──────→ allocation-service :8082 ───→ allocation.db
@@ -750,7 +750,9 @@ Browser management pages and APIs now require an admin `SESSION` cookie from log
 
 All five services show a branded browser error page for access denied, missing pages, unavailable services, and unexpected failures. API and internal endpoints keep their JSON error responses; error pages do not expose stack traces or internal exception messages.
 
-Future customer/dispatcher portal controllers must validate the browser session locally, then sign each allocation-service request with `X-Allocation-Identity-Assertion`. The HMAC assertion includes origin, account/role/profile, issued/expiry time, HTTP method/path, and a one-use nonce. It expires within 45 seconds and is never a browser credential. The root launchers share separate customer and dispatcher assertion keys only with the matching portal service and allocation-service.
+Customer/dispatcher portal controllers validate the browser session locally, then sign each allocation-service request with `X-Allocation-Identity-Assertion`. The HMAC assertion includes origin, account/role/profile, issued/expiry time, HTTP method/path, and a one-use nonce. It expires within 45 seconds and is never a browser credential. The root launchers share separate customer and dispatcher assertion keys only with the matching portal service and allocation-service. Admins can open either portal and explicitly select a customer or dispatcher to view.
+
+Administrators assign deliveries from `/allocations` by choosing an active dispatcher on an allocation card. The admin allocation creation forms accept optional custom item prices; those saved prices are used when delivery issues the invoice. Once issued, an admin can use **Amend Invoice Prices** to update prices with a required reason. The prior PDF and total are retained as a downloadable revision. Customer pages provide both inline invoice viewing and downloads. All service navigation uses a common role-aware menu, and **Sign out** opens a confirmation page at login-service before the session is revoked.
 
 To launch all five services together:
 

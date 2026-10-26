@@ -12,10 +12,16 @@
         <a class="brand" th:href="@{/admin/accounts}" href="/admin/accounts" aria-label="Taro Carts account administration">
             <span class="brand-mark" aria-hidden="true">T</span><span>Taro Carts</span>
         </a>
-        <form method="post" th:action="@{/logout}" action="/logout">
-            <input type="hidden" name="csrf" th:value="${csrfToken}">
-            <button class="text-back" type="submit">Sign out <span aria-hidden="true">→</span></button>
-        </form>
+        <nav class="admin-header-nav" aria-label="Admin navigation">
+            <a href="http://localhost:8081/customers">Customers</a>
+            <a href="http://localhost:8084/dispatchers">Dispatchers</a>
+            <a href="http://localhost:8083/taro-types">Taro</a>
+            <a href="http://localhost:8082/allocations">Allocations</a>
+            <a href="http://localhost:8081/portal/allocations">Customer portal</a>
+            <a href="http://localhost:8084/portal/deliveries">Dispatcher portal</a>
+            <a href="/admin/accounts" aria-current="page">Accounts</a>
+            <a th:href="@{/logout}" href="/logout">Sign out</a>
+        </nav>
     </header>
 
     <main class="admin-panel">

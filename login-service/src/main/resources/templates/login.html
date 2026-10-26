@@ -14,7 +14,8 @@
             <span class="brand-mark" aria-hidden="true">T</span>
             <span>Taro Carts</span>
         </a>
-        <a class="header-link" th:href="@{/register}" href="/register">Create an account <span aria-hidden="true">↗</span></a>
+        <a class="header-link" th:if="${signedInUsername == null}" th:href="@{/register}" href="/register">Create an account <span aria-hidden="true">↗</span></a>
+        <a class="header-link" th:if="${signedInUsername != null}" th:href="@{/logout}" href="/logout">Sign out <span aria-hidden="true">→</span></a>
     </header>
 
     <main class="auth-layout">
@@ -40,10 +41,7 @@
                 <div class="form-success" role="status" th:if="${passwordChanged}">Password changed. Sign in with your new password.</div>
                 <div class="session-notice" th:if="${signedInUsername}">
                     <p>You are signed in as <strong th:text="${signedInUsername}">username</strong>. You can sign in below with another account, or sign out.</p>
-                    <form method="post" action="/logout">
-                        <input type="hidden" name="csrf" th:value="${csrfToken}">
-                        <button class="sign-out-button" type="submit">Sign out</button>
-                    </form>
+                    <a class="sign-out-button" th:href="@{/logout}" href="/logout">Sign out</a>
                 </div>
 
                 <form method="post" action="/login" autocomplete="on">

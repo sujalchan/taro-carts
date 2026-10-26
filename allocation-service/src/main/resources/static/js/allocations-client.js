@@ -144,6 +144,12 @@ function createAllocationElement(allocation) {
         invoiceLink.textContent = "Download Invoice PDF";
         actions.appendChild(invoiceLink);
         actions.appendChild(document.createTextNode(" "));
+
+        const amendLink = document.createElement("a");
+        amendLink.href = `/allocations/${allocation.id}/invoice/edit`;
+        amendLink.textContent = "Amend Invoice Prices";
+        actions.appendChild(amendLink);
+        actions.appendChild(document.createTextNode(" "));
     }
 
     const editLink = document.createElement("a");

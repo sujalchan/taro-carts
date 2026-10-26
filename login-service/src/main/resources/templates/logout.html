@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign out · Taro Carts</title>
+    <link rel="stylesheet" th:href="@{/css/auth.css}" href="/css/auth.css">
+</head>
+<body>
+<div class="page-shell">
+    <header class="site-header"><a class="brand" href="/login"><span class="brand-mark" aria-hidden="true">T</span><span>Taro Carts</span></a></header>
+    <main class="logout-panel">
+        <span class="eyebrow">Account</span>
+        <h1>Sign out?</h1>
+        <p th:text="|You are signed in as ${username}. Your session will end on this browser.|">Your session will end on this browser.</p>
+        <form method="post" action="/logout">
+            <input type="hidden" name="csrf" th:value="${csrfToken}">
+            <button class="primary-button" type="submit">Sign out <span aria-hidden="true">→</span></button>
+        </form>
+        <p><a th:href="${returnUrl}" href="/login">Keep working</a></p>
+    </main>
+    <footer class="site-footer"><span>© Taro Carts</span></footer>
+</div>
+</body>
+</html>

@@ -159,7 +159,7 @@ function addAllocationItem(existingItem = null) {
         </div>
 
         <div>
-            <label>Price per kg</label>
+            <label>Custom price per kg (admin)</label>
             <input type="number" class="price-input" step="0.01" min="0">
 
             <small>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Amend invoice · Taro Carts</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/service-navigation.js"></script>
+</head>
+<body class="page-form page-allocation">
+<nav class="app-nav" aria-label="Service navigation">
+    <a class="app-nav__brand" href="/allocations">Taro Carts</a>
+    <button class="app-nav__toggle" type="button" aria-expanded="false" aria-controls="service-navigation"><span aria-hidden="true">☰</span> Menu</button>
+    <div class="app-nav__links" id="service-navigation"><a href="/allocations">Allocations</a></div>
+</nav>
+<main>
+    <p><a href="/allocations">← Back to allocations</a></p>
+    <h1 th:text="|Amend invoice for allocation ${allocation.id}|">Amend invoice</h1>
+    <p>This admin-only action changes item prices and regenerates the invoice. The previous PDF and amendment reason are retained below.</p>
+    <p class="error-message" role="alert" th:if="${errors != null}" th:each="error : ${errors}" th:text="${error}">Check prices.</p>
+    <p class="status-message" role="status" th:if="${updated}">Invoice prices were updated and the previous version was saved.</p>
+    <form th:action="@{/allocations/{id}/invoice/edit(id=${allocation.id})}" method="post">
+        <input type="hidden" name="csrf" th:value="${csrfToken}">
+        <div class="invoice-price-row" th:each="item : ${allocation.allocationItems}">
+            <div><strong th:text="${item.taroTypeName}">Taro</strong><small th:text="|${item.quantity} kg|">1 kg</small></div>
+            <input type="hidden" name="itemId" th:value="${item.id}">
+            <div><label th:for="|price-${item.id}|">Price per kg</label>
+                <input th:id="|price-${item.id}|" name="pricePerKg" type="number" step="0.01" min="0" required th:value="${item.pricePerKg}"></div>
+        </div>
+        <div><label for="reason">Reason for amendment</label><textarea id="reason" name="reason" rows="3" minlength="8" maxlength="500" required th:text="${reason}"></textarea></div>
+        <button type="submit">Save revised invoice</button>
+    </form>
+    <section th:if="${revisions != null and !#lists.isEmpty(revisions)}" aria-labelledby="revisions-title">
+        <h2 id="revisions-title">Previous versions</h2>
+        <div class="table-scroll"><table><thead><tr><th>Revision</th><th>Changed</th><th>Previous total</th><th>Reason</th><th>PDF</th></tr></thead>
+            <tbody><tr th:each="revision : ${revisions}">
+                <td th:text="${revision.revisionNumber}">1</td>
+                <td th:text="${#temporals.format(revision.changedAt, 'dd MMM yyyy HH:mm')}">Date</td>
+                <td th:text="${revision.previousTotal}">0.00</td>
+                <td th:text="${revision.reason}">Reason</td>
+                <td><a th:href="@{/api/v1/allocations/{id}/invoice/revisions/{number}.pdf(id=${allocation.id},number=${revision.revisionNumber})}">Download</a></td>
+            </tr></tbody></table></div>
+    </section>
+</main>
+</body>
+</html>

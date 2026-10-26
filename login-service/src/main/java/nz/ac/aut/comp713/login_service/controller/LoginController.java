@@ -89,6 +89,18 @@ public class LoginController {
         return "redirect:/login";
     }
 
+    @GetMapping("/logout")
+    public String logoutPage(@CookieValue(value = AuthCookies.SESSION, required = false) String sessionToken,
+                             HttpServletResponse response, Model model) {
+        var existing = sessions.validate(sessionToken);
+        if (existing.isEmpty()) return "redirect:/login";
+        response.setHeader("Cache-Control", "no-store");
+        model.addAttribute("username", existing.get().getAccount().getUsername());
+        model.addAttribute("returnUrl", destinations.destination(existing.get().getAccount().getRole(), null));
+        model.addAttribute("csrfToken", cookies.issueCsrf(response));
+        return "logout";
+    }
+
     private String loginError(Model model, String username, String returnTo, String csrfCookie,
                               String sessionToken) {
         model.addAttribute("loginError", "Sign-in failed. Check your details or account status and try again.");

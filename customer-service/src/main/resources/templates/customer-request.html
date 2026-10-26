@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Request allocation · Taro Carts</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/service-navigation.js"></script>
+</head>
+<body class="page-form portal-page">
+<nav class="app-nav" aria-label="Portal navigation" th:attr="data-nav-role=${admin ? 'admin' : 'customer'}">
+    <a class="app-nav__brand" href="/portal/allocations">Taro Carts</a>
+    <div class="app-nav__links"><a th:href="@{/portal/allocations(customerId=${admin ? customerId : null})}">Allocations</a><a href="http://localhost:8085/logout">Sign out</a></div>
+</nav>
+<main>
+    <p class="portal-eyebrow">Customer portal</p>
+    <h1>Request a weekly allocation</h1>
+    <p class="portal-intro" th:text="|For ${selectedCustomer.name}. Choose a week, taro type and whole-kilogram quantity.|">Choose a week and taro type.</p>
+    <p class="portal-error" role="alert" th:if="${error}" th:text="${error}">Please check your request.</p>
+    <form method="post" action="/portal/allocations/request" class="portal-form">
+        <input type="hidden" name="csrf" th:value="${csrfToken}">
+        <input type="hidden" name="customerId" th:if="${admin}" th:value="${customerId}">
+        <div><label for="weekStart">Week of</label><input id="weekStart" name="weekStart" type="date" required th:value="${weekStart}"><small>The week will be counted from Monday.</small></div>
+        <div><label for="taroTypeId">Taro type</label><select id="taroTypeId" name="taroTypeId" required>
+            <option value="">Choose a taro type</option>
+            <option th:each="type : ${taroTypes}" th:value="${type.id}" th:text="${type.name}">Taro</option>
+        </select></div>
+        <div><label for="quantity">Quantity (kg)</label><input id="quantity" name="quantity" type="number" min="1" step="1" required></div>
+        <div><label for="deliveryAddress">Delivery address (optional)</label><textarea id="deliveryAddress" name="deliveryAddress" rows="3" maxlength="500" th:placeholder="${selectedCustomer.address}"></textarea></div>
+        <button type="submit">Send request</button>
+    </form>
+</main>
+</body>
+</html>

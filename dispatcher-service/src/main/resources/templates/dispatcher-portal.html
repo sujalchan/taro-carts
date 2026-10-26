@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My deliveries · Taro Carts</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/service-navigation.js"></script>
+</head>
+<body class="page-list portal-page">
+<nav class="app-nav" aria-label="Portal navigation" th:attr="data-nav-role=${admin ? 'admin' : 'dispatcher'}">
+    <a class="app-nav__brand" href="/portal/deliveries">Taro Carts</a>
+    <div class="app-nav__links">
+        <a href="/portal/deliveries" aria-current="page">Deliveries</a>
+        <a href="http://localhost:8085/logout">Sign out</a>
+        <a th:if="${admin}" href="http://localhost:8085/admin/accounts">Admin accounts</a>
+    </div>
+</nav>
+<main>
+    <p class="portal-eyebrow">Dispatcher portal</p>
+    <h1 th:text="${admin ? 'Dispatcher deliveries' : 'Your deliveries'}">Your deliveries</h1>
+    <p class="portal-intro" th:if="${!admin}">Only deliveries assigned to your dispatcher profile appear here.</p>
+    <p th:if="${admin}"><a class="button-primary" href="http://localhost:8082/allocations">Assign deliveries in Allocation Service</a></p>
+    <form class="portal-select" th:if="${admin}" method="get" action="/portal/deliveries">
+        <label for="dispatcherId">Choose a dispatcher to view</label>
+        <select id="dispatcherId" name="dispatcherId" required>
+            <option value="">Select dispatcher</option>
+            <option th:each="dispatcher : ${dispatchers}" th:value="${dispatcher.id}" th:text="${dispatcher.name}"
+                    th:selected="${dispatcherId == dispatcher.id}">Dispatcher</option>
+        </select>
+        <button type="submit">View deliveries</button>
+    </form>
+    <section th:if="${selectedDispatcher != null}">
+        <div class="portal-heading"><div><p class="portal-eyebrow" th:text="${selectedDispatcher.name}">Dispatcher</p><h2>Assigned deliveries</h2></div></div>
+        <p class="portal-empty" th:if="${deliveries == null or #lists.isEmpty(deliveries)}">No deliveries are assigned right now.</p>
+        <div class="table-scroll" th:if="${deliveries != null and !#lists.isEmpty(deliveries)}">
+            <table><thead><tr><th>Week</th><th>Customer</th><th>Address</th><th>Status</th><th>Next step</th></tr></thead>
+                <tbody><tr th:each="delivery : ${deliveries}">
+                    <td th:text="${delivery.weekStart}">2026-10-26</td>
+                    <td th:text="${delivery.customerName}">Customer</td>
+                    <td th:text="${delivery.deliveryAddress ?: 'Address not provided'}">Address</td>
+                    <td th:text="${#strings.replace(delivery.deliveryStatus, '_', ' ')}">Awaiting dispatch</td>
+                    <td>
+                        <form th:if="${delivery.deliveryStatus == 'AWAITING_DISPATCH' or delivery.deliveryStatus == 'IN_TRANSIT'}"
+                              th:action="@{/portal/deliveries/{id}/status(id=${delivery.id})}" method="post">
+                            <input type="hidden" name="csrf" th:value="${csrfToken}">
+                            <input type="hidden" name="dispatcherId" th:if="${admin}" th:value="${dispatcherId}">
+                            <input type="hidden" name="nextStatus" th:value="${delivery.deliveryStatus == 'AWAITING_DISPATCH' ? 'IN_TRANSIT' : 'DELIVERED'}">
+                            <button type="submit" th:text="${delivery.deliveryStatus == 'AWAITING_DISPATCH' ? 'Start delivery' : 'Mark delivered'}">Update</button>
+                        </form>
+                        <span th:unless="${delivery.deliveryStatus == 'AWAITING_DISPATCH' or delivery.deliveryStatus == 'IN_TRANSIT'}">No action available</span>
+                    </td>
+                </tr></tbody></table>
+        </div>
+    </section>
+    <p class="portal-empty" th:if="${admin and selectedDispatcher == null}">Select a dispatcher to view their assigned deliveries.</p>
+</main>
+</body>
+</html>

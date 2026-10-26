@@ -67,6 +67,25 @@ class SessionAuthenticationFilterTest {
     }
 
     @Test
+    void customerCanUseOnlyCustomerPortalWithCsrfProtectedWrites() throws Exception {
+        LoginClient login = mock(LoginClient.class);
+        SessionAuthenticationFilter filter = new SessionAuthenticationFilter(
+                login, "http://localhost:8085", VALIDATION_SECRET, REFERENCE_SECRET);
+        when(login.validate(TOKEN)).thenReturn(Optional.of(new LoginClient.SessionPrincipal(
+                2L, "customer", "CUSTOMER", 7L, true, Instant.now().plusSeconds(60))));
+        var page = response(filter, authenticated("GET", "/portal/allocations"));
+        assertThat(page.getStatus()).isEqualTo(200);
+        assertThat(response(filter, authenticated("GET", "/css/style.css")).getStatus()).isEqualTo(200);
+        assertThat(response(filter, authenticated("GET", "/js/service-navigation.js")).getStatus()).isEqualTo(200);
+        assertThat(response(filter, authenticated("GET", "/customers")).getStatus()).isEqualTo(403);
+        assertThat(response(filter, authenticated("POST", "/portal/allocations/request")).getStatus()).isEqualTo(403);
+        String csrf = page.getHeader("Set-Cookie").split("[=;]")[1];
+        var write = authenticated("POST", "/portal/allocations/request");
+        write.addParameter("csrf", csrf);
+        assertThat(response(filter, write).getStatus()).isEqualTo(200);
+    }
+
+    @Test
     void allocationReferenceReadsRequirePrivateKeyAndLoopback() throws Exception {
         SessionAuthenticationFilter filter = new SessionAuthenticationFilter(
                 mock(LoginClient.class), "http://localhost:8085", VALIDATION_SECRET, REFERENCE_SECRET);

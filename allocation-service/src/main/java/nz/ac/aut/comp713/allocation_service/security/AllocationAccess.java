@@ -39,6 +39,13 @@ public final class AllocationAccess {
         if (principal != null && !"ADMIN".equals(principal.role())) throw new Denied();
     }
 
+    public static Long adminAccountId() {
+        LoginClient.SessionPrincipal principal = principal();
+        if (principal == null) return 0L; // Isolated legacy tests have no browser principal.
+        if (!"ADMIN".equals(principal.role())) throw new Denied();
+        return principal.accountId();
+    }
+
     public static Long customerForList(Long selected) {
         LoginClient.SessionPrincipal principal = principal();
         if (principal == null || "ADMIN".equals(principal.role())) return selected;

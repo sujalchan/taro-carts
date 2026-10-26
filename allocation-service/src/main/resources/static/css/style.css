@@ -65,7 +65,7 @@ body.page-form.page-allocation { max-width: 1080px; }
 }
 .app-nav__links {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 14px;
 }
 .app-nav__links a {
@@ -226,6 +226,7 @@ input:not([type="checkbox"]), select {
     font: inherit;
     line-height: 1.4;
 }
+textarea { display: block; width: 100%; min-height: 90px; padding: 9px 11px; border: 1px solid #879c9a; border-radius: var(--radius); background: var(--surface); color: var(--text); font: inherit; }
 input:hover, select:hover { border-color: var(--accent); }
 input[type="checkbox"] {
     width: 20px;
@@ -345,6 +346,13 @@ td:last-child { white-space: nowrap; }
     margin: 20px 0 0;
 }
 .delete-form { margin: 0; }
+.assignment-form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; width: 100%; margin: 4px 0 10px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: #f7faf9; }
+.assignment-form label { width: 100%; margin: 0; }
+.assignment-form select { width: min(100%, 320px); }
+.invoice-price-row { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(150px, 220px); align-items: end; gap: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.invoice-price-row > div { min-width: 0; }
+.invoice-price-row small { margin-top: 4px; }
+@media (max-width: 560px) { .invoice-price-row { grid-template-columns: 1fr; } .assignment-form select, .assignment-form button { width: 100%; } }
 
 /* Keep the original error headings and lists; emphasis is not colour-only. */
 .error-message {

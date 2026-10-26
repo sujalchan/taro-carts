@@ -63,6 +63,8 @@
         </ul>
     </div>
 
+    <p class="error-message" role="alert" th:if="${assignmentError}" th:text="${assignmentError}">Assignment unavailable.</p>
+
     <p th:if="${#lists.isEmpty(allocations) && errors == null}">
         No weekly allocations found.
     </p>
@@ -99,6 +101,10 @@
             <strong>Payment Status:</strong>
             <span th:text="${allocation.paymentStatus}">UNPAID</span>
         </p>
+        <p th:if="${allocation.dispatcherId != null}"><strong>Assigned dispatcher:</strong>
+            <span th:text="${allocation.dispatcherId}">1</span>
+            <span th:each="dispatcher : ${dispatchers}" th:if="${dispatcher.id == allocation.dispatcherId}" th:text="|(${dispatcher.name})|">(Dispatcher)</span>
+        </p>
 
         <div class="table-scroll" role="region" aria-label="Data table" tabindex="0">
     <table border="1">
@@ -129,6 +135,17 @@
     </div>
 
         <div class="allocation-actions">
+            <form th:if="${allocation.deliveryStatus.name() != 'DELIVERED' and allocation.deliveryStatus.name() != 'CANCELLED' and allocation.deliveryStatus.name() != 'IN_TRANSIT' and !#lists.isEmpty(dispatchers)}"
+                  th:action="@{/allocations/{id}/assign(id=${allocation.id})}" method="post" class="assignment-form">
+                <input type="hidden" name="csrf" th:value="${csrfToken}">
+                <label th:for="|dispatcher-${allocation.id}|">Assign delivery to</label>
+                <select th:id="|dispatcher-${allocation.id}|" name="dispatcherId" required>
+                    <option value="">Choose dispatcher</option>
+                    <option th:each="dispatcher : ${dispatchers}" th:value="${dispatcher.id}" th:text="${dispatcher.name}"
+                            th:selected="${dispatcher.id == allocation.dispatcherId}">Dispatcher</option>
+                </select>
+                <button type="submit">Assign delivery</button>
+            </form>
             <a th:if="${allocation.invoiceAvailable}"
                th:href="@{/api/v1/allocations/{id}/invoice.pdf(id=${allocation.id},inline=true)}"
                target="_blank" rel="noopener">
@@ -137,6 +154,10 @@
             <a th:if="${allocation.invoiceAvailable}"
                th:href="@{/api/v1/allocations/{id}/invoice.pdf(id=${allocation.id})}">
                 Download Invoice PDF
+            </a>
+            <a th:if="${allocation.invoiceAvailable}"
+               th:href="@{/allocations/{id}/invoice/edit(id=${allocation.id})}">
+                Amend Invoice Prices
             </a>
             <a th:href="@{/allocations/{id}/edit(id=${allocation.id})}">
                 Edit Allocation

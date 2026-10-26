@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.stream.IntStream;
 
 import org.apache.pdfbox.Loader;
@@ -40,8 +41,11 @@ import nz.ac.aut.comp713.allocation_service.model.DeliveryStatus;
 import nz.ac.aut.comp713.allocation_service.model.PaymentStatus;
 import nz.ac.aut.comp713.allocation_service.repository.AllocationItemRepository;
 import nz.ac.aut.comp713.allocation_service.repository.InvoiceRepository;
+import nz.ac.aut.comp713.allocation_service.repository.InvoiceRevisionRepository;
 import nz.ac.aut.comp713.allocation_service.repository.WeeklyAllocationRepository;
 import nz.ac.aut.comp713.allocation_service.service.InvoicePdfGenerator;
+import nz.ac.aut.comp713.allocation_service.security.LoginClient;
+import nz.ac.aut.comp713.allocation_service.security.SessionAuthenticationFilter;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -50,6 +54,8 @@ class InvoiceApiTest {
     MockMvc mockMvc;
     @Autowired
     InvoiceRepository invoiceRepository;
+    @Autowired
+    InvoiceRevisionRepository revisionRepository;
     @Autowired
     AllocationItemRepository itemRepository;
     @Autowired
@@ -65,6 +71,7 @@ class InvoiceApiTest {
 
     @BeforeEach
     void setUp() {
+        revisionRepository.deleteAll();
         invoiceRepository.deleteAll();
         itemRepository.deleteAll();
         allocationRepository.deleteAll();
@@ -74,6 +81,62 @@ class InvoiceApiTest {
                 .thenReturn(new TaroTypeResponse(1L, "Samoan Taro", "", new BigDecimal("50.00")));
         when(dispatcherClient.getDispatcher(1L))
                 .thenReturn(new DispatcherResponse(1L, "Auckland Dispatch", "Hana", "+64211234567", "20 Example Road"));
+    }
+
+    @Test
+    void adminCanAmendIssuedInvoicePricesWhileEarlierPdfIsRetained() throws Exception {
+        Long id = createAllocation();
+        mockMvc.perform(put("/api/v1/allocations/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON).content(update("DELIVERED", 100)))
+                .andExpect(status().isOk());
+        byte[] original = invoiceRepository.findByAllocationId(id).orElseThrow().getPdfBytes().clone();
+        Long itemId = itemRepository.findByWeeklyAllocationId(id).getFirst().getId();
+
+        mockMvc.perform(post("/allocations/{id}/invoice/edit", id)
+                .param("itemId", itemId.toString())
+                .param("pricePerKg", "60.00")
+                .param("reason", "Corrected agreed price"))
+                .andExpect(status().is3xxRedirection());
+
+        var amended = invoiceRepository.findByAllocationId(id).orElseThrow();
+        assertThat(amended.getTotalAmount()).isEqualByComparingTo("6000.00");
+        assertThat(itemRepository.findByWeeklyAllocationId(id).getFirst().getPricePerKg())
+                .isEqualByComparingTo("60.00");
+        assertThat(revisionRepository.count()).isEqualTo(1);
+        assertArrayEquals(original, revisionRepository.findAll().getFirst().getPreviousPdfBytes());
+        assertArrayEquals(original, mockMvc.perform(get(
+                "/api/v1/allocations/{id}/invoice/revisions/1.pdf", id))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray());
+        mockMvc.perform(get("/allocations/{id}/invoice/edit", id).accept(MediaType.TEXT_HTML))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Corrected agreed price")));
+    }
+
+    @Test
+    void invoiceAmendmentRejectsInvalidPricesAndNonAdmins() throws Exception {
+        Long id = createAllocation();
+        mockMvc.perform(put("/api/v1/allocations/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON).content(update("DELIVERED", 100)))
+                .andExpect(status().isOk());
+        Long itemId = itemRepository.findByWeeklyAllocationId(id).getFirst().getId();
+
+        mockMvc.perform(post("/allocations/{id}/invoice/edit", id)
+                .param("itemId", itemId.toString()).param("pricePerKg", "-1")
+                .param("reason", "Incorrect price"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("valid price")));
+        assertThat(invoiceRepository.findByAllocationId(id).orElseThrow().getTotalAmount())
+                .isEqualByComparingTo("5000.00");
+        assertThat(revisionRepository.count()).isZero();
+
+        var customer = new LoginClient.SessionPrincipal(20L, "customer", "CUSTOMER", 1L,
+                true, Instant.now().plusSeconds(60));
+        mockMvc.perform(post("/allocations/{id}/invoice/edit", id)
+                .requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer)
+                .param("itemId", itemId.toString()).param("pricePerKg", "60.00")
+                .param("reason", "Corrected agreed price"))
+                .andExpect(status().isForbidden());
+        assertThat(revisionRepository.count()).isZero();
     }
 
     @Test

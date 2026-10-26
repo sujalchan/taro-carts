@@ -29,6 +29,7 @@ import nz.ac.aut.comp713.allocation_service.exception.CustomerNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.CustomerServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.DispatcherNotFoundException;
 import nz.ac.aut.comp713.allocation_service.exception.DispatcherRequiredException;
+import nz.ac.aut.comp713.allocation_service.exception.InvalidDispatcherTransitionException;
 import nz.ac.aut.comp713.allocation_service.exception.DispatcherServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.TaroServiceUnavailableException;
 import nz.ac.aut.comp713.allocation_service.exception.DuplicateTaroTypeException;
@@ -115,8 +116,28 @@ public class AllocationPageController {
 				errors);
 			model.addAttribute("customers", List.of());
 		}
+		try {
+			model.addAttribute("dispatchers", dispatcherClient.getDispatchers().stream()
+					.filter(dispatcher -> dispatcher.active()).toList());
+		} catch (DispatcherServiceUnavailableException exception) {
+			model.addAttribute("dispatchers", List.of());
+			model.addAttribute("assignmentError", "Dispatchers are unavailable right now.");
+		}
 
 		return "allocations";
+	}
+
+	@PostMapping("/allocations/{id}/assign")
+	public String assignDispatcher(@PathVariable Long id, @RequestParam Long dispatcherId,
+			RedirectAttributes redirectAttributes) {
+		try {
+			weeklyAllocationService.assignDispatcher(id, dispatcherId);
+		} catch (DispatcherRequiredException | DispatcherNotFoundException
+				| DispatcherServiceUnavailableException | InvalidDispatcherTransitionException
+				| WeeklyAllocationNotFoundException exception) {
+			redirectAttributes.addFlashAttribute("assignmentError", exception.getMessage());
+		}
+		return "redirect:/allocations";
 	}
 
 	// show the create form with one empty allocation item row
@@ -348,6 +369,7 @@ public class AllocationPageController {
 				| DispatcherRequiredException
 				| DispatcherNotFoundException
 				| DispatcherServiceUnavailableException
+				| InvalidDispatcherTransitionException
 				| WeeklyAllocationNotFoundException exception) {
 
 			errors.add(exception.getMessage());

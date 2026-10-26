@@ -32,7 +32,8 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
     private static final String REFERENCE_ROOT = "/internal/v1/allocation-reference/dispatchers";
     private static final String PROVISIONING_ROOT = "/internal/v1/dispatchers";
     private static final String CSRF_COOKIE = "DISPATCHER_CSRF";
-    private static final Set<String> LANDING_PATHS = Set.of("/", "/dispatchers", "/dispatchers-client.html");
+    private static final Set<String> LANDING_PATHS = Set.of("/", "/dispatchers", "/dispatchers-client.html",
+            "/portal/deliveries");
 
     private final LoginClient login;
     private final String loginPageUrl;
@@ -102,8 +103,12 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
         }
         request.setAttribute(PRINCIPAL_ATTRIBUTE, principal);
 
-        // Existing domain management routes are admin-only until role portals are implemented.
-        if (!"ADMIN".equals(principal.role())) {
+        boolean dispatcherPortal = path.equals("/portal/deliveries")
+                || path.startsWith("/portal/deliveries/");
+        boolean portalAsset = "GET".equals(request.getMethod())
+                && (path.equals("/css/style.css") || path.equals("/js/service-navigation.js"));
+        if (!"ADMIN".equals(principal.role())
+                && !("DISPATCHER".equals(principal.role()) && (dispatcherPortal || portalAsset))) {
             deny(request, response, HttpServletResponse.SC_FORBIDDEN, "Access denied");
             return;
         }

@@ -98,6 +98,13 @@ public class WeeklyAllocationController {
 	}
 
 	public record DeliveryUpdate(DeliveryStatus deliveryStatus) {}
+	public record DispatcherAssignment(Long dispatcherId) {}
+
+	@PutMapping("/{id}/dispatcher")
+	public ResponseEntity<WeeklyAllocationResponse> assignDispatcher(
+			@PathVariable Long id, @RequestBody DispatcherAssignment assignment) {
+		return ResponseEntity.ok(weeklyAllocationService.assignDispatcher(id, assignment.dispatcherId()));
+	}
 
 	@PutMapping("/{id}/delivery-status")
 	public ResponseEntity<WeeklyAllocationResponse> advanceDelivery(

@@ -56,4 +56,15 @@ public class InvoiceController {
                 .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
                 .body(download.bytes());
     }
+
+    @GetMapping("/{id}/invoice/revisions/{revisionNumber}.pdf")
+    public ResponseEntity<byte[]> downloadRevision(@PathVariable Long id, @PathVariable int revisionNumber) {
+        InvoiceService.Download download = invoiceService.downloadRevision(id, revisionNumber);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
+                .contentLength(download.bytes().length)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(download.filename()).build().toString())
+                .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
+                .body(download.bytes());
+    }
 }

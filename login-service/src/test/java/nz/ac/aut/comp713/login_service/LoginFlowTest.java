@@ -175,6 +175,29 @@ class LoginFlowTest {
     }
 
     @Test
+    void signOutPageConfirmsAccountAndRevokesSession() throws Exception {
+        String csrf = csrfFromLoginPage();
+        MvcResult login = mvc.perform(post("/login")
+                        .cookie(new Cookie(AuthCookies.CSRF, csrf))
+                        .param("csrf", csrf).param("username", "admin").param("password", "admin1234!"))
+                .andExpect(status().is3xxRedirection()).andReturn();
+        String token = cookieValue(cookieHeader(login, AuthCookies.SESSION));
+        MvcResult page = mvc.perform(get("/logout").cookie(new Cookie(AuthCookies.SESSION, token)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sign out?")))
+                .andExpect(content().string(containsString("admin")))
+                .andReturn();
+        String logoutCsrf = cookieValue(cookieHeader(page, AuthCookies.CSRF));
+        mvc.perform(post("/logout")
+                        .cookie(new Cookie(AuthCookies.SESSION, token), new Cookie(AuthCookies.CSRF, logoutCsrf))
+                        .param("csrf", logoutCsrf))
+                .andExpect(status().is3xxRedirection());
+        mvc.perform(get("/logout").cookie(new Cookie(AuthCookies.SESSION, token)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/login"));
+    }
+
+    @Test
     void introspectionRequiresServiceCredentialAndReturnsMinimumIdentity() throws Exception {
         String csrf = csrfFromLoginPage();
         MvcResult login = mvc.perform(post("/login")

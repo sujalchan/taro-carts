@@ -122,6 +122,41 @@ class WeeklyAllocationApiTest {
 	}
 
 	@Test
+	void adminCanAssignDeliveryFromAllocationPageButCustomerCannot() throws Exception {
+		createCustomerAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		mockMvc.perform(get("/allocations").accept(MediaType.TEXT_HTML))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("Assign delivery")));
+		var customer = new LoginClient.SessionPrincipal(11L, "customer", "CUSTOMER", 1L,
+				true, Instant.now().plusSeconds(300));
+		mockMvc.perform(put("/api/v1/allocations/{id}/dispatcher", id)
+				.requestAttr(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE, customer)
+				.contentType(MediaType.APPLICATION_JSON).content("{\"dispatcherId\":1}"))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(post("/allocations/{id}/assign", id).param("dispatcherId", "1"))
+				.andExpect(status().is3xxRedirection());
+		mockMvc.perform(get("/api/v1/allocations/{id}", id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.dispatcherId").value(1))
+				.andExpect(jsonPath("$.deliveryStatus").value("AWAITING_DISPATCH"));
+	}
+
+	@Test
+	void inactiveDispatcherCannotBeAssigned() throws Exception {
+		createCustomerAllocation(1L, "2026-09-14", 1L, 100);
+		Long id = weeklyAllocationRepository.findAll().getFirst().getId();
+		when(dispatcherClient.getDispatcher(2L)).thenReturn(new DispatcherResponse(
+				2L, "Inactive Dispatch", null, null, "Auckland", false));
+		mockMvc.perform(put("/api/v1/allocations/{id}/dispatcher", id)
+				.contentType(MediaType.APPLICATION_JSON).content("{\"dispatcherId\":2}"))
+				.andExpect(status().isConflict());
+		mockMvc.perform(get("/api/v1/allocations/{id}", id))
+				.andExpect(jsonPath("$.dispatcherId").doesNotExist())
+				.andExpect(jsonPath("$.deliveryStatus").value("REQUESTED_ALLOCATION"));
+	}
+
+	@Test
 	void missingBrowserPageUsesBrandedError() throws Exception {
 		mockMvc.perform(get("/missing-page").accept(MediaType.TEXT_HTML))
 				.andExpect(status().isNotFound())

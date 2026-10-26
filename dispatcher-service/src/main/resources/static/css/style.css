@@ -13,6 +13,22 @@
     --radius: 5px;
 }
 
+/* Role portal */
+.portal-page h1 { margin-bottom: .4rem; }
+.portal-eyebrow { margin: 0 0 .35rem; color: var(--accent); font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+.portal-intro { margin: 0 0 1.8rem; color: var(--muted); }
+.portal-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 2rem 0 1rem; }
+.portal-heading h2 { margin: 0; }
+.portal-select, .portal-empty { padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.portal-select { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.portal-select label { width: 100%; font-weight: 700; }
+.portal-select select { min-width: min(100%, 320px); }
+.portal-empty { margin-top: 18px; color: var(--muted); }
+.portal-page .table-scroll { border-radius: 10px; }
+.portal-page td form { margin: 0; }
+.portal-page td button { white-space: nowrap; }
+@media (max-width: 640px) { .portal-heading { align-items: stretch; flex-direction: column; } }
+
 * {
     box-sizing: border-box;
 }
@@ -80,7 +96,7 @@ body.page-form.page-allocation {
 
 .app-nav__links {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 14px;
 }
 

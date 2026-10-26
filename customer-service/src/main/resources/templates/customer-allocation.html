@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Allocation details · Taro Carts</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/service-navigation.js"></script>
+</head>
+<body class="page-list portal-page">
+<nav class="app-nav" aria-label="Portal navigation" th:attr="data-nav-role=${admin ? 'admin' : 'customer'}">
+    <a class="app-nav__brand" href="/portal/allocations">Taro Carts</a>
+    <div class="app-nav__links"><a th:href="@{/portal/allocations(customerId=${admin ? customerId : null})}">Allocations</a><a href="http://localhost:8085/logout">Sign out</a></div>
+</nav>
+<main>
+    <p class="portal-eyebrow">Customer portal</p>
+    <h1 th:text="|Allocation for week of ${allocation.weekStart}|">Allocation details</h1>
+    <p class="portal-intro" th:text="${selectedCustomer.name}">Customer</p>
+    <div class="portal-facts"><p><strong>Delivery</strong><span th:text="${#strings.replace(allocation.deliveryStatus, '_', ' ')}">Requested</span></p>
+        <p><strong>Payment</strong><span th:text="${#strings.replace(allocation.paymentStatus, '_', ' ')}">Unpaid</span></p>
+        <p><strong>Address</strong><span th:text="${allocation.deliveryAddress ?: 'No address specified'}">Address</span></p></div>
+    <h2>Taro items</h2>
+    <div class="table-scroll"><table><thead><tr><th>Type</th><th>Quantity (kg)</th><th>Price per kg</th></tr></thead>
+        <tbody><tr th:each="item : ${allocation.allocationItems}"><td th:text="${item.taroTypeName}">Taro</td><td th:text="${item.quantity}">1</td><td th:text="${item.pricePerKg}">0.00</td></tr></tbody></table></div>
+    <div class="portal-actions">
+        <a th:if="${allocation.invoiceAvailable}" th:href="@{/portal/allocations/{id}/invoice.pdf(id=${allocation.id},customerId=${admin ? customerId : null},inline=true)}" target="_blank" rel="noopener">View invoice</a>
+        <a th:if="${allocation.invoiceAvailable}" th:href="@{/portal/allocations/{id}/invoice.pdf(id=${allocation.id},customerId=${admin ? customerId : null})}">Download invoice</a>
+        <form th:if="${allocation.paymentStatus != 'PAID' and allocation.deliveryStatus != 'REQUESTED_ALLOCATION' and allocation.deliveryStatus != 'CANCELLED'}"
+              th:action="@{/portal/allocations/{id}/pay(id=${allocation.id})}" method="post">
+            <input type="hidden" name="csrf" th:value="${csrfToken}"><input type="hidden" name="customerId" th:if="${admin}" th:value="${customerId}"><button type="submit">Mark as paid</button>
+        </form>
+        <form th:if="${allocation.requestedByCustomerId != null and allocation.deliveryStatus == 'REQUESTED_ALLOCATION' and !allocation.invoiceAvailable}"
+              th:action="@{/portal/allocations/{id}/cancel(id=${allocation.id})}" method="post">
+            <input type="hidden" name="csrf" th:value="${csrfToken}"><input type="hidden" name="customerId" th:if="${admin}" th:value="${customerId}"><button type="submit">Cancel request</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

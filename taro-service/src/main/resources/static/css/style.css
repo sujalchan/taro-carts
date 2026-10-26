@@ -80,7 +80,7 @@ body.page-form.page-allocation {
 
 .app-nav__links {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 14px;
 }
 
