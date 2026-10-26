@@ -96,6 +96,15 @@ public class WeeklyAllocationService {
                 .toList();
     }
 
+    // Fetch assigned records before enriching them with customer and taro data.
+    public List<WeeklyAllocationResponse> getWeeklyAllocationsForDispatcher(Long dispatcherId) {
+        Map<Long, CustomerResponse> customers = new HashMap<>();
+        Map<Long, TaroTypeResponse> taroTypes = new HashMap<>();
+        return weeklyAllocationRepository.findByDispatcherId(dispatcherId).stream()
+                .map(allocation -> toResponse(allocation, customers, taroTypes))
+                .toList();
+    }
+
     // get a weekly allocation by id
     public WeeklyAllocationResponse getWeeklyAllocationById(Long id) {
         WeeklyAllocation weeklyAllocation = weeklyAllocationRepository.findById(id)

@@ -13,6 +13,8 @@ public interface WeeklyAllocationRepository extends JpaRepository<WeeklyAllocati
     // find weekly allocations for one customer
     List<WeeklyAllocation> findByCustomerId(Long customerId);
 
+    List<WeeklyAllocation> findByDispatcherId(Long dispatcherId);
+
     // find all taro items belonging to a specific weekly allocation
     boolean existsByCustomerIdAndWeekStart(Long customerId, LocalDate weekStart);
 

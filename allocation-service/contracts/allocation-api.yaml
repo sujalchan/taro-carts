@@ -13,6 +13,28 @@ servers:
     description: Local allocation service
 
 paths:
+  /api/v1/allocations/dispatcher/{dispatcherId}:
+    get:
+      summary: Get allocations assigned to a dispatcher
+      operationId: getWeeklyAllocationsForDispatcher
+      parameters:
+        - name: dispatcherId
+          in: path
+          required: true
+          description: Dispatcher ID stored on assigned allocations.
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Assigned allocations, or an empty array when none are assigned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeeklyAllocationResponse"
+
   /api/v1/customer-service-reference/customers:
     get:
       summary: Get customers for allocation forms and filters

@@ -382,6 +382,7 @@ Allocation operations include:
 
 ```text
 GET     /allocations?customerId={customerId}
+GET     /allocations/dispatcher/{dispatcherId}
 POST    /allocations
 POST    /allocations/customer-request
 GET     /allocations/{id}
@@ -396,6 +397,8 @@ GET     /dispatcher-service-reference/dispatchers
 ```
 
 When updating an allocation to `AWAITING_DISPATCH`, `IN_TRANSIT`, or `DELIVERED`, include a valid `dispatcherId` in the JSON body. Allocation-service verifies the ID with dispatcher-service and returns `DISPATCHER_REQUIRED` (400) when it is missing or `DISPATCHER_NOT_FOUND` (404) when it does not identify an existing dispatcher. Allocation responses include `dispatcherId` when assigned. The edit pages show dispatcher names in the dropdown and submit each dispatcher's ID.
+
+The dispatcher allocation endpoint returns only records assigned to that dispatcher ID.
 
 ---
 
@@ -823,6 +826,7 @@ android-app/
 as a project in Android Studio.
 
 Allow Gradle to synchronise the project and then run the application using an Android emulator or supported physical device.
+After changing the app, use Android Studio's Run action or `:app:installDebug` to replace the APK on the emulator; compiling Kotlin alone does not update the installed app.
 
 ### Android Emulator Backend Address
 
@@ -870,6 +874,15 @@ The invoice opens inside the app with page and zoom controls. On Android 17 and
 newer, allow the app's local network request so it can reach the emulator host.
 
 A physical Android device will require the backend computer's reachable local network address instead.
+
+The bottom bar switches between Customer and Dispatcher on account selection screens.
+It disappears after an account is selected and returns when the user switches accounts
+or goes back to selection. In Dispatcher, select an
+active dispatcher profile to see its assigned allocations, customer addresses,
+taro quantities, status, and delivery week. The allocation service stores the
+Monday of an allocation week, not an exact delivery day. Dispatcher selection,
+like customer selection, is a development account switch and is not authentication.
+The dispatcher view also needs dispatcher-service on port 8084.
 
 ---
 

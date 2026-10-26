@@ -1,5 +1,6 @@
 package nz.ac.aut.comp713.tarocartmobile.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -60,7 +61,7 @@ import java.util.Locale
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun AllocationsScreen() {
+fun AllocationsScreen(onAccountSelected: (Boolean) -> Unit = {}) {
     var customers by remember { mutableStateOf<List<Customer>>(emptyList()) }
     var allocations by remember { mutableStateOf<List<Allocation>>(emptyList()) }
     // saves the acting customer's basic details so rotation does not restart selection
@@ -88,6 +89,26 @@ fun AllocationsScreen() {
     val scope = rememberCoroutineScope()
     // tracks whether the customer actions drawer is open or closed
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+
+    fun clearCustomerSelection() {
+        selectedCustomerId = null
+        selectedCustomerName = null
+        selectedCustomerAddress = ""
+        selectedCustomerContactName = ""
+        selectedCustomerPhone = ""
+        selectedCustomerActive = true
+        allocations = emptyList()
+        deleteError = null
+        paymentError = null
+        customerRefreshKey++
+        onAccountSelected(false)
+    }
+
+    LaunchedEffect(selectedCustomerId) { onAccountSelected(selectedCustomerId != null) }
+    BackHandler(selectedCustomerId != null && !requesting && !editingCustomer
+        && viewedInvoiceId == null && !drawerState.isOpen) {
+        clearCustomerSelection()
+    }
 
     LaunchedEffect(customerRefreshKey) {
         loadingCustomers = true
@@ -131,6 +152,7 @@ fun AllocationsScreen() {
                 selectedCustomerContactName = it.contactName
                 selectedCustomerPhone = it.phone
                 selectedCustomerActive = it.active
+                onAccountSelected(true)
             }
         )
         return
@@ -262,7 +284,7 @@ fun AllocationsScreen() {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surfaceContainer) {
                 Text(
                     "Customer menu",
                     style = MaterialTheme.typography.titleLarge,
@@ -288,16 +310,7 @@ fun AllocationsScreen() {
                         scope.launch {
                             // closes the drawer and clears state before choosing another customer
                             drawerState.close()
-                            selectedCustomerId = null
-                            selectedCustomerName = null
-                            selectedCustomerAddress = ""
-                            selectedCustomerContactName = ""
-                            selectedCustomerPhone = ""
-                            selectedCustomerActive = true
-                            allocations = emptyList()
-                            deleteError = null
-                            paymentError = null
-                            customerRefreshKey++
+                            clearCustomerSelection()
                         }
                     }
                 )

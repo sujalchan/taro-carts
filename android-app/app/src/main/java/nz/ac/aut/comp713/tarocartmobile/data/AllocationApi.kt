@@ -12,6 +12,7 @@ import java.net.URL
 // 10.0.2.2 maps to the development computer from the standard android emulator
 private const val API_BASE_URL = "http://10.0.2.2:8082"
 private const val CUSTOMER_API_BASE_URL = "http://10.0.2.2:8081"
+private const val DISPATCHER_API_BASE_URL = "http://10.0.2.2:8084"
 
 // lightweight models used to exchange customer, product, and allocation data with the ui
 data class Customer(
@@ -25,6 +26,10 @@ data class Customer(
 
 data class TaroType(val id: Long, val name: String, val standardPrice: Double)
 
+data class Dispatcher(val id: Long, val name: String, val active: Boolean)
+
+data class AssignedDelivery(val allocation: Allocation, val customer: Customer)
+
 data class RequestedItem(val taroTypeId: Long, val quantity: Int)
 
 data class Allocation(
@@ -33,6 +38,7 @@ data class Allocation(
     val requestedByCustomerId: Long?,
     val customerName: String,
     val weekStart: String,
+    val dispatcherId: Long?,
     val deliveryStatus: String,
     val paymentStatus: String,
     val invoiceAvailable: Boolean,
@@ -47,6 +53,33 @@ data class AllocationItem(
 
 // centralizes allocation-service requests and keeps network work off the main thread
 object AllocationApi {
+    // Dispatcher profiles are owned by dispatcher-service, while assignments are
+    // stored on allocations. Match by ID so duplicate or changed names are safe.
+    suspend fun getDispatchers(): List<Dispatcher> = withContext(Dispatchers.IO) {
+        val json = getJson("/api/v1/dispatchers", DISPATCHER_API_BASE_URL) as? JSONArray
+            ?: throw IOException("The server returned an unexpected dispatcher response.")
+        (0 until json.length()).map { index ->
+            json.getJSONObject(index).let { dispatcher ->
+                Dispatcher(dispatcher.getLong("id"), dispatcher.optString("name", "Dispatcher"),
+                    dispatcher.optBoolean("active", true))
+            }
+        }.filter { it.active }
+    }
+
+    suspend fun getAssignedDeliveries(dispatcherId: Long): List<AssignedDelivery> = withContext(Dispatchers.IO) {
+        val json = getJson("/api/v1/allocations/dispatcher/$dispatcherId") as? JSONArray
+            ?: throw IOException("The server returned an unexpected allocations response.")
+        val assigned = (0 until json.length()).map { index ->
+            json.getJSONObject(index).toAllocation()
+        }.filter { it.dispatcherId == dispatcherId }
+        val customers = assigned.map { it.customerId }.distinct().associateWith { customerId ->
+            (getJson("/api/v1/customers/$customerId", CUSTOMER_API_BASE_URL) as? JSONObject)
+                ?.toCustomer() ?: throw IOException("The server returned an unexpected customer response.")
+        }
+        assigned.map { allocation -> AssignedDelivery(allocation, customers.getValue(allocation.customerId)) }
+            .sortedWith(compareBy<AssignedDelivery> { it.allocation.weekStart }.thenBy { it.allocation.id })
+    }
+
     // downloads an invoice into the app cache and removes partial files after failures
     suspend fun downloadInvoice(cacheDir: File, allocationId: Long): File = withContext(Dispatchers.IO) {
         val connection = (URL("$API_BASE_URL/api/v1/allocations/$allocationId/invoice.pdf?inline=true")
@@ -165,6 +198,7 @@ object AllocationApi {
             requestedByCustomerId = if (isNull("requestedByCustomerId")) null else getLong("requestedByCustomerId"),
             customerName = optString("customerName", "Unknown customer"),
             weekStart = optString("weekStart", ""),
+            dispatcherId = if (isNull("dispatcherId")) null else getLong("dispatcherId"),
             deliveryStatus = optString("deliveryStatus", "UNKNOWN"),
             paymentStatus = optString("paymentStatus", "UNKNOWN"),
             invoiceAvailable = optBoolean("invoiceAvailable", false),
@@ -190,8 +224,8 @@ object AllocationApi {
     )
 
     // accepts either json object or array responses and rejects malformed content
-    private fun getJson(path: String): Any {
-        val body = request("GET", path)
+    private fun getJson(path: String, baseUrl: String = API_BASE_URL): Any {
+        val body = request("GET", path, baseUrl = baseUrl)
         val trimmed = body.trimStart()
         return when {
             trimmed.startsWith("[") -> JSONArray(body)

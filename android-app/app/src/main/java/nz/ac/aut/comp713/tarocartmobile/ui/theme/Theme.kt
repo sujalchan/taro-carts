@@ -25,7 +25,12 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = GreenDarkOnSecondaryContainer,
     background = GreenDarkBackground,
     surface = GreenDarkSurface,
-    surfaceVariant = GreenDarkSurfaceVariant
+    surfaceVariant = GreenDarkSurfaceVariant,
+    surfaceContainer = Color(0xFF222A27),
+    surfaceContainerLow = Color(0xFF1C2421),
+    surfaceContainerHigh = Color(0xFF29312E),
+    surfaceContainerHighest = Color(0xFF303935),
+    outlineVariant = Color(0xFF4A5550)
 )
 
 // defines the branded light palette used throughout the app
@@ -41,6 +46,13 @@ private val LightColorScheme = lightColorScheme(
     background = GreenBackground,
     surface = GreenSurface,
     surfaceVariant = GreenSurfaceVariant,
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color(0xFFF5F6F6),
+    surfaceContainer = SoftGrey,
+    surfaceContainerHigh = Color(0xFFE9ECEB),
+    surfaceContainerHighest = Color(0xFFE2E6E4),
+    outlineVariant = SoftGreyOutline,
+    onSurfaceVariant = Color(0xFF46514E),
     onBackground = Color(0xFF17201D),
     onSurface = Color(0xFF17201D),
     outline = GreenOutline,

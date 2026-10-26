@@ -140,6 +140,36 @@ class WeeklyAllocationApiTest {
 	}
 
 	@Test
+	void dispatcherAllocationsOnlyContainAssignedRecords() throws Exception {
+		createAllocation(1L, "2026-09-14", 1L, 100);
+		createAllocation(2L, "2026-09-14", 2L, 50);
+		createAllocation(1L, "2026-09-21", 1L, 75);
+		var allocations = weeklyAllocationRepository.findAll();
+		var firstAssignment = allocations.stream()
+				.filter(allocation -> allocation.getCustomerId() == 1L
+						&& allocation.getWeekStart().toString().equals("2026-09-14"))
+				.findFirst().orElseThrow();
+		firstAssignment.setDispatcherId(1L);
+		firstAssignment.setDeliveryStatus(DeliveryStatus.AWAITING_DISPATCH);
+		var secondAssignment = allocations.stream()
+				.filter(allocation -> allocation.getCustomerId() == 2L)
+				.findFirst().orElseThrow();
+		secondAssignment.setDispatcherId(2L);
+		secondAssignment.setDeliveryStatus(DeliveryStatus.IN_TRANSIT);
+		weeklyAllocationRepository.saveAllAndFlush(allocations);
+
+		mockMvc.perform(get("/api/v1/allocations/dispatcher/1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(1)))
+				.andExpect(jsonPath("$[0].customerId").value(1))
+				.andExpect(jsonPath("$[0].dispatcherId").value(1))
+				.andExpect(jsonPath("$[0].allocationItems[0].quantity").value(100));
+		mockMvc.perform(get("/api/v1/allocations/dispatcher/999"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(0)));
+	}
+
+	@Test
 	void getAllocationsRejectsNonPositiveCustomerIdFilter() throws Exception {
 		mockMvc.perform(get("/api/v1/allocations").param("customerId", "0"))
 				.andExpect(status().isBadRequest())

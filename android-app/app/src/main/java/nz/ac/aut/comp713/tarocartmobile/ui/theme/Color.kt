@@ -14,6 +14,8 @@ val GreenBackground = Color(0xFFF5FBF8)
 val GreenSurface = Color(0xFFF5FBF8)
 val GreenSurfaceVariant = Color(0xFFDBE5E0)
 val GreenOutline = Color(0xFF6F7975)
+val SoftGrey = Color(0xFFF0F2F2)
+val SoftGreyOutline = Color(0xFFC8CECB)
 
 // lighter green accents maintain contrast on dark surfaces
 val GreenDarkPrimary = Color(0xFF8BD5C1)

@@ -82,6 +82,14 @@ public class WeeklyAllocationController {
 		return ResponseEntity.ok(weeklyAllocationService.getWeeklyAllocationById(id));
 	}
 
+	/** Returns allocations assigned to one dispatcher. */
+	@Operation(summary = "Retrieve a dispatcher's allocations", description = "Returns only allocations whose dispatcherId matches the requested dispatcher.")
+	@GetMapping("/dispatcher/{dispatcherId}")
+	public ResponseEntity<List<WeeklyAllocationResponse>> getWeeklyAllocationsForDispatcher(
+			@PathVariable Long dispatcherId) {
+		return ResponseEntity.ok(weeklyAllocationService.getWeeklyAllocationsForDispatcher(dispatcherId));
+	}
+
 	/** Marks an allocation as paid for its owning customer. */
 	@Operation(summary = "Record a customer's allocation as paid", description = "Marks an eligible allocation as paid after verifying the supplied customer owns it.")
 	@ApiResponses({
