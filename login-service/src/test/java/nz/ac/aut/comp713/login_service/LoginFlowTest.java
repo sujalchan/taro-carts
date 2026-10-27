@@ -38,6 +38,7 @@ import nz.ac.aut.comp713.login_service.repository.LoginSessionRepository;
 import nz.ac.aut.comp713.login_service.repository.RegistrationRequestRepository;
 import nz.ac.aut.comp713.login_service.service.AccountSeeder;
 import nz.ac.aut.comp713.login_service.service.AuthCookies;
+import nz.ac.aut.comp713.login_service.service.SessionService;
 
 /** Exercises browser/mobile authentication, registration, CSRF, and session behavior over HTTP. */
 @SpringBootTest(properties = {"debug=false", "logging.level.root=ERROR", "logging.level.org.hibernate.SQL=OFF",
@@ -63,6 +64,7 @@ class LoginFlowTest {
     @Autowired RegistrationRequestRepository requests;
     @Autowired BCryptPasswordEncoder passwords;
     @Autowired AccountSeeder seeder;
+    @Autowired SessionService sessionService;
 
     @BeforeEach
     void cleanUp() {
@@ -81,6 +83,41 @@ class LoginFlowTest {
                 .andExpect(status().isNotFound())
                 .andExpect(content().string(containsString("Page not found")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Whitelabel Error Page"))));
+    }
+
+    @Test
+    void signInAndAccessDeniedNavigationFollowTheValidatedSessionRole() throws Exception {
+        Account customer = accounts.save(new Account("menu-customer", "menu-customer",
+                passwords.encode("validpassword123"), AccountRole.CUSTOMER, 7L, true));
+        Account dispatcher = accounts.save(new Account("menu-dispatcher", "menu-dispatcher",
+                passwords.encode("validpassword123"), AccountRole.DISPATCHER, 8L, true));
+        String customerToken = sessionService.issue(customer).token();
+        String dispatcherToken = sessionService.issue(dispatcher).token();
+        String adminToken = sessionService.issue(accounts.findByNormalizedUsername("admin").orElseThrow()).token();
+
+        mvc.perform(get("/login").cookie(new Cookie(AuthCookies.SESSION, customerToken)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("href=\"http://localhost:8081/portal/allocations\"")))
+                .andExpect(content().string(containsString("href=\"http://localhost:8081/portal/profile\"")))
+                .andExpect(content().string(not(containsString("href=\"/admin/accounts\""))))
+                .andExpect(content().string(not(containsString("href=\"http://localhost:8084/portal/deliveries\""))));
+        mvc.perform(get("/admin/accounts").cookie(new Cookie(AuthCookies.SESSION, customerToken))
+                        .accept(MediaType.TEXT_HTML))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string(containsString("Return to your account")))
+                .andExpect(content().string(containsString("href=\"http://localhost:8081/portal/allocations\"")));
+        mvc.perform(get("/login").cookie(new Cookie(AuthCookies.SESSION, dispatcherToken)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("href=\"http://localhost:8084/portal/deliveries\"")))
+                .andExpect(content().string(containsString("href=\"http://localhost:8084/portal/profile\"")))
+                .andExpect(content().string(not(containsString("href=\"/admin/accounts\""))));
+        mvc.perform(get("/login").cookie(new Cookie(AuthCookies.SESSION, adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("href=\"/admin/accounts\"")));
+        mvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("href=\"/register\"")))
+                .andExpect(content().string(not(containsString("href=\"/admin/accounts\""))));
     }
 
     @Test

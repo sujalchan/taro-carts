@@ -43,12 +43,11 @@ public class LoginController {
                             @RequestParam(value = "returnTo", required = false) String returnTo,
                             @RequestParam(value = "passwordChanged", required = false) String passwordChanged,
                             HttpServletResponse response, Model model) {
-        var existing = sessions.validate(sessionToken);
         response.setHeader("Cache-Control", "no-store");
         model.addAttribute("csrfToken", cookies.issueCsrf(response));
         model.addAttribute("returnTo", destinations.permittedReturnTo(returnTo));
         model.addAttribute("passwordChanged", "1".equals(passwordChanged));
-        model.addAttribute("signedInUsername", existing.map(session -> session.getAccount().getUsername()).orElse(null));
+        addSessionNavigation(model, sessionToken);
         return "login";
     }
 
@@ -126,8 +125,16 @@ public class LoginController {
         model.addAttribute("username", username);
         model.addAttribute("returnTo", destinations.permittedReturnTo(returnTo));
         model.addAttribute("csrfToken", csrfCookie);
-        model.addAttribute("signedInUsername", sessions.validate(sessionToken)
-                .map(session -> session.getAccount().getUsername()).orElse(null));
+        addSessionNavigation(model, sessionToken);
         return "login";
+    }
+
+    /** Builds navigation only from the validated session, never from the attempted login. */
+    private void addSessionNavigation(Model model, String sessionToken) {
+        var existing = sessions.validate(sessionToken);
+        model.addAttribute("signedInUsername", existing.map(session -> session.getAccount().getUsername()).orElse(null));
+        model.addAttribute("signedInRole", existing.map(session -> session.getAccount().getRole().name()).orElse(null));
+        model.addAttribute("accountHomeUrl", existing.map(session ->
+                destinations.destination(session.getAccount().getRole(), null)).orElse("/login"));
     }
 }

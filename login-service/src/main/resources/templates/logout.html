@@ -12,7 +12,7 @@
 <body>
     <div class="page-shell">
         <nav class="app-nav" aria-label="Account navigation">
-            <a class="app-nav__brand" href="http://localhost:8081/customers">Taro Carts</a>
+            <a class="app-nav__brand" th:href="${returnUrl}" href="/login">Taro Carts</a>
             <div class="app-nav__links"><a href="/login">Sign in</a><a th:href="${returnUrl}" href="/login">Keep
                     working</a></div>
         </nav>

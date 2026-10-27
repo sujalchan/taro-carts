@@ -248,10 +248,20 @@
 <body>
     <div class="shell">
         <nav class="app-nav" aria-label="Service navigation">
-            <a class="app-nav__brand" href="http://localhost:8085/login">Taro Carts</a>
+            <a class="app-nav__brand" th:href="${accountHomeUrl ?: '/login'}" href="/login">Taro Carts</a>
             <div class="app-nav__links">
-                <a href="http://localhost:8085/login">Login Service</a>
-                <a href="http://localhost:8085/register">Create account</a>
+                <a th:if="${signedInRole == 'ADMIN'}" href="http://localhost:8081/customers">Customer Service</a>
+                <a th:if="${signedInRole == 'ADMIN'}" href="http://localhost:8084/dispatchers">Dispatcher Service</a>
+                <a th:if="${signedInRole == 'ADMIN'}" href="http://localhost:8083/taro-types">Taro Service</a>
+                <a th:if="${signedInRole == 'ADMIN'}" href="http://localhost:8082/allocations">Allocation Service</a>
+                <a th:if="${signedInRole == 'ADMIN'}" href="/admin/accounts">Admin accounts</a>
+                <a th:if="${signedInRole == 'CUSTOMER'}" href="http://localhost:8081/portal/allocations">My allocations</a>
+                <a th:if="${signedInRole == 'CUSTOMER'}" href="http://localhost:8081/portal/profile">My Account</a>
+                <a th:if="${signedInRole == 'DISPATCHER'}" href="http://localhost:8084/portal/deliveries">My deliveries</a>
+                <a th:if="${signedInRole == 'DISPATCHER'}" href="http://localhost:8084/portal/profile">My Account</a>
+                <a href="/login">Sign in</a>
+                <a th:if="${signedInRole == null}" href="/register">Create account</a>
+                <a th:if="${signedInRole != null}" href="/logout">Sign out</a>
             </div>
         </nav>
         <main class="card">
@@ -272,8 +282,11 @@
                 <p th:if="${status == 503}">A service is unavailable right now. Please try again in a moment.</p>
                 <p th:unless="${status == 401 or status == 403 or status == 404 or status == 503}">We could not complete
                     that request. Please try again shortly.</p>
-                <a class="button" href="http://localhost:8085/login">Go to sign in <span
-                        aria-hidden="true">&nbsp;→</span></a>
+                <a class="button" th:href="${status == 403 and signedInRole != null ? accountHomeUrl : '/login'}"
+                   href="/login">
+                    <span th:text="${status == 403 and signedInRole != null ? 'Return to your account' : 'Go to sign in'}">Go to sign in</span>
+                    <span aria-hidden="true">&nbsp;→</span>
+                </a>
                 <span class="hint">You can also use your browser's Back button.</span>
             </div>
         </main>
