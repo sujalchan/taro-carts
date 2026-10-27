@@ -30,5 +30,7 @@ public record WeeklyAllocationResponse(
 		@Schema(description = "Assigned dispatcher ID, or null when no dispatcher is assigned")
 		Long dispatcherId,
 		@Schema(description = "Delivery destination for this allocation, or null if neither the allocation nor customer has an address")
-		String deliveryAddress) {
+		String deliveryAddress,
+		@Schema(description = "Selected dispatch starting address, or null when not set")
+		String dispatchStartAddress) {
 }

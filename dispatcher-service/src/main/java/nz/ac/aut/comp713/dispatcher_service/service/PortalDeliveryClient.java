@@ -4,6 +4,7 @@ import java.net.URI;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
@@ -32,8 +33,19 @@ public class PortalDeliveryClient {
     public record Delivery(Long id, Long customerId, String customerName, LocalDate weekStart,
                            String deliveryStatus, String paymentStatus, Long dispatcherId,
                            String deliveryAddress, boolean invoiceAvailable,
-                           List<Item> allocationItems) {}
+                           List<Item> allocationItems, String dispatchStartAddress) {
+        public Delivery(Long id, Long customerId, String customerName, LocalDate weekStart,
+                        String deliveryStatus, String paymentStatus, Long dispatcherId,
+                        String deliveryAddress, boolean invoiceAvailable, List<Item> allocationItems) {
+            this(id, customerId, customerName, weekStart, deliveryStatus, paymentStatus,
+                    dispatcherId, deliveryAddress, invoiceAvailable, allocationItems, null);
+        }
+    }
     private record StatusUpdate(String deliveryStatus) {}
+    public record DispatchStartSelection(String address) {}
+    private record DispatchStartChoice(boolean reroll) {}
+    public record LocationPoint(String kind, double latitude, double longitude, Instant updatedAt) {}
+    private record LocationUpdate(double latitude, double longitude) {}
 
     private final RestClient client;
     private final AllocationIdentitySigner signer;
@@ -60,7 +72,13 @@ public class PortalDeliveryClient {
         Delivery[] deliveries = call(() -> client.get().uri(path)
                 .header("X-Allocation-Identity-Assertion", signer.sign(request, "GET", path))
                 .retrieve().body(Delivery[].class));
-        return Arrays.asList(deliveries);
+        return Arrays.stream(deliveries).map(delivery ->
+                "DELIVERED".equals(delivery.deliveryStatus())
+                        ? new Delivery(delivery.id(), delivery.customerId(), delivery.customerName(),
+                                delivery.weekStart(), delivery.deliveryStatus(), delivery.paymentStatus(),
+                                delivery.dispatcherId(), null, delivery.invoiceAvailable(),
+                                delivery.allocationItems(), delivery.dispatchStartAddress())
+                        : delivery).toList();
     }
 
     public void advance(HttpServletRequest request, Long id, String nextStatus) {
@@ -69,6 +87,33 @@ public class PortalDeliveryClient {
                 .header("X-Allocation-Identity-Assertion", signer.sign(request, "PUT", path))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new StatusUpdate(nextStatus)).retrieve().toBodilessEntity());
+    }
+
+    public List<LocationPoint> locations(HttpServletRequest request, Long id) {
+        String path = "/api/v1/allocations/" + id + "/locations";
+        LocationPoint[] points = call(() -> client.get().uri(path)
+                .header("X-Allocation-Identity-Assertion", signer.sign(request, "GET", path))
+                .retrieve().body(LocationPoint[].class));
+        return Arrays.asList(points);
+    }
+
+    public LocationPoint saveLocation(HttpServletRequest request, Long id,
+                                      double latitude, double longitude) {
+        String path = "/api/v1/allocations/" + id + "/locations";
+        return call(() -> client.post().uri(path)
+                .header("X-Allocation-Identity-Assertion", signer.sign(request, "POST", path))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new LocationUpdate(latitude, longitude))
+                .retrieve().body(LocationPoint.class));
+    }
+
+    public String randomStart(HttpServletRequest request, Long id, boolean reroll) {
+        String path = "/api/v1/allocations/" + id + "/dispatch-start/random";
+        return call(() -> client.post().uri(path)
+                .header("X-Allocation-Identity-Assertion", signer.sign(request, "POST", path))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new DispatchStartChoice(reroll))
+                .retrieve().body(DispatchStartSelection.class)).address();
     }
 
     private <T> T call(ExternalCall<T> call) {

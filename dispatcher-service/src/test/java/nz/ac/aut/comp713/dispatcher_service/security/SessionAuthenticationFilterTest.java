@@ -77,6 +77,9 @@ class SessionAuthenticationFilterTest {
         assertThat(page.getStatus()).isEqualTo(200);
         assertThat(response(filter, authenticated("GET", "/css/style.css")).getStatus()).isEqualTo(200);
         assertThat(response(filter, authenticated("GET", "/js/service-navigation.js")).getStatus()).isEqualTo(200);
+        assertThat(response(filter, authenticated("GET", "/js/delivery-locations.js")).getStatus()).isEqualTo(200);
+        assertThat(response(filter, authenticated("GET", "/images/delivery-driver-marker.svg")).getStatus()).isEqualTo(200);
+        assertThat(response(filter, authenticated("GET", "/images/delivery-driver-illustrative-marker.svg")).getStatus()).isEqualTo(200);
         assertThat(response(filter, authenticated("GET", "/dispatchers")).getStatus()).isEqualTo(403);
         assertThat(response(filter, authenticated("POST", "/portal/deliveries/3/status")).getStatus()).isEqualTo(403);
         String csrf = page.getHeader("Set-Cookie").split("[=;]")[1];

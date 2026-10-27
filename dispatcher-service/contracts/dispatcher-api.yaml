@@ -19,6 +19,39 @@ tags:
     description: Public browser configuration for dispatcher address forms
 
 paths:
+  /api/v1/mobile/portal/deliveries/{id}/locations:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: integer, format: int64}
+    get:
+      summary: List saved locations for the signed-in driver's allocation
+      responses:
+        '200':
+          description: Last saved driver position, or an empty list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/DeliveryLocation'}
+        '403': {description: Driver is not assigned to this allocation}
+    post:
+      summary: Save a foreground delivery location for the signed-in driver
+      description: Coordinates come from Android's existing foreground device location API. The single driver position can be refreshed while in transit.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryLocationRequest'}
+      responses:
+        '200':
+          description: Saved point with server timestamp
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DeliveryLocation'}
+        '403': {description: Driver is not assigned to this allocation}
+        '409': {description: Delivery is not in transit}
   /api/v1/dispatchers:
     get:
       tags: [Dispatchers]
@@ -176,6 +209,19 @@ paths:
 
 components:
   schemas:
+    DeliveryLocationRequest:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+    DeliveryLocation:
+      type: object
+      properties:
+        kind: {type: string, enum: [DRIVER]}
+        latitude: {type: number}
+        longitude: {type: number}
+        updatedAt: {type: string, format: date-time}
     DispatcherRequest:
       type: object
       required: [name, address]

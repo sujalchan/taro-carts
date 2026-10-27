@@ -222,7 +222,8 @@ fun DispatcherScreen(
 }
 
 @Composable
-private fun DeliveryCard(delivery: AssignedDelivery, updating: Boolean, onAdvance: (String) -> Unit) {
+private fun DeliveryCard(delivery: AssignedDelivery, updating: Boolean,
+                         onAdvance: (String) -> Unit) {
     val allocation = delivery.allocation
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -234,9 +235,11 @@ private fun DeliveryCard(delivery: AssignedDelivery, updating: Boolean, onAdvanc
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(allocation.customerName, style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium)
-            Text("Delivery address", style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold)
-            Text(allocation.deliveryAddress ?: "No delivery address set")
+            if (allocation.deliveryStatus != "DELIVERED") {
+                Text("Delivery address", style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold)
+                Text(allocation.deliveryAddress ?: "No delivery address set")
+            }
             Text("Delivery week", style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold)
             Text(formatDeliveryWeek(allocation.weekStart))

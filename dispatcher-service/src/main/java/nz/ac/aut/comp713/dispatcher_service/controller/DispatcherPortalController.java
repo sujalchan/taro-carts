@@ -130,6 +130,27 @@ public class DispatcherPortalController {
                 ? "?dispatcherId=" + selected : "");
     }
 
+    @GetMapping("/portal/deliveries/{id}/locations")
+    public String locations(@PathVariable Long id, @RequestParam(required = false) Long dispatcherId,
+                            HttpServletRequest request, Model model) {
+        Long selected = scope(request, dispatcherId, model);
+        if (selected == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        var delivery = deliveries.list(request, "ADMIN".equals(principal(request).role()) ? selected : null)
+                .stream().filter(item -> id.equals(item.id()) && selected.equals(item.dispatcherId()))
+                .findFirst().orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
+        if (!"IN_TRANSIT".equals(delivery.deliveryStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        model.addAttribute("delivery", delivery);
+        model.addAttribute("startAddress", deliveries.randomStart(request, id, false));
+        var points = deliveries.locations(request, id).stream().collect(
+                java.util.stream.Collectors.toMap(PortalDeliveryClient.LocationPoint::kind, point -> point));
+        model.addAttribute("points", points);
+        model.addAttribute("driverPoint", points.get("DRIVER"));
+        model.addAttribute("kinds", List.of("DRIVER"));
+        return "delivery-locations";
+    }
+
     private Long scope(HttpServletRequest request, Long selected, Model model) {
         LoginClient.SessionPrincipal principal = principal(request);
         boolean admin = "ADMIN".equals(principal.role());

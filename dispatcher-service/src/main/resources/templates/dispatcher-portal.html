@@ -38,12 +38,14 @@
         <div class="portal-heading"><div><p class="portal-eyebrow" th:text="${selectedDispatcher.name}">Dispatcher</p><h2>Assigned deliveries</h2></div></div>
         <p class="portal-empty" th:if="${deliveries == null or #lists.isEmpty(deliveries)}">No deliveries are assigned right now.</p>
         <div class="table-scroll" th:if="${deliveries != null and !#lists.isEmpty(deliveries)}">
-            <table><thead><tr><th>Week</th><th>Customer</th><th>Address</th><th>Status</th><th>Next step</th></tr></thead>
+            <table class="dispatcher-deliveries-table"><thead><tr><th>Week</th><th>Customer</th><th>Address</th><th>Status</th><th>Location</th><th>Next step</th></tr></thead>
                 <tbody><tr th:each="delivery : ${deliveries}">
                     <td th:text="${delivery.weekStart}">2026-10-26</td>
                     <td th:text="${delivery.customerName}">Customer</td>
-                    <td th:text="${delivery.deliveryAddress ?: 'Address not provided'}">Address</td>
+                    <td th:text="${delivery.deliveryStatus == 'DELIVERED' ? '—' : (delivery.deliveryAddress ?: 'Address not provided')}">Address</td>
                     <td th:text="${#strings.replace(delivery.deliveryStatus, '_', ' ')}">Awaiting dispatch</td>
+                    <td><a class="portal-location-link" th:if="${delivery.deliveryStatus == 'IN_TRANSIT'}"
+                           th:href="@{/portal/deliveries/{id}/locations(id=${delivery.id},dispatcherId=${admin ? dispatcherId : null})}">View location</a></td>
                     <td>
                         <form th:if="${delivery.deliveryStatus == 'AWAITING_DISPATCH' or delivery.deliveryStatus == 'IN_TRANSIT'}"
                               th:action="@{/portal/deliveries/{id}/status(id=${delivery.id})}" method="post">

@@ -101,4 +101,18 @@ public final class AllocationAccess {
                 && principal.profileId().equals(allocation.getDispatcherId())) return;
         throw new Denied();
     }
+
+    public static void locationWriter(WeeklyAllocation allocation) {
+        LoginClient.SessionPrincipal principal = principal();
+        if (principal == null || !"DISPATCHER".equals(principal.role())
+                || principal.profileId() == null
+                || !principal.profileId().equals(allocation.getDispatcherId())) throw new Denied();
+    }
+
+    public static void locationReader(WeeklyAllocation allocation) {
+        LoginClient.SessionPrincipal principal = principal();
+        if (principal == null || !("ADMIN".equals(principal.role())
+                || "DISPATCHER".equals(principal.role()) && principal.profileId() != null
+                && principal.profileId().equals(allocation.getDispatcherId()))) throw new Denied();
+    }
 }

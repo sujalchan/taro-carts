@@ -40,6 +40,9 @@ public class WeeklyAllocation {
     @Column(name = "delivery_address", length = 500)
     private String deliveryAddress;
 
+    @Column(name = "dispatch_start_address", length = 500)
+    private String dispatchStartAddress;
+
     // normalized to the Monday of the allocation week by the service layer
     @Column(name = "week_start", nullable = false)
     private LocalDate weekStart;
@@ -91,6 +94,12 @@ public class WeeklyAllocation {
 
     public void setDeliveryAddress(String deliveryAddress) {
         this.deliveryAddress = deliveryAddress;
+    }
+
+    public String getDispatchStartAddress() { return dispatchStartAddress; }
+
+    public void setDispatchStartAddress(String dispatchStartAddress) {
+        this.dispatchStartAddress = dispatchStartAddress;
     }
 
     public LocalDate getWeekStart() {

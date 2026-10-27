@@ -27,6 +27,27 @@
 .portal-page .table-scroll { border-radius: 10px; }
 .portal-page td form { margin: 0; }
 .portal-page td button { white-space: nowrap; }
+.dispatcher-deliveries-table th:nth-child(4),
+.dispatcher-deliveries-table td:nth-child(4) {
+    min-width: 125px;
+    white-space: nowrap;
+}
+.portal-page td a.portal-location-link {
+    min-height: 36px;
+    padding: 7px 12px;
+    border-color: var(--accent);
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
+    font-size: .875rem;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.portal-page td a.portal-location-link:hover {
+    border-color: var(--accent-hover);
+    background: var(--accent-hover);
+    color: #fff;
+}
 @media (max-width: 640px) { .portal-heading { align-items: stretch; flex-direction: column; } }
 
 * {
@@ -475,6 +496,107 @@ td:last-child {
 
 .page-list:not(.page-allocation) table {
     min-width: 620px;
+}
+
+.delivery-map-section {
+    margin: 24px 0;
+}
+
+.delivery-map-section h2 {
+    margin-bottom: 12px;
+}
+
+.delivery-map-shell {
+    position: relative;
+}
+
+.delivery-map {
+    width: 100%;
+    height: min(70vw, 600px);
+    min-height: 440px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #e8efec;
+}
+
+.delivery-map-summary {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 1;
+    display: grid;
+    gap: 8px;
+    max-width: min(330px, calc(100% - 28px));
+    max-height: calc(100% - 28px);
+    overflow: auto;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 3px 16px rgba(0, 0, 0, 0.18);
+    font-size: 13px;
+}
+
+.delivery-map-summary div {
+    display: grid;
+    gap: 2px;
+}
+
+.delivery-map-summary span {
+    overflow-wrap: anywhere;
+}
+
+.delivery-map-summary .delivery-driver-summary {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.delivery-driver-summary img {
+    width: 32px;
+    height: 38px;
+    flex: none;
+}
+
+.delivery-driver-summary > span {
+    display: grid;
+    gap: 2px;
+}
+
+.delivery-route-legend {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    max-width: calc(100% - 28px);
+    padding: 9px 12px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.16);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.delivery-route-legend > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.delivery-route-legend i {
+    display: inline-block;
+    width: 25px;
+    border-top: 5px solid var(--accent);
+}
+
+.delivery-route-legend .route-key-illustrative {
+    border-top-style: dotted;
+}
+
+.delivery-route-legend .route-key-remaining {
+    border-color: #4a927e;
 }
 
 .page-allocation table {

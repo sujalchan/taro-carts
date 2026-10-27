@@ -22,10 +22,10 @@ import kotlin.coroutines.resumeWithException
 
 /** Resolves a one-time precise fix through login-service or the keyless Android geocoder. */
 object CurrentLocationAddress {
-    suspend fun lookup(context: Context): String {
+    suspend fun coordinates(context: Context): Pair<Double, Double> {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED) {
-            throw IOException("Allow precise location, or search for your address instead.")
+            throw IOException("Allow precise location to find your current address.")
         }
         val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val provider = when {
@@ -37,7 +37,16 @@ object CurrentLocationAddress {
         val location = withTimeoutOrNull(20_000) { currentLocation(context, manager, provider) }
             ?: throw IOException("Could not get your location. Try again outdoors or search for your address.")
         if (!location.hasAccuracy() || location.accuracy > 100f) {
-            throw IOException("Your location is too approximate for a street address. Search for your address instead.")
+            throw IOException("Your location is too approximate. Try again outdoors.")
+        }
+        return location.latitude to location.longitude
+    }
+
+    suspend fun lookup(context: Context): String {
+        val (latitude, longitude) = coordinates(context)
+        val location = Location(LocationManager.GPS_PROVIDER).apply {
+            this.latitude = latitude
+            this.longitude = longitude
         }
         return try {
             MobileAuthApi.reverseGeocode(location.latitude, location.longitude)

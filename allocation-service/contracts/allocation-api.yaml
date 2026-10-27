@@ -13,6 +13,83 @@ servers:
     description: Local allocation service
 
 paths:
+  /api/v1/allocations/dispatch-start-areas:
+    get:
+      summary: List configured sample starting addresses
+      description: Administrator only. These addresses are separate from dispatcher account addresses.
+      responses:
+        '200':
+          description: Candidate addresses
+          content:
+            application/json:
+              schema: {type: array, items: {type: string}}
+        '403': {description: Administrator role required}
+  /api/v1/allocations/{id}/dispatch-start/random:
+    post:
+      summary: Choose a random starting address for an allocation
+      description: Administrator or assigned dispatcher. Saves one candidate address against the allocation; repeated calls keep it unless reroll is true.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reroll: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Selected starting address
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  address: {type: string}
+        '403': {description: Not an administrator or assigned dispatcher}
+        '404': {description: Allocation not found}
+        '409': {description: Assign a dispatcher first}
+  /api/v1/allocations/{allocationId}/locations:
+    parameters:
+      - name: allocationId
+        in: path
+        required: true
+        schema: {type: integer, format: int64}
+    get:
+      summary: View an allocation's delivery locations
+      description: Authenticated administrators and the assigned dispatcher may read the last driver-shared position. An empty array means no location has been shared.
+      responses:
+        '200':
+          description: Zero or one saved driver position with a server update time
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/DeliveryLocation'}
+        '403': {description: Not the assigned dispatcher or an administrator}
+        '404': {description: Allocation not found}
+    post:
+      summary: Save a manual delivery location
+      description: Only the assigned dispatcher may submit or refresh one foreground position while IN_TRANSIT. The server sets updatedAt.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeliveryLocationRequest'}
+      responses:
+        '200':
+          description: Saved point
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DeliveryLocation'}
+        '400': {description: Missing or invalid coordinates}
+        '403': {description: Caller is not the assigned dispatcher}
+        '404': {description: Allocation not found}
+        '409': {description: Delivery is not in transit}
   /api/v1/allocations/dispatcher/{dispatcherId}:
     get:
       summary: Get allocations assigned to a dispatcher
@@ -726,6 +803,19 @@ paths:
 
 components:
   schemas:
+    DeliveryLocationRequest:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: {type: number, minimum: -90, maximum: 90}
+        longitude: {type: number, minimum: -180, maximum: 180}
+    DeliveryLocation:
+      type: object
+      properties:
+        kind: {type: string, enum: [DRIVER]}
+        latitude: {type: number}
+        longitude: {type: number}
+        updatedAt: {type: string, format: date-time, description: Server timestamp in UTC}
     CustomerReference:
       type: object
       properties:
@@ -872,6 +962,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AllocationItemResponse"
+
+        dispatchStartAddress:
+          type: string
+          nullable: true
+          description: Randomly selected sample starting address, or null before selection.
 
     AllocationItemResponse:
       type: object

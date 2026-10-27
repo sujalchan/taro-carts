@@ -17,6 +17,7 @@ if command -v lsof >/dev/null 2>&1; then
 fi
 
 browser_places_api_key="${GOOGLE_MAPS_BROWSER_API_KEY:-}"
+delivery_start_addresses="${DELIVERY_START_ADDRESSES:-}"
 server_maps_api_key="${GOOGLE_MAPS_SERVER_API_KEY:-}"
 login_service_url="${LOGIN_SERVICE_URL:-http://localhost:8085}"
 login_session_lifetime="${LOGIN_SESSION_LIFETIME:-PT8H}"
@@ -61,6 +62,10 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
         if [[ -z "$browser_places_api_key" && "$line" == GOOGLE_MAPS_BROWSER_API_KEY=* ]]; then
             browser_places_api_key="${line#*=}"
             browser_places_api_key="${browser_places_api_key%$'\r'}"
+        fi
+        if [[ -z "$delivery_start_addresses" && "$line" == DELIVERY_START_ADDRESSES=* ]]; then
+            delivery_start_addresses="${line#*=}"
+            delivery_start_addresses="${delivery_start_addresses%$'\r'}"
         fi
         if [[ -z "$server_maps_api_key" && "$line" == GOOGLE_MAPS_SERVER_API_KEY=* ]]; then
             server_maps_api_key="${line#*=}"
@@ -177,6 +182,9 @@ start_service() {
             export ALLOCATION_DISPATCHER_ASSERTION_SECRET="${service_secret_values[$dispatcher_assertion_index]}"
         fi
         if [[ "$directory" == "allocation-service" ]]; then
+            if [[ -n "$delivery_start_addresses" ]]; then
+                export DELIVERY_START_ADDRESSES="$delivery_start_addresses"
+            fi
             export LOGIN_ALLOCATION_VALIDATION_SECRET="${service_secret_values[$allocation_validation_index]}"
             export ALLOCATION_CUSTOMER_REFERENCE_SECRET="${service_secret_values[$customer_reference_index]}"
             export ALLOCATION_DISPATCHER_REFERENCE_SECRET="${service_secret_values[$dispatcher_reference_index]}"

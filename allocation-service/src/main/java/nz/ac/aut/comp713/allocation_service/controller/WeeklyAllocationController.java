@@ -99,6 +99,20 @@ public class WeeklyAllocationController {
 
 	public record DeliveryUpdate(DeliveryStatus deliveryStatus) {}
 	public record DispatcherAssignment(Long dispatcherId) {}
+	public record DispatchStartSelection(String address) {}
+	public record DispatchStartChoice(boolean reroll) {}
+
+	@GetMapping("/dispatch-start-areas")
+	public ResponseEntity<List<String>> dispatchStartAreas() {
+		return ResponseEntity.ok(weeklyAllocationService.dispatchStartAreas());
+	}
+
+	@PostMapping("/{id}/dispatch-start/random")
+	public ResponseEntity<DispatchStartSelection> chooseDispatchStart(
+			@PathVariable Long id, @RequestBody(required = false) DispatchStartChoice request) {
+		return ResponseEntity.ok(new DispatchStartSelection(weeklyAllocationService.chooseDispatchStart(
+				id, request != null && request.reroll())));
+	}
 
 	@PutMapping("/{id}/dispatcher")
 	public ResponseEntity<WeeklyAllocationResponse> assignDispatcher(

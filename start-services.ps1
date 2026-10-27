@@ -2,6 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $originalPlacesKey = [Environment]::GetEnvironmentVariable("GOOGLE_MAPS_BROWSER_API_KEY", "Process")
+$originalDeliveryStartAddresses = [Environment]::GetEnvironmentVariable("DELIVERY_START_ADDRESSES", "Process")
+$deliveryStartAddresses = $originalDeliveryStartAddresses
 $originalServerMapsKey = [Environment]::GetEnvironmentVariable("GOOGLE_MAPS_SERVER_API_KEY", "Process")
 $originalLoginServiceUrl = [Environment]::GetEnvironmentVariable("LOGIN_SERVICE_URL", "Process")
 $loginServiceUrl = if ([string]::IsNullOrWhiteSpace($originalLoginServiceUrl)) { "http://localhost:8085" } else { $originalLoginServiceUrl }
@@ -33,6 +35,9 @@ if (Test-Path -LiteralPath $envFile) {
     foreach ($line in Get-Content -LiteralPath $envFile) {
         if ([string]::IsNullOrWhiteSpace($placesApiKey) -and $line -match '^\s*GOOGLE_MAPS_BROWSER_API_KEY\s*=\s*(.*?)\s*$') {
             $placesApiKey = $Matches[1].Trim('"', "'")
+        }
+        if ([string]::IsNullOrWhiteSpace($deliveryStartAddresses) -and $line -match '^\s*DELIVERY_START_ADDRESSES\s*=\s*(.*?)\s*$') {
+            $deliveryStartAddresses = $Matches[1].Trim('"', "'")
         }
         if ([string]::IsNullOrWhiteSpace($serverMapsKey) -and $line -match '^\s*GOOGLE_MAPS_SERVER_API_KEY\s*=\s*(.*?)\s*$') {
             $serverMapsKey = $Matches[1].Trim('"', "'")
@@ -141,6 +146,7 @@ try {
 
         # Only browser services with address autocomplete inherit the Maps API key.
         [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_BROWSER_API_KEY", $null, "Process")
+        [Environment]::SetEnvironmentVariable("DELIVERY_START_ADDRESSES", $null, "Process")
         [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_SERVER_API_KEY", $null, "Process")
         [Environment]::SetEnvironmentVariable("LOGIN_SERVICE_URL", $loginServiceUrl, "Process")
         [Environment]::SetEnvironmentVariable("LOGIN_SESSION_LIFETIME", $sessionLifetime, "Process")
@@ -180,6 +186,9 @@ try {
             [Environment]::SetEnvironmentVariable("ALLOCATION_DISPATCHER_ASSERTION_SECRET", $serviceSecrets["ALLOCATION_DISPATCHER_ASSERTION_SECRET"], "Process")
         }
         if ($service.Directory -eq "allocation-service") {
+            if (-not [string]::IsNullOrWhiteSpace($deliveryStartAddresses)) {
+                [Environment]::SetEnvironmentVariable("DELIVERY_START_ADDRESSES", $deliveryStartAddresses, "Process")
+            }
             [Environment]::SetEnvironmentVariable("LOGIN_ALLOCATION_VALIDATION_SECRET", $serviceSecrets["LOGIN_ALLOCATION_VALIDATION_SECRET"], "Process")
             foreach ($secretName in @("ALLOCATION_CUSTOMER_REFERENCE_SECRET", "ALLOCATION_DISPATCHER_REFERENCE_SECRET", "ALLOCATION_TARO_REFERENCE_SECRET")) {
                 [Environment]::SetEnvironmentVariable($secretName, $serviceSecrets[$secretName], "Process")
@@ -201,6 +210,7 @@ try {
     }
 } finally {
     [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_BROWSER_API_KEY", $originalPlacesKey, "Process")
+    [Environment]::SetEnvironmentVariable("DELIVERY_START_ADDRESSES", $originalDeliveryStartAddresses, "Process")
     [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_SERVER_API_KEY", $originalServerMapsKey, "Process")
     [Environment]::SetEnvironmentVariable("LOGIN_SERVICE_URL", $originalLoginServiceUrl, "Process")
     [Environment]::SetEnvironmentVariable("LOGIN_SESSION_LIFETIME", $originalSessionLifetime, "Process")

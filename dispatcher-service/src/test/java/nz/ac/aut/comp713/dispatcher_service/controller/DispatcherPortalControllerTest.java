@@ -63,6 +63,35 @@ class DispatcherPortalControllerTest {
                         .isEqualTo(HttpStatus.FORBIDDEN));
     }
 
+    @Test
+    void adminLocationViewUsesSelectedDispatcherAndRejectsOtherAllocation() {
+        var admin = request("ADMIN", null);
+        when(dispatchers.getById(7L)).thenReturn(
+                new DispatcherResponse(7L, "Driver", null, null, "Auckland", true));
+        when(deliveries.randomStart(admin, 11L, false)).thenReturn("16 Putney Way Manukau Auckland");
+        when(deliveries.list(admin, 7L)).thenReturn(List.of(new PortalDeliveryClient.Delivery(
+                11L, 3L, "Customer", LocalDate.now(), "IN_TRANSIT", "UNPAID", 7L, "Auckland",
+                false, List.of())));
+        when(deliveries.locations(admin, 11L)).thenReturn(List.of(
+                new PortalDeliveryClient.LocationPoint("DRIVER", -36.8, 174.7, Instant.now())));
+        var model = new ExtendedModelMap();
+        assertThat(controller.locations(11L, 7L, admin, model)).isEqualTo("delivery-locations");
+        assertThat(model.get("points")).asString().contains("DRIVER");
+        assertThat(model.get("startAddress")).isEqualTo("16 Putney Way Manukau Auckland");
+        verify(deliveries).locations(admin, 11L);
+        assertThatThrownBy(() -> controller.locations(12L, 7L, admin, new ExtendedModelMap()))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
+                        .isEqualTo(HttpStatus.FORBIDDEN));
+        when(deliveries.list(admin, 7L)).thenReturn(List.of(new PortalDeliveryClient.Delivery(
+                11L, 3L, "Customer", LocalDate.now(), "DELIVERED", "UNPAID", 7L, "Auckland",
+                false, List.of())));
+        assertThatThrownBy(() -> controller.locations(11L, 7L, admin, new ExtendedModelMap()))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
+                        .isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
     private MockHttpServletRequest request(String role, Long profileId) {
         var request = new MockHttpServletRequest();
         request.setAttribute(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE,

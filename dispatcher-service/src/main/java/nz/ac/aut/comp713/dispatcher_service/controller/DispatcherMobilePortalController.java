@@ -63,6 +63,24 @@ public class DispatcherMobilePortalController {
         return ResponseEntity.noContent().build();
     }
 
+    public record LocationRequest(Double latitude, Double longitude) {}
+
+    @GetMapping("/deliveries/{id}/locations")
+    public List<PortalDeliveryClient.LocationPoint> locations(@PathVariable Long id,
+            HttpServletRequest request) {
+        dispatcher(request);
+        return deliveries.locations(request, id);
+    }
+
+    @PostMapping("/deliveries/{id}/locations")
+    public PortalDeliveryClient.LocationPoint saveLocation(@PathVariable Long id,
+            @Valid @RequestBody LocationRequest body, HttpServletRequest request) {
+        dispatcher(request);
+        if (body.latitude() == null || body.longitude() == null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        return deliveries.saveLocation(request, id, body.latitude(), body.longitude());
+    }
+
     private LoginClient.SessionPrincipal dispatcher(HttpServletRequest request) {
         Object value = request.getAttribute(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE);
         if (value instanceof LoginClient.SessionPrincipal principal && principal.active()

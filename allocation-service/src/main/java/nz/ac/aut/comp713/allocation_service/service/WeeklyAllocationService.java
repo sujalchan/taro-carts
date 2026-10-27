@@ -61,6 +61,8 @@ public class WeeklyAllocationService {
     private final DispatcherClient dispatcherClient;
     private final TaroClient taroClient;
     private final InvoiceService invoiceService;
+    private final nz.ac.aut.comp713.allocation_service.repository.DeliveryLocationRepository deliveryLocationRepository;
+    private final DispatchStartCatalog dispatchStarts;
 
     public WeeklyAllocationService(
             WeeklyAllocationRepository weeklyAllocationRepository,
@@ -68,7 +70,9 @@ public class WeeklyAllocationService {
             CustomerClient customerClient,
             DispatcherClient dispatcherClient,
             TaroClient taroClient,
-            InvoiceService invoiceService) {
+            InvoiceService invoiceService,
+            nz.ac.aut.comp713.allocation_service.repository.DeliveryLocationRepository deliveryLocationRepository,
+            DispatchStartCatalog dispatchStarts) {
 
         this.weeklyAllocationRepository = weeklyAllocationRepository;
         this.allocationItemRepository = allocationItemRepository;
@@ -76,6 +80,8 @@ public class WeeklyAllocationService {
         this.dispatcherClient = dispatcherClient;
         this.taroClient = taroClient;
         this.invoiceService = invoiceService;
+        this.deliveryLocationRepository = deliveryLocationRepository;
+        this.dispatchStarts = dispatchStarts;
     }
 
     // get all weekly allocations
@@ -157,9 +163,32 @@ public class WeeklyAllocationService {
         }
         DispatcherResponse dispatcher = dispatcherClient.getDispatcher(dispatcherId);
         if (!dispatcher.active()) throw new InvalidDispatcherTransitionException("Choose an active dispatcher.");
+        if (!dispatcherId.equals(allocation.getDispatcherId()) || allocation.getDispatchStartAddress() == null)
+            allocation.setDispatchStartAddress(dispatchStarts.choose(null));
         allocation.setDispatcherId(dispatcherId);
         allocation.setDeliveryStatus(DeliveryStatus.AWAITING_DISPATCH);
         return toResponse(weeklyAllocationRepository.saveAndFlush(allocation));
+    }
+
+    @Transactional
+    public String chooseDispatchStart(Long id, boolean reroll) {
+        WeeklyAllocation allocation = weeklyAllocationRepository.findById(id)
+                .orElseThrow(() -> new WeeklyAllocationNotFoundException(id));
+        AllocationAccess.locationReader(allocation);
+        if (allocation.getDispatcherId() == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.CONFLICT, "Assign a dispatcher first");
+        }
+        if (reroll || !dispatchStarts.addresses().contains(allocation.getDispatchStartAddress())) {
+            allocation.setDispatchStartAddress(dispatchStarts.choose(allocation.getDispatchStartAddress()));
+            weeklyAllocationRepository.saveAndFlush(allocation);
+        }
+        return allocation.getDispatchStartAddress();
+    }
+
+    public List<String> dispatchStartAreas() {
+        AllocationAccess.admin();
+        return dispatchStarts.addresses();
     }
 
     @Transactional
@@ -353,9 +382,13 @@ public class WeeklyAllocationService {
             }
             DispatcherResponse dispatcher = dispatcherClient.getDispatcher(request.dispatcherId());
             if (!dispatcher.active()) throw new InvalidDispatcherTransitionException("Choose an active dispatcher.");
+            if (!request.dispatcherId().equals(weeklyAllocation.getDispatcherId())
+                    || weeklyAllocation.getDispatchStartAddress() == null)
+                weeklyAllocation.setDispatchStartAddress(dispatchStarts.choose(null));
             weeklyAllocation.setDispatcherId(request.dispatcherId());
         } else {
             weeklyAllocation.setDispatcherId(null);
+            weeklyAllocation.setDispatchStartAddress(null);
         }
 
         // make sure another allocation does not already use this customer and week
@@ -478,6 +511,7 @@ public class WeeklyAllocationService {
         }
 
         // delete child allocation items first
+        deliveryLocationRepository.deleteByAllocationId(id);
         allocationItemRepository.deleteByWeeklyAllocationId(id);
         allocationItemRepository.flush();
 
@@ -544,7 +578,8 @@ public class WeeklyAllocationService {
                 weeklyAllocation.getDispatcherId(),
                 weeklyAllocation.getDeliveryAddress() == null
                         ? normalizeAddress(customer.address())
-                        : weeklyAllocation.getDeliveryAddress());
+                        : weeklyAllocation.getDeliveryAddress(),
+                weeklyAllocation.getDispatchStartAddress());
     }
 
     // convert an allocation item entity into an enriched response dto

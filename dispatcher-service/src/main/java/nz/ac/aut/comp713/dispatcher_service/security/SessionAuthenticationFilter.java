@@ -114,7 +114,11 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
         boolean portalAsset = "GET".equals(request.getMethod())
                 && (path.equals("/css/style.css") || path.equals("/css/auth-inspired.css")
                 || path.equals("/js/service-navigation.js")
-                || path.equals("/js/address-autocomplete.js") || path.equals("/images/google-maps-logo.svg"));
+                || path.equals("/js/address-autocomplete.js")
+                || path.equals("/js/delivery-locations.js")
+                || path.equals("/images/google-maps-logo.svg")
+                || path.equals("/images/delivery-driver-marker.svg")
+                || path.equals("/images/delivery-driver-illustrative-marker.svg"));
         if (!"ADMIN".equals(principal.role())
                 && !("DISPATCHER".equals(principal.role()) && (dispatcherPortal || portalAsset))) {
             deny(request, response, HttpServletResponse.SC_FORBIDDEN, "Access denied");
