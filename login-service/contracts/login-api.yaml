@@ -69,7 +69,7 @@ paths:
                 $ref: "#/components/schemas/ApiError"
               example:
                 code: UNAUTHORIZED
-                message: Sign-in failed. Check your details or account status and try again.
+                message: Your username or password may be incorrect, or your account may not be available. Check your details; if your account is disabled, contact your administrator.
                 path: /api/v1/mobile/login
         "403":
           description: The account is waiting for administrator activation.
@@ -265,6 +265,72 @@ paths:
                     code: VALIDATION_ERROR
                     message: Session token is required.
                     path: /api/v1/mobile/logout
+        "500":
+          $ref: "#/components/responses/UnexpectedError"
+
+  /api/v1/mobile/session:
+    post:
+      tags: [Mobile authentication]
+      summary: Check whether a saved mobile session is still valid
+      operationId: checkMobileSession
+      description: >-
+        The Android app calls this while it is in the foreground. A disabled
+        account receives a specific explanation; an expired or revoked token
+        asks the user to sign in again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileSessionRequest"
+            example:
+              sessionToken: eyJhbGciOiJIUzI1NiJ9.example-token
+      responses:
+        "204":
+          description: The account and session are still valid.
+          headers:
+            Cache-Control:
+              description: Session check responses are not stored by caches.
+              schema:
+                type: string
+              example: no-store
+        "400":
+          description: The session token is missing or malformed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: Session token is required.
+                path: /api/v1/mobile/session
+        "401":
+          description: The token has expired, was revoked, or is not recognized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: SESSION_INVALID
+                message: Your session has expired or was signed out. Please sign in again.
+                path: /api/v1/mobile/session
+        "403":
+          description: The account was disabled or no longer has an available linked profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                accountDisabled:
+                  value:
+                    code: ACCOUNT_DEACTIVATED
+                    message: Your account has been disabled by an administrator. Contact your administrator if you think this is a mistake.
+                    path: /api/v1/mobile/session
+                profileUnavailable:
+                  value:
+                    code: ACCOUNT_PROFILE_UNAVAILABLE
+                    message: Your account is no longer linked to an available customer or dispatcher profile. Contact your administrator.
+                    path: /api/v1/mobile/session
         "500":
           $ref: "#/components/responses/UnexpectedError"
 
@@ -543,6 +609,17 @@ components:
           description: Opaque session token to revoke.
           example: eyJhbGciOiJIUzI1NiJ9.example-token
 
+    MobileSessionRequest:
+      type: object
+      required: [sessionToken]
+      properties:
+        sessionToken:
+          type: string
+          minLength: 1
+          pattern: '\S'
+          description: Opaque session token whose account and expiry state should be checked.
+          example: eyJhbGciOiJIUzI1NiJ9.example-token
+
     GooglePlacesConfigResponse:
       type: object
       required: [apiKey]
@@ -605,6 +682,9 @@ components:
             - BAD_REQUEST
             - UNAUTHORIZED
             - ACCOUNT_AWAITING_ACTIVATION
+            - ACCOUNT_DEACTIVATED
+            - ACCOUNT_PROFILE_UNAVAILABLE
+            - SESSION_INVALID
             - FORBIDDEN
             - NOT_FOUND
             - CONFLICT

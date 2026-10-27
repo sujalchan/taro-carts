@@ -60,6 +60,7 @@ import nz.ac.aut.comp713.tarocartmobile.data.MobileAuthApi
 @Composable
 fun MobileAuthScreen(
     account: MobileAccount?,
+    signInMessage: String? = null,
     onSignedIn: (MobileAccount, String) -> Unit,
     onSignOut: suspend () -> Unit
 ) {
@@ -252,8 +253,11 @@ fun MobileAuthScreen(
                                         name.trim(), contactName.trim(), phone.trim(), address.trim())
                                     registering = false
                                     error = null
+                                } catch (exception: CancellationException) {
+                                    throw exception
                                 } catch (exception: Exception) {
-                                    error = exception.message ?: "Could not submit your request."
+                                    error = MobileAuthApi.userFacingMessage(exception,
+                                        "We couldn't submit your request. Check your connection and try again.")
                                 } finally { busy = false }
                             }
                         }
@@ -267,6 +271,10 @@ fun MobileAuthScreen(
             TextButtonLike("Back to sign in", onClick = { registering = false; step = 1; error = null })
         } else {
             Text("Sign in", style = MaterialTheme.typography.titleLarge)
+            signInMessage?.let {
+                Spacer(Modifier.height(10.dp))
+                Text(it, color = MaterialTheme.colorScheme.error)
+            }
             Spacer(Modifier.height(12.dp))
             Field("Username", username, { username = it })
             Field("Password", password, { password = it }, password = true)
@@ -277,8 +285,11 @@ fun MobileAuthScreen(
                     try {
                         val result = MobileAuthApi.login(username.trim(), password)
                         onSignedIn(result.account, result.sessionToken)
+                    } catch (exception: CancellationException) {
+                        throw exception
                     } catch (exception: Exception) {
-                        error = exception.message ?: "Could not sign in."
+                        error = MobileAuthApi.userFacingMessage(exception,
+                            "We couldn't sign you in. Check your details and try again.")
                     } finally { busy = false }
                 }
             }) { if (busy) CircularProgressIndicator() else Text("Sign in") }

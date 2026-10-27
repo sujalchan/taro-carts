@@ -35,6 +35,8 @@ public class MobileAuthenticationController {
     public record RegistrationResponse(long requestId, String status, String message) {}
     /** Token submitted to revoke a native-client session. */
     public record LogoutRequest(@NotBlank(message = "Session token is required.") String sessionToken) {}
+    /** Session token submitted when the Android app checks whether its saved login is still valid. */
+    public record SessionRequest(@NotBlank(message = "Session token is required.") String sessionToken) {}
 
     private final AuthenticationService authentication;
     private final RegistrationRequestService registrations;
@@ -73,7 +75,8 @@ public class MobileAuthenticationController {
             SecurityAudit.denied("mobile.login.denied", "reason=credentials_or_inactive_account");
             limiter.failed(address, request.username());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                    "Sign-in failed. Check your details or account status and try again.");
+                    "Your username or password may be incorrect, or your account may not be available. "
+                            + "Check your details; if your account is disabled, contact your administrator.");
         }
         limiter.succeeded(address, request.username());
         SecurityAudit.event("mobile.login.succeeded", "accountId=" + account.getId()
@@ -124,6 +127,27 @@ public class MobileAuthenticationController {
         sessions.revoke(request.sessionToken());
         SecurityAudit.event("mobile.logout", "sessionPresented=true");
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+    }
+
+    /** Lets a foreground mobile app detect account deactivation or a revoked/expired session. */
+    @PostMapping("/session")
+    public ResponseEntity<?> checkSession(@Valid @RequestBody SessionRequest request,
+                                          HttpServletRequest servletRequest) {
+        return switch (sessions.checkMobileSession(request.sessionToken())) {
+            case VALID -> ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+            case ACCOUNT_DISABLED -> ResponseEntity.status(HttpStatus.FORBIDDEN).cacheControl(CacheControl.noStore())
+                    .body(new ApiError("ACCOUNT_DEACTIVATED",
+                            "Your account has been disabled by an administrator. Contact your administrator if you think this is a mistake.",
+                            servletRequest.getRequestURI()));
+            case PROFILE_UNAVAILABLE -> ResponseEntity.status(HttpStatus.FORBIDDEN).cacheControl(CacheControl.noStore())
+                    .body(new ApiError("ACCOUNT_PROFILE_UNAVAILABLE",
+                            "Your account is no longer linked to an available customer or dispatcher profile. Contact your administrator.",
+                            servletRequest.getRequestURI()));
+            case INVALID -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).cacheControl(CacheControl.noStore())
+                    .body(new ApiError("SESSION_INVALID",
+                            "Your session has expired or was signed out. Please sign in again.",
+                            servletRequest.getRequestURI()));
+        };
     }
 
     /** Validated account and profile fields accepted by mobile registration. */

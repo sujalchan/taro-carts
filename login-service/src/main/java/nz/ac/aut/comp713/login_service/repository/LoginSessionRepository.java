@@ -20,6 +20,10 @@ public interface LoginSessionRepository extends JpaRepository<LoginSession, Long
     @EntityGraph(attributePaths = "account")
     Optional<LoginSession> findByTokenHashAndRevokedAtIsNull(String tokenHash);
 
+    /** Loads any matching session, including revoked sessions, for mobile sign-in-state explanations. */
+    @EntityGraph(attributePaths = "account")
+    Optional<LoginSession> findByTokenHash(String tokenHash);
+
     /**
      * Revokes all currently live sessions for an account in one database update.
      */

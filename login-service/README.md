@@ -10,7 +10,7 @@ The launcher supplies distinct provisioning, session-validation, and allocation-
 
 Browser login creates a 256-bit opaque `SESSION` cookie and stores only its SHA-256 hash. The cookie is host-only, `HttpOnly`, `SameSite=Lax`, and expires after eight hours by default. Set `LOGIN_COOKIE_SECURE=true` when serving over HTTPS and keep every local service on `localhost` so the cookie can reach services on different ports. `LOGIN_SESSION_LIFETIME` accepts a duration such as `PT8H`. Login and registration forms use a separate CSRF cookie. Repeated failed logins receive a local in-memory backoff; a shared limiter is needed for multiple login-service instances.
 
-The Android app uses `POST /api/v1/mobile/login`, `POST /api/v1/mobile/register/{customer,dispatcher}`, and `POST /api/v1/mobile/logout`. Login returns the same opaque session credential once in JSON; Android encrypts it using an AES key held by Android Keystore. Registration returns an approval-pending receipt and always creates an inactive account/profile. The mobile app does not expose admin account management; admins must use the web app at `/admin/accounts`. These JSON endpoints are intended for the native client, not browser JavaScript, and do not enable cross-origin browser access.
+The Android app uses `POST /api/v1/mobile/login`, `POST /api/v1/mobile/register/{customer,dispatcher}`, `POST /api/v1/mobile/session`, and `POST /api/v1/mobile/logout`. Login returns the same opaque session credential once in JSON; Android encrypts it using an AES key held by Android Keystore. While the app is in the foreground, it checks the saved session every 15 seconds. The session endpoint distinguishes disabled accounts from expired or revoked sessions so Android can clear its local token and explain why sign-in ended. Registration returns an approval-pending receipt and always creates an inactive account/profile. The mobile app does not expose admin account management; admins must use the web app at `/admin/accounts`. These JSON endpoints are intended for the native client, not browser JavaScript, and do not enable cross-origin browser access.
 
 ## Routes and access
 
@@ -19,6 +19,7 @@ The Android app uses `POST /api/v1/mobile/login`, `POST /api/v1/mobile/register/
 | `GET /login`, `GET /register`, `GET /register/{customer,dispatcher}` | allowed | allowed | allowed | allowed |
 | `POST /login` | allowed with CSRF | allowed | allowed if active | allowed if active |
 | `/api/v1/mobile/login` | allowed | allowed | allowed if active | allowed if active |
+| `/api/v1/mobile/session` | checks the supplied session token | allowed | allowed if active | allowed if active |
 | `/api/v1/mobile/register/{customer,dispatcher}` | creates inactive request/account | creates inactive request/account | creates inactive request/account | creates inactive request/account |
 | `/api/v1/mobile/logout` | revokes the supplied mobile session | allowed | allowed | allowed |
 | `GET /logout`, `POST /logout` | login redirect / CSRF-protected sign-out | allowed | allowed | allowed |

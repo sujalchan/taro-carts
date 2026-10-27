@@ -27,6 +27,9 @@ import nz.ac.aut.comp713.login_service.repository.LoginSessionRepository;
 @Service
 public class SessionService {
 
+    /** Outcome of checking whether a mobile app should keep its local sign-in state. */
+    public enum MobileSessionState { VALID, ACCOUNT_DISABLED, PROFILE_UNAVAILABLE, INVALID }
+
     /** Raw token is returned once to the caller; only its hash is persisted. */
     public record IssuedSession(String token, Instant expiresAt) {
     }
@@ -76,6 +79,25 @@ public class SessionService {
             return Optional.empty();
         }
         return session;
+    }
+
+    /** Checks a token while preserving enough state to explain a disabled account to the mobile user. */
+    @Transactional(readOnly = true)
+    public MobileSessionState checkMobileSession(String token) {
+        if (!isTokenShapeValid(token)) return MobileSessionState.INVALID;
+        Optional<LoginSession> found = sessions.findByTokenHash(hash(token));
+        if (found.isEmpty()) return MobileSessionState.INVALID;
+
+        LoginSession session = found.get();
+        Account account = session.getAccount();
+        if (!account.isActive()) return MobileSessionState.ACCOUNT_DISABLED;
+        if (session.getRevokedAt() != null || !session.getExpiresAt().isAfter(Instant.now())) {
+            return MobileSessionState.INVALID;
+        }
+        if (account.getRole() != AccountRole.ADMIN && account.getProfileId() == null) {
+            return MobileSessionState.PROFILE_UNAVAILABLE;
+        }
+        return MobileSessionState.VALID;
     }
 
     /**
