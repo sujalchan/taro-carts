@@ -54,7 +54,10 @@ import java.util.Locale
 fun DispatcherScreen(
     modifier: Modifier = Modifier,
     username: String = "",
+    sessionToken: String = "",
     onSignOut: suspend () -> Unit = {},
+    onSessionEnded: (String) -> Unit = {},
+    serviceNotice: String? = null,
     onAccountSelected: (Boolean) -> Unit = {}
 ) {
     var dispatchers by remember { mutableStateOf<List<Dispatcher>>(emptyList()) }
@@ -69,6 +72,7 @@ fun DispatcherScreen(
     var deliveriesRefresh by remember { mutableStateOf(0) }
     var updatingDeliveryId by remember { mutableStateOf<Long?>(null) }
     var updateError by remember { mutableStateOf<String?>(null) }
+    var changingPassword by rememberSaveable { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -108,6 +112,15 @@ fun DispatcherScreen(
         }
     }
 
+    if (changingPassword) {
+        ChangePasswordScreen(
+            sessionToken = sessionToken,
+            onBack = { changingPassword = false },
+            onSessionEnded = onSessionEnded
+        )
+        return
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = true,
@@ -116,7 +129,13 @@ fun DispatcherScreen(
                 title = "Dispatcher portal",
                 username = username,
                 role = "Dispatcher",
-                onSignOut = onSignOut
+                onSignOut = onSignOut,
+                onChangePassword = {
+                    scope.launch {
+                        drawerState.close()
+                        changingPassword = true
+                    }
+                }
             )
         }
     ) {
@@ -143,6 +162,13 @@ fun DispatcherScreen(
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
+            if (serviceNotice != null) {
+                Card(colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                    Text(serviceNotice, modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer)
+                }
+            }
             if (selectedId == null) {
                 when {
                     loadingDispatchers -> CircularProgressIndicator(Modifier.padding(top = 20.dp))

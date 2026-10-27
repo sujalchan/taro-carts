@@ -8,11 +8,34 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import nz.ac.aut.comp713.dispatcher_service.service.PortalServiceUnavailableException;
 
 import nz.ac.aut.comp713.dispatcher_service.dto.ApiError;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(PortalServiceUnavailableException.class)
+    public ResponseEntity<ApiError> status(PortalServiceUnavailableException ex, HttpServletRequest request) {
+            String reason = ex.getReason();
+            String code = switch (reason == null ? "" : reason) {
+                case "Allocation Service is unavailable." -> "ALLOCATION_SERVICE_UNAVAILABLE";
+                case "Customer Service is unavailable." -> "CUSTOMER_SERVICE_UNAVAILABLE";
+                case "Dispatcher Service is unavailable." -> "DISPATCHER_SERVICE_UNAVAILABLE";
+                case "Taro Service is unavailable." -> "TARO_SERVICE_UNAVAILABLE";
+                case "Login Service is unavailable." -> "LOGIN_SERVICE_UNAVAILABLE";
+                default -> "DISPATCHER_SERVICE_UNAVAILABLE";
+            };
+            String message = switch (code) {
+                case "ALLOCATION_SERVICE_UNAVAILABLE" -> "Allocation Service is unavailable.";
+                case "CUSTOMER_SERVICE_UNAVAILABLE" -> "Customer Service is unavailable.";
+                case "TARO_SERVICE_UNAVAILABLE" -> "Taro Service is unavailable.";
+                case "LOGIN_SERVICE_UNAVAILABLE" -> "Login Service is unavailable.";
+                default -> "Dispatcher Service is unavailable.";
+            };
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(new ApiError(code, message, request.getRequestURI()));
+    }
+
     @ExceptionHandler(DispatcherAlreadyExistsException.class)
     public ResponseEntity<ApiError> duplicate(DispatcherAlreadyExistsException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

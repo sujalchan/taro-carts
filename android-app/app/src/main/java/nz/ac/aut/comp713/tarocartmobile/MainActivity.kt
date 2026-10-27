@@ -101,6 +101,7 @@ private fun TaroCartApp() {
     var account by remember { mutableStateOf(savedSession?.first) }
     var sessionToken by remember { mutableStateOf(savedSession?.second) }
     var signInMessage by remember { mutableStateOf<String?>(null) }
+    var serviceNotice by remember { mutableStateOf<String?>(null) }
     val lifecycleOwner = context as? LifecycleOwner
     remember { AllocationApi.setSessionToken(sessionToken) }
 
@@ -112,6 +113,7 @@ private fun TaroCartApp() {
             if (appIsVisible) {
                 try {
                     MobileAuthApi.checkSession(token)
+                    serviceNotice = null
                 } catch (exception: CancellationException) {
                     throw exception
                 } catch (exception: MobileApiException) {
@@ -122,11 +124,17 @@ private fun TaroCartApp() {
                         AllocationApi.setSessionToken(null)
                         account = null
                         sessionToken = null
+                        serviceNotice = null
                         signInMessage = exception.message
                         return@LaunchedEffect
                     }
-                } catch (_: IOException) {
-                    // A network outage is temporary; keep the session and retry when the app is visible.
+                    if (exception.statusCode in setOf(502, 503, 504)) {
+                        serviceNotice = exception.message
+                    }
+                } catch (exception: IOException) {
+                    // Keep the session during a temporary outage and show which service is unreachable.
+                    serviceNotice = MobileAuthApi.userFacingMessage(exception,
+                        "Cannot reach Login Service. Try again shortly.")
                 }
             }
             delay(15_000)
@@ -148,15 +156,29 @@ private fun TaroCartApp() {
             AllocationApi.setSessionToken(null)
             account = null
             sessionToken = null
+            serviceNotice = null
         }
+    }
+
+    val endSession: (String) -> Unit = { message ->
+        store.clear()
+        AllocationApi.setSessionToken(null)
+        account = null
+        sessionToken = null
+        serviceNotice = null
+        signInMessage = message
     }
 
     when (account?.role) {
         "CUSTOMER", "DISPATCHER" -> {
             if (account?.role == "CUSTOMER") {
-                AllocationsScreen(username = account?.username.orEmpty(), onSignOut = signOut)
+                AllocationsScreen(username = account?.username.orEmpty(),
+                    sessionToken = sessionToken.orEmpty(), onSignOut = signOut,
+                    onSessionEnded = endSession, serviceNotice = serviceNotice)
             } else {
-                DispatcherScreen(username = account?.username.orEmpty(), onSignOut = signOut)
+                DispatcherScreen(username = account?.username.orEmpty(),
+                    sessionToken = sessionToken.orEmpty(), onSignOut = signOut,
+                    onSessionEnded = endSession, serviceNotice = serviceNotice)
             }
         }
         else -> MobileAuthScreen(
@@ -167,6 +189,7 @@ private fun TaroCartApp() {
                 AllocationApi.setSessionToken(token)
                 account = signedInAccount
                 sessionToken = token
+                serviceNotice = null
                 signInMessage = null
             },
             onSignOut = signOut

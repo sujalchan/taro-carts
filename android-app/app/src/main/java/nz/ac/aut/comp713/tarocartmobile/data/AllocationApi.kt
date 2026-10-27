@@ -15,6 +15,12 @@ private const val API_BASE_URL = "http://10.0.2.2:8082"
 private const val CUSTOMER_API_BASE_URL = "http://10.0.2.2:8081"
 private const val DISPATCHER_API_BASE_URL = "http://10.0.2.2:8084"
 
+private fun serviceFor(baseUrl: String): BackendService = when (baseUrl) {
+    CUSTOMER_API_BASE_URL -> BackendService.CUSTOMER
+    DISPATCHER_API_BASE_URL -> BackendService.DISPATCHER
+    else -> BackendService.ALLOCATION
+}
+
 // lightweight models used to exchange customer, product, and allocation data with the ui
 data class Customer(
     val id: Long,
@@ -99,23 +105,49 @@ object AllocationApi {
             setRequestProperty("Cookie", sessionCookie(CUSTOMER_API_BASE_URL))
         }
         var file: File? = null
+        var receivingResponse = true
         try {
             val status = connection.responseCode
             if (status !in 200..299) {
                 val body = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                val message = runCatching { JSONObject(body).optString("message") }.getOrNull()
-                throw IOException(message?.takeIf { it.isNotBlank() } ?: "Invoice request failed (HTTP $status).")
+                val error = runCatching { JSONObject(body) }.getOrNull()
+                throw BackendResponseException(ServiceErrors.http(BackendService.CUSTOMER, status,
+                    error?.optString("code").orEmpty(),
+                    error?.optString("message")?.takeIf { it.isNotBlank() }
+                        ?: error?.optString("error").orEmpty()))
             }
             if (!connection.contentType.orEmpty().startsWith("application/pdf", ignoreCase = true)) {
-                throw IOException("The server did not return a PDF invoice.")
+                throw BackendResponseException("The server did not return a PDF invoice.")
             }
+            receivingResponse = false
             val invoiceFile = File.createTempFile("invoice-$allocationId-", ".pdf", cacheDir)
             file = invoiceFile
-            connection.inputStream.use { input -> invoiceFile.outputStream().use { output -> input.copyTo(output) } }
-            if (invoiceFile.length() == 0L) throw IOException("The invoice PDF is empty.")
+            val invoiceStream = try {
+                connection.inputStream
+            } catch (exception: IOException) {
+                throw ServiceErrors.network(BackendService.CUSTOMER, exception)
+            }
+            invoiceStream.use { input ->
+                invoiceFile.outputStream().use { output ->
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val count = try {
+                            input.read(buffer)
+                        } catch (exception: IOException) {
+                            throw ServiceErrors.network(BackendService.CUSTOMER, exception)
+                        }
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            if (invoiceFile.length() == 0L) throw BackendResponseException("The invoice PDF is empty.")
             invoiceFile
         } catch (exception: Exception) {
             file?.delete()
+            if (receivingResponse && exception is IOException && exception !is BackendResponseException) {
+                throw ServiceErrors.network(BackendService.CUSTOMER, exception)
+            }
             throw exception
         } finally {
             connection.disconnect()
@@ -277,15 +309,16 @@ object AllocationApi {
                 ?.use { it.readText() }
                 .orEmpty()
             if (status !in 200..299) {
-                val serverMessage = runCatching { JSONObject(body).optString("message") }.getOrNull()
-                throw IOException(serverMessage?.takeIf { it.isNotBlank() } ?: "Request failed (HTTP $status).")
+                val error = runCatching { JSONObject(body) }.getOrNull()
+                throw BackendResponseException(ServiceErrors.http(serviceFor(baseUrl), status,
+                    error?.optString("code").orEmpty(),
+                    error?.optString("message")?.takeIf { it.isNotBlank() }
+                        ?: error?.optString("error").orEmpty()))
             }
             body
         } catch (exception: IOException) {
-            if (exception.message?.startsWith("CLEARTEXT") == true) {
-                throw IOException("HTTP traffic is blocked. Check the app network configuration.", exception)
-            }
-            throw exception
+            if (exception is BackendResponseException) throw exception
+            throw ServiceErrors.network(serviceFor(baseUrl), exception)
         } finally {
             connection.disconnect()
         }

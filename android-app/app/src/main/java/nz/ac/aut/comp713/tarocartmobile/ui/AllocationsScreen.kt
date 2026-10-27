@@ -61,7 +61,10 @@ import java.util.Locale
 fun AllocationsScreen(
     modifier: Modifier = Modifier,
     username: String = "",
+    sessionToken: String = "",
     onSignOut: suspend () -> Unit = {},
+    onSessionEnded: (String) -> Unit = {},
+    serviceNotice: String? = null,
     onAccountSelected: (Boolean) -> Unit = {}
 ) {
     var customers by remember { mutableStateOf<List<Customer>>(emptyList()) }
@@ -82,6 +85,7 @@ fun AllocationsScreen(
     var viewedInvoiceId by remember { mutableStateOf<Long?>(null) }
     var requesting by remember { mutableStateOf(false) }
     var editingCustomer by rememberSaveable { mutableStateOf(false) }
+    var changingPassword by rememberSaveable { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<Allocation?>(null) }
     var deleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
@@ -177,6 +181,15 @@ fun AllocationsScreen(
                 }
                 editingCustomer = false
             }
+        )
+        return
+    }
+
+    if (changingPassword) {
+        ChangePasswordScreen(
+            sessionToken = sessionToken,
+            onBack = { changingPassword = false },
+            onSessionEnded = onSessionEnded
         )
         return
     }
@@ -281,6 +294,12 @@ fun AllocationsScreen(
                         drawerState.close()
                         editingCustomer = true
                     }
+                },
+                onChangePassword = {
+                    scope.launch {
+                        drawerState.close()
+                        changingPassword = true
+                    }
                 }
             )
         }
@@ -312,6 +331,15 @@ fun AllocationsScreen(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                if (serviceNotice != null) {
+                    item {
+                        Card(colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                            Text(serviceNotice, modifier = Modifier.padding(16.dp),
+                                color = MaterialTheme.colorScheme.onErrorContainer)
+                        }
+                    }
+                }
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Your account · ${customer.name}", style = MaterialTheme.typography.titleMedium)
