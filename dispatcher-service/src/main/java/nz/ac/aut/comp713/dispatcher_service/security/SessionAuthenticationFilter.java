@@ -36,7 +36,7 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
     private static final String PROVISIONING_ROOT = "/internal/v1/dispatchers";
     private static final String CSRF_COOKIE = "DISPATCHER_CSRF";
     private static final Set<String> LANDING_PATHS = Set.of("/", "/dispatchers", "/dispatchers-client.html",
-            "/portal/deliveries");
+            "/portal/deliveries", "/portal/profile");
 
     private final LoginClient login;
     private final String loginPageUrl;
@@ -106,11 +106,14 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
         }
         request.setAttribute(PRINCIPAL_ATTRIBUTE, principal);
 
-        boolean dispatcherPortal = path.equals("/portal/deliveries")
+        boolean dispatcherPortal = path.equals("/portal/profile")
+                || path.equals("/portal/password")
+                || path.equals("/portal/deliveries")
                 || path.startsWith("/portal/deliveries/")
                 || path.startsWith("/api/v1/mobile/portal/");
         boolean portalAsset = "GET".equals(request.getMethod())
-                && (path.equals("/css/style.css") || path.equals("/js/service-navigation.js"));
+                && (path.equals("/css/style.css") || path.equals("/js/service-navigation.js")
+                || path.equals("/js/address-autocomplete.js") || path.equals("/images/google-maps-logo.svg"));
         if (!"ADMIN".equals(principal.role())
                 && !("DISPATCHER".equals(principal.role()) && (dispatcherPortal || portalAsset))) {
             deny(request, response, HttpServletResponse.SC_FORBIDDEN, "Access denied");

@@ -11,6 +11,7 @@ const navigationLinks = {
     ],
     customer: [
         ["My allocations", "http://localhost:8081/portal/allocations"],
+        ["My Account", "http://localhost:8081/portal/profile"],
         ["Sign out", "http://localhost:8085/logout"]
     ],
     dispatcher: [

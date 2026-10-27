@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Account · Taro Carts</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="/js/service-navigation.js"></script>
+    <script defer src="/js/address-autocomplete.js"></script>
+</head>
+<body class="page-form portal-page">
+<nav class="app-nav" aria-label="Portal navigation" data-nav-role="dispatcher">
+    <a class="app-nav__brand" href="/portal/deliveries">Taro Carts</a>
+    <div class="app-nav__links">
+        <a href="/portal/deliveries">Deliveries</a>
+        <a href="/portal/profile" aria-current="page">My Account</a>
+        <a href="http://localhost:8085/logout">Sign out</a>
+    </div>
+</nav>
+<main>
+    <p class="portal-eyebrow">Dispatcher portal</p>
+    <h1>My Account</h1>
+    <p class="portal-intro">Update the information attached to your dispatcher account.</p>
+    <div class="error-message" role="alert" th:if="${errors != null and !errors.isEmpty()}">
+        <strong>Unable to save your profile:</strong>
+        <ul><li th:each="error : ${errors}" th:text="${error}">Error message</li></ul>
+    </div>
+    <form th:action="@{/portal/profile}" method="post" autocomplete="off">
+        <input type="hidden" name="csrf" th:value="${csrfToken}">
+        <div>
+            <label for="name">Dispatcher name</label>
+            <input type="text" id="name" name="name" maxlength="100" required th:value="${name}">
+        </div>
+        <div>
+            <label for="contactName">Contact</label>
+            <input type="text" id="contactName" name="contactName" maxlength="100" th:value="${contactName}">
+        </div>
+        <div>
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" name="phone" autocomplete="tel" pattern="\+?[0-9]{7,15}"
+                   title="Enter 7 to 15 digits, optionally starting with +" th:value="${phone}">
+        </div>
+        <div>
+            <label for="address">Address</label>
+            <div class="address-field">
+                <input type="text" id="address" name="address" maxlength="500" required th:value="${address}"
+                       th:attr="data-existing-address=${errors == null and address != null and !#strings.isEmpty(address)}"
+                       placeholder="Search and select a New Zealand address" autocomplete="off" role="combobox"
+                       aria-autocomplete="list" aria-controls="addressSuggestions" aria-expanded="false">
+                <div id="addressAutocomplete" class="address-suggestions" hidden>
+                    <div id="addressSuggestions" role="listbox" aria-label="Suggested addresses"></div>
+                    <div class="address-attribution"><img src="/images/google-maps-logo.svg" alt="Google Maps"></div>
+                </div>
+            </div>
+            <p id="addressAutocompleteStatus" class="form-hint" role="status" aria-live="polite"></p>
+        </div>
+        <button type="submit">Save changes</button>
+        <a href="/portal/deliveries">Cancel</a>
+    </form>
+    <section aria-labelledby="account-settings-title">
+        <h2 id="account-settings-title">Settings</h2>
+        <p>Change your sign-in password. Changing it signs out all sessions for your account.</p>
+        <div class="error-message" role="alert" th:if="${passwordError != null}" th:text="${passwordError}">
+            Password could not be changed.
+        </div>
+        <form th:action="@{/portal/password}" method="post" autocomplete="off">
+            <input type="hidden" name="csrf" th:value="${csrfToken}">
+            <div>
+                <label for="currentPassword">Current password</label>
+                <input type="password" id="currentPassword" name="currentPassword"
+                       autocomplete="current-password" required>
+            </div>
+            <div>
+                <label for="newPassword">New password</label>
+                <input type="password" id="newPassword" name="newPassword" autocomplete="new-password"
+                       minlength="12" maxlength="72" required>
+            </div>
+            <div>
+                <label for="confirmPassword">Confirm new password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password"
+                       minlength="12" maxlength="72" required>
+            </div>
+            <button type="submit">Change password</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

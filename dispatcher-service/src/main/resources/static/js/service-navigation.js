@@ -15,6 +15,7 @@ const navigationLinks = {
     ],
     dispatcher: [
         ["My deliveries", "http://localhost:8084/portal/deliveries"],
+        ["My Account", "http://localhost:8084/portal/profile"],
         ["Sign out", "http://localhost:8085/logout"]
     ]
 };

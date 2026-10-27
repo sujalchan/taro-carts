@@ -16,6 +16,8 @@ servers:
 tags:
   - name: Mobile authentication
     description: JSON sign-in, registration, and sign-out for the Android app
+  - name: Account settings
+    description: Authenticated password changes for web portal accounts
   - name: Google Places configuration
     description: Public browser configuration for address autocomplete
   - name: Internal sessions
@@ -265,6 +267,58 @@ paths:
                     code: VALIDATION_ERROR
                     message: Session token is required.
                     path: /api/v1/mobile/logout
+        "500":
+          $ref: "#/components/responses/UnexpectedError"
+
+  /api/v1/account/password:
+    post:
+      tags: [Account settings]
+      summary: Change the password for the account owning a session
+      operationId: changeAccountPassword
+      description: >-
+        Used by the customer and dispatcher web portal password settings forms
+        through their same-origin CSRF-protected form handlers. The session token
+        identifies the account; a successful change invalidates all of its sessions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountPasswordChangeRequest"
+            example:
+              sessionToken: eyJhbGciOiJIUzI1NiJ9.example-token
+              currentPassword: current-password-value
+              newPassword: new-secure-password-value
+              confirmPassword: new-secure-password-value
+      responses:
+        "204":
+          description: Password changed and all account sessions revoked.
+          headers:
+            Cache-Control:
+              description: Password change responses are not stored by caches.
+              schema:
+                type: string
+              example: no-store
+        "400":
+          description: The current password is incorrect, the new password violates policy, or confirmation differs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: BAD_REQUEST
+                message: Password was not changed. Check your current password and make sure both new password entries match.
+                path: /api/v1/account/password
+        "401":
+          description: The session token is expired, revoked, or unrecognized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: UNAUTHORIZED
+                message: Your session has expired. Sign in again before changing your password.
+                path: /api/v1/account/password
         "500":
           $ref: "#/components/responses/UnexpectedError"
 
@@ -619,6 +673,28 @@ components:
           pattern: '\S'
           description: Opaque session token whose account and expiry state should be checked.
           example: eyJhbGciOiJIUzI1NiJ9.example-token
+
+    AccountPasswordChangeRequest:
+      type: object
+      required: [sessionToken, currentPassword, newPassword, confirmPassword]
+      properties:
+        sessionToken:
+          type: string
+          description: Opaque session token for the account changing its password.
+          example: eyJhbGciOiJIUzI1NiJ9.example-token
+        currentPassword:
+          type: string
+          format: password
+          minLength: 1
+        newPassword:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 72
+        confirmPassword:
+          type: string
+          format: password
+          minLength: 1
 
     GooglePlacesConfigResponse:
       type: object

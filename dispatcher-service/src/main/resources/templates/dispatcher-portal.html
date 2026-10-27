@@ -12,6 +12,7 @@
     <a class="app-nav__brand" href="/portal/deliveries">Taro Carts</a>
     <div class="app-nav__links">
         <a href="/portal/deliveries" aria-current="page">Deliveries</a>
+        <a th:if="${!admin}" href="/portal/profile">My Account</a>
         <a href="http://localhost:8085/logout">Sign out</a>
         <a th:if="${admin}" href="http://localhost:8085/admin/accounts">Admin accounts</a>
     </div>

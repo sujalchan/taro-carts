@@ -8,7 +8,7 @@
 
     const form = address.form;
     const addressField = address.closest(".address-field");
-    const editingExistingAddress = location.pathname.includes("edit");
+    const editingExistingAddress = address.dataset.existingAddress === "true" || location.pathname.includes("edit");
     let hasVerifiedAddress = editingExistingAddress && address.value.trim().length > 0;
 
     address.addEventListener("input", () => {

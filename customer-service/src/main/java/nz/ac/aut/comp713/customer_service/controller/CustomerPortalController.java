@@ -4,8 +4,12 @@ import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.List;
 
+import jakarta.validation.Validator;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Validation;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,7 +27,10 @@ import org.springframework.web.server.ResponseStatusException;
 import nz.ac.aut.comp713.customer_service.security.LoginClient;
 import nz.ac.aut.comp713.customer_service.security.SessionAuthenticationFilter;
 import nz.ac.aut.comp713.customer_service.exception.CustomerNotFoundException;
+import nz.ac.aut.comp713.customer_service.exception.CustomerAlreadyExistsException;
+import nz.ac.aut.comp713.customer_service.dto.CustomerRequest;
 import nz.ac.aut.comp713.customer_service.service.CustomerService;
+import nz.ac.aut.comp713.customer_service.service.AccountPasswordClient;
 import nz.ac.aut.comp713.customer_service.service.PortalAllocationClient;
 
 /** Role-specific customer pages. Browser IDs select an admin view but never identify the acting customer. */
@@ -32,10 +39,78 @@ import nz.ac.aut.comp713.customer_service.service.PortalAllocationClient;
 public class CustomerPortalController {
     private final CustomerService customers;
     private final PortalAllocationClient allocations;
+    private final Validator validator;
+    private final AccountPasswordClient passwords;
+
+    @Autowired
+    public CustomerPortalController(CustomerService customers, PortalAllocationClient allocations, Validator validator,
+                                    AccountPasswordClient passwords) {
+        this.customers = customers;
+        this.allocations = allocations;
+        this.validator = validator;
+        this.passwords = passwords;
+    }
 
     public CustomerPortalController(CustomerService customers, PortalAllocationClient allocations) {
         this.customers = customers;
         this.allocations = allocations;
+        this.validator = Validation.buildDefaultValidatorFactory().getValidator();
+        this.passwords = null;
+    }
+
+    @GetMapping("/portal/profile")
+    public String profile(HttpServletRequest request, Model model) {
+        var principal = customerPrincipal(request);
+        var customer = customers.getCustomerById(principal.profileId());
+        addProfileValues(model, customer.name(), customer.address(), customer.contactName(), customer.phone());
+        model.addAttribute("username", principal.username());
+        return "customer-profile";
+    }
+
+    @PostMapping("/portal/profile")
+    public String updateProfile(@RequestParam(required = false) String name,
+                                @RequestParam(required = false) String address,
+                                @RequestParam(required = false) String contactName,
+                                @RequestParam(required = false) String phone,
+                                HttpServletRequest request, Model model) {
+        var principal = customerPrincipal(request);
+        var update = new CustomerRequest(name, address, contactName, phone, null);
+        var errors = validator.validate(update).stream().map(violation -> violation.getMessage()).toList();
+        if (!errors.isEmpty()) {
+            addProfileValues(model, name, address, contactName, phone);
+            model.addAttribute("username", principal.username());
+            model.addAttribute("errors", errors);
+            return "customer-profile";
+        }
+        try {
+            customers.updateCustomer(principal.profileId(), update);
+        } catch (CustomerAlreadyExistsException exception) {
+            addProfileValues(model, name, address, contactName, phone);
+            model.addAttribute("username", principal.username());
+            model.addAttribute("errors", List.of(exception.getMessage()));
+            return "customer-profile";
+        }
+        return "redirect:/portal/allocations";
+    }
+
+    @PostMapping("/portal/password")
+    public String updatePassword(@RequestParam String currentPassword,
+                                 @RequestParam String newPassword,
+                                 @RequestParam String confirmPassword,
+                                 @org.springframework.web.bind.annotation.CookieValue(value = "SESSION", required = false)
+                                         String sessionToken,
+                                 HttpServletRequest request, Model model) {
+        var principal = customerPrincipal(request);
+        try {
+            passwords.change(sessionToken, currentPassword, newPassword, confirmPassword);
+            return "redirect:" + passwords.loginUrl() + "/login?passwordChanged=1";
+        } catch (ResponseStatusException exception) {
+            var customer = customers.getCustomerById(principal.profileId());
+            addProfileValues(model, customer.name(), customer.address(), customer.contactName(), customer.phone());
+            model.addAttribute("username", principal.username());
+            model.addAttribute("passwordError", exception.getReason());
+            return "customer-profile";
+        }
     }
 
     @GetMapping("/portal/allocations")
@@ -188,6 +263,21 @@ public class CustomerPortalController {
         Object value = request.getAttribute(SessionAuthenticationFilter.PRINCIPAL_ATTRIBUTE);
         if (value instanceof LoginClient.SessionPrincipal principal && principal.active()) return principal;
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+    }
+
+    private LoginClient.SessionPrincipal customerPrincipal(HttpServletRequest request) {
+        var principal = principal(request);
+        if (!"CUSTOMER".equals(principal.role()) || principal.profileId() == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        return principal;
+    }
+
+    private void addProfileValues(Model model, String name, String address, String contactName, String phone) {
+        model.addAttribute("name", name);
+        model.addAttribute("address", address);
+        model.addAttribute("contactName", contactName);
+        model.addAttribute("phone", phone);
     }
 
     private String requestError(HttpServletRequest request, Model model, LocalDate weekStart, String message) {
