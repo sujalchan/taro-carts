@@ -224,8 +224,8 @@ object AllocationApi {
         id = getLong("id"),
         name = optString("name", "Customer"),
         address = optString("address", ""),
-        contactName = optString("contactName", ""),
-        phone = optString("phone", ""),
+        contactName = if (isNull("contactName")) "" else optString("contactName", ""),
+        phone = if (isNull("phone")) "" else optString("phone", ""),
         active = optBoolean("active", true)
     )
 
