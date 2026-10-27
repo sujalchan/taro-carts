@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -92,6 +93,8 @@ fun AllocationsScreen(
     var payTarget by remember { mutableStateOf<Allocation?>(null) }
     var paying by remember { mutableStateOf(false) }
     var paymentError by remember { mutableStateOf<String?>(null) }
+    var signingOutFromError by remember { mutableStateOf(false) }
+    var signOutErrorFromError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     // tracks whether the customer actions drawer is open or closed
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -134,15 +137,84 @@ fun AllocationsScreen(
                 )
             }
     }
+    if (changingPassword) {
+        ChangePasswordScreen(
+            sessionToken = sessionToken,
+            onBack = { changingPassword = false },
+            onSessionEnded = onSessionEnded
+        )
+        return
+    }
     if (customer == null) {
-        Column(modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            if (loadingCustomers) CircularProgressIndicator()
-            else {
-                Text(customersError ?: "No customer profile is linked to this account.",
-                    color = MaterialTheme.colorScheme.error)
-                Button(onClick = { customerRefreshKey++ }, modifier = Modifier.padding(top = 12.dp)) {
-                    Text("Try again")
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                PortalDrawerContent(
+                    title = "Customer portal",
+                    username = username,
+                    role = "Customer",
+                    onSignOut = onSignOut,
+                    onChangePassword = {
+                        scope.launch {
+                            drawerState.close()
+                            changingPassword = true
+                        }
+                    }
+                )
+            }
+        ) {
+            Scaffold(
+                modifier = modifier,
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Customer portal") },
+                        navigationIcon = {
+                            TextButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Text("Back to menu")
+                            }
+                        }
+                    )
+                }
+            ) { contentPadding ->
+                Column(modifier.fillMaxSize().padding(contentPadding).padding(24.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (loadingCustomers) CircularProgressIndicator()
+                    else {
+                        Text(customersError ?: "No customer profile is linked to this account.",
+                            color = MaterialTheme.colorScheme.error)
+                        Button(onClick = { customerRefreshKey++ }, modifier = Modifier.padding(top = 12.dp)) {
+                            Text("Try again")
+                        }
+                        OutlinedButton(
+                            enabled = !signingOutFromError,
+                            onClick = {
+                                signOutErrorFromError = null
+                                signingOutFromError = true
+                                scope.launch {
+                                    try {
+                                        onSignOut()
+                                    } catch (exception: CancellationException) {
+                                        throw exception
+                                    } catch (exception: Exception) {
+                                        signOutErrorFromError = exception.message
+                                            ?: "Could not sign out. Please try again."
+                                    } finally {
+                                        signingOutFromError = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.padding(top = 8.dp)
+                        ) {
+                            if (signingOutFromError) CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            else Text("Sign out")
+                        }
+                        signOutErrorFromError?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(top = 8.dp))
+                        }
+                    }
                 }
             }
         }
@@ -181,15 +253,6 @@ fun AllocationsScreen(
                 }
                 editingCustomer = false
             }
-        )
-        return
-    }
-
-    if (changingPassword) {
-        ChangePasswordScreen(
-            sessionToken = sessionToken,
-            onBack = { changingPassword = false },
-            onSessionEnded = onSessionEnded
         )
         return
     }
