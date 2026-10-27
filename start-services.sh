@@ -19,10 +19,32 @@ secret_names=(
     ALLOCATION_TARO_REFERENCE_SECRET
     ALLOCATION_CUSTOMER_ASSERTION_SECRET ALLOCATION_DISPATCHER_ASSERTION_SECRET
 )
-declare -A service_secrets
+service_secret_values=()
 for secret_name in "${secret_names[@]}"; do
-    service_secrets[$secret_name]="${!secret_name:-}"
+    service_secret_values+=("${!secret_name:-}")
 done
+
+secret_index() {
+    local target="$1"
+    local index
+    for ((index = 0; index < ${#secret_names[@]}; index++)); do
+        if [[ "${secret_names[$index]}" == "$target" ]]; then
+            printf '%s' "$index"
+            return 0
+        fi
+    done
+    return 1
+}
+
+customer_validation_index="$(secret_index LOGIN_CUSTOMER_VALIDATION_SECRET)"
+dispatcher_validation_index="$(secret_index LOGIN_DISPATCHER_VALIDATION_SECRET)"
+allocation_validation_index="$(secret_index LOGIN_ALLOCATION_VALIDATION_SECRET)"
+taro_validation_index="$(secret_index LOGIN_TARO_VALIDATION_SECRET)"
+customer_reference_index="$(secret_index ALLOCATION_CUSTOMER_REFERENCE_SECRET)"
+dispatcher_reference_index="$(secret_index ALLOCATION_DISPATCHER_REFERENCE_SECRET)"
+taro_reference_index="$(secret_index ALLOCATION_TARO_REFERENCE_SECRET)"
+customer_assertion_index="$(secret_index ALLOCATION_CUSTOMER_ASSERTION_SECRET)"
+dispatcher_assertion_index="$(secret_index ALLOCATION_DISPATCHER_ASSERTION_SECRET)"
 if [[ -f "$ROOT_DIR/.env" ]]; then
     while IFS= read -r line || [[ -n "$line" ]]; do
         if [[ -z "$browser_places_api_key" && "$line" == GOOGLE_MAPS_BROWSER_API_KEY=* ]]; then
@@ -50,9 +72,10 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
             dispatcher_provisioning_secret="${dispatcher_provisioning_secret%$'\r'}"
         fi
         for secret_name in "${secret_names[@]}"; do
-            if [[ -z "${service_secrets[$secret_name]}" && "$line" == "$secret_name="* ]]; then
-                service_secrets[$secret_name]="${line#*=}"
-                service_secrets[$secret_name]="${service_secrets[$secret_name]%$'\r'}"
+            secret_index_value="$(secret_index "$secret_name")"
+            if [[ -z "${service_secret_values[$secret_index_value]}" && "$line" == "$secret_name="* ]]; then
+                service_secret_values[$secret_index_value]="${line#*=}"
+                service_secret_values[$secret_index_value]="${service_secret_values[$secret_index_value]%$'\r'}"
             fi
         done
     done < "$ROOT_DIR/.env"
@@ -72,21 +95,22 @@ if [[ "$customer_provisioning_secret" == "$dispatcher_provisioning_secret" ]]; t
     exit 1
 fi
 all_secrets=("$customer_provisioning_secret" "$dispatcher_provisioning_secret")
-for secret_name in "${secret_names[@]}"; do
-    if [[ -z "${service_secrets[$secret_name]}" ]]; then
-        service_secrets[$secret_name]="$(openssl rand -hex 32)"
+for secret_index_value in "${!secret_names[@]}"; do
+    secret_name="${secret_names[$secret_index_value]}"
+    if [[ -z "${service_secret_values[$secret_index_value]}" ]]; then
+        service_secret_values[$secret_index_value]="$(openssl rand -hex 32)"
     fi
-    if [[ ${#service_secrets[$secret_name]} -lt 32 ]]; then
+    if [[ ${#service_secret_values[$secret_index_value]} -lt 32 ]]; then
         printf '%s must contain at least 32 characters.\n' "$secret_name" >&2
         exit 1
     fi
     for existing_secret in "${all_secrets[@]}"; do
-        if [[ "${service_secrets[$secret_name]}" == "$existing_secret" ]]; then
+        if [[ "${service_secret_values[$secret_index_value]}" == "$existing_secret" ]]; then
             printf 'All internal service secrets must be different.\n' >&2
             exit 1
         fi
     done
-    all_secrets+=("${service_secrets[$secret_name]}")
+    all_secrets+=("${service_secret_values[$secret_index_value]}")
 done
 unset GOOGLE_MAPS_BROWSER_API_KEY
 export LOGIN_SERVICE_URL="$login_service_url"
@@ -118,31 +142,32 @@ start_service() {
             export LOGIN_DISPATCHER_PROVISIONING_SECRET="$dispatcher_provisioning_secret"
         fi
         if [[ "$directory" == "login-service" ]]; then
-            for secret_name in LOGIN_CUSTOMER_VALIDATION_SECRET LOGIN_DISPATCHER_VALIDATION_SECRET LOGIN_ALLOCATION_VALIDATION_SECRET LOGIN_TARO_VALIDATION_SECRET; do
-                export "$secret_name=${service_secrets[$secret_name]}"
-            done
+            export LOGIN_CUSTOMER_VALIDATION_SECRET="${service_secret_values[$customer_validation_index]}"
+            export LOGIN_DISPATCHER_VALIDATION_SECRET="${service_secret_values[$dispatcher_validation_index]}"
+            export LOGIN_ALLOCATION_VALIDATION_SECRET="${service_secret_values[$allocation_validation_index]}"
+            export LOGIN_TARO_VALIDATION_SECRET="${service_secret_values[$taro_validation_index]}"
         fi
         if [[ "$directory" == "customer-service" ]]; then
-            export LOGIN_CUSTOMER_VALIDATION_SECRET="${service_secrets[LOGIN_CUSTOMER_VALIDATION_SECRET]}"
-            export ALLOCATION_CUSTOMER_REFERENCE_SECRET="${service_secrets[ALLOCATION_CUSTOMER_REFERENCE_SECRET]}"
-            export ALLOCATION_CUSTOMER_ASSERTION_SECRET="${service_secrets[ALLOCATION_CUSTOMER_ASSERTION_SECRET]}"
+            export LOGIN_CUSTOMER_VALIDATION_SECRET="${service_secret_values[$customer_validation_index]}"
+            export ALLOCATION_CUSTOMER_REFERENCE_SECRET="${service_secret_values[$customer_reference_index]}"
+            export ALLOCATION_CUSTOMER_ASSERTION_SECRET="${service_secret_values[$customer_assertion_index]}"
         fi
         if [[ "$directory" == "dispatcher-service" ]]; then
-            export LOGIN_DISPATCHER_VALIDATION_SECRET="${service_secrets[LOGIN_DISPATCHER_VALIDATION_SECRET]}"
-            export ALLOCATION_DISPATCHER_REFERENCE_SECRET="${service_secrets[ALLOCATION_DISPATCHER_REFERENCE_SECRET]}"
-            export ALLOCATION_DISPATCHER_ASSERTION_SECRET="${service_secrets[ALLOCATION_DISPATCHER_ASSERTION_SECRET]}"
+            export LOGIN_DISPATCHER_VALIDATION_SECRET="${service_secret_values[$dispatcher_validation_index]}"
+            export ALLOCATION_DISPATCHER_REFERENCE_SECRET="${service_secret_values[$dispatcher_reference_index]}"
+            export ALLOCATION_DISPATCHER_ASSERTION_SECRET="${service_secret_values[$dispatcher_assertion_index]}"
         fi
         if [[ "$directory" == "allocation-service" ]]; then
-            export LOGIN_ALLOCATION_VALIDATION_SECRET="${service_secrets[LOGIN_ALLOCATION_VALIDATION_SECRET]}"
-            export ALLOCATION_CUSTOMER_REFERENCE_SECRET="${service_secrets[ALLOCATION_CUSTOMER_REFERENCE_SECRET]}"
-            export ALLOCATION_DISPATCHER_REFERENCE_SECRET="${service_secrets[ALLOCATION_DISPATCHER_REFERENCE_SECRET]}"
-            export ALLOCATION_TARO_REFERENCE_SECRET="${service_secrets[ALLOCATION_TARO_REFERENCE_SECRET]}"
-            export ALLOCATION_CUSTOMER_ASSERTION_SECRET="${service_secrets[ALLOCATION_CUSTOMER_ASSERTION_SECRET]}"
-            export ALLOCATION_DISPATCHER_ASSERTION_SECRET="${service_secrets[ALLOCATION_DISPATCHER_ASSERTION_SECRET]}"
+            export LOGIN_ALLOCATION_VALIDATION_SECRET="${service_secret_values[$allocation_validation_index]}"
+            export ALLOCATION_CUSTOMER_REFERENCE_SECRET="${service_secret_values[$customer_reference_index]}"
+            export ALLOCATION_DISPATCHER_REFERENCE_SECRET="${service_secret_values[$dispatcher_reference_index]}"
+            export ALLOCATION_TARO_REFERENCE_SECRET="${service_secret_values[$taro_reference_index]}"
+            export ALLOCATION_CUSTOMER_ASSERTION_SECRET="${service_secret_values[$customer_assertion_index]}"
+            export ALLOCATION_DISPATCHER_ASSERTION_SECRET="${service_secret_values[$dispatcher_assertion_index]}"
         fi
         if [[ "$directory" == "taro-service" ]]; then
-            export LOGIN_TARO_VALIDATION_SECRET="${service_secrets[LOGIN_TARO_VALIDATION_SECRET]}"
-            export ALLOCATION_TARO_REFERENCE_SECRET="${service_secrets[ALLOCATION_TARO_REFERENCE_SECRET]}"
+            export LOGIN_TARO_VALIDATION_SECRET="${service_secret_values[$taro_validation_index]}"
+            export ALLOCATION_TARO_REFERENCE_SECRET="${service_secret_values[$taro_reference_index]}"
         fi
         exec ./mvnw spring-boot:run
     ) >"$LOG_DIR/$name.log" 2>&1 &
