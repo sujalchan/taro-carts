@@ -12,6 +12,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
+/**
+ * Issues host-only session and CSRF cookies and compares submitted CSRF tokens
+ * in constant time.
+ */
 @Service
 public class AuthCookies {
 
@@ -24,6 +28,10 @@ public class AuthCookies {
         this.secure = secure;
     }
 
+    /**
+     * Creates a random form token and writes its HttpOnly cookie; the returned
+     * value goes in the form.
+     */
     public String issueCsrf(HttpServletResponse response) {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
@@ -32,6 +40,10 @@ public class AuthCookies {
         return token;
     }
 
+    /**
+     * Requires matching well-formed form and cookie tokens before a browser
+     * mutation.
+     */
     public boolean validCsrf(String formToken, String cookieToken) {
         if (formToken == null || cookieToken == null
                 || !formToken.matches("[A-Za-z0-9_-]{43}") || !cookieToken.matches("[A-Za-z0-9_-]{43}")) {
@@ -41,14 +53,22 @@ public class AuthCookies {
                 cookieToken.getBytes(StandardCharsets.US_ASCII));
     }
 
+    /**
+     * Sets the opaque session cookie with the server-side session's remaining
+     * lifetime.
+     */
     public void issueSession(HttpServletResponse response, SessionService.IssuedSession session) {
         add(response, SESSION, session.token(), Duration.between(java.time.Instant.now(), session.expiresAt()));
     }
 
+    /** Expires the session cookie in the browser. */
     public void clearSession(HttpServletResponse response) {
         add(response, SESSION, "", Duration.ZERO);
     }
 
+    /**
+     * Expires the form CSRF cookie after a successful sign-out or password change.
+     */
     public void clearCsrf(HttpServletResponse response) {
         add(response, CSRF, "", Duration.ZERO);
     }

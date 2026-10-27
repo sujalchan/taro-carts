@@ -34,6 +34,7 @@ import nz.ac.aut.comp713.login_service.repository.RegistrationRequestRepository;
 import nz.ac.aut.comp713.login_service.service.AuthCookies;
 import nz.ac.aut.comp713.login_service.service.SessionService;
 
+/** Exercises profile provisioning, repair retries, and admin activation against test domain services. */
 @SpringBootTest(properties = {"debug=false", "logging.level.root=ERROR",
         "login.customer-provisioning-secret=test-customer-secret-0123456789abcdef0123456789abcdef",
         "login.dispatcher-provisioning-secret=test-dispatcher-secret-0123456789abcdef0123456789abcdef"})

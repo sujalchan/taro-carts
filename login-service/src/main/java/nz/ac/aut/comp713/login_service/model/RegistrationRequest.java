@@ -11,7 +11,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** An account request awaiting the future administrator approval workflow. */
+/**
+ * Persisted registration and domain-provisioning progress for a not-yet-active
+ * account.
+ */
 @Entity
 @Table(name = "registration_requests")
 public class RegistrationRequest {
@@ -60,7 +63,7 @@ public class RegistrationRequest {
     }
 
     public RegistrationRequest(String username, String normalizedUsername, String passwordHash,
-                               RegistrationRole role, String name, String contactName, String phone, String address) {
+            RegistrationRole role, String name, String contactName, String phone, String address) {
         this.username = username;
         this.normalizedUsername = normalizedUsername;
         this.passwordHash = passwordHash;
@@ -77,29 +80,75 @@ public class RegistrationRequest {
         return id;
     }
 
-    public String getUsername() { return username; }
-    public String getNormalizedUsername() { return normalizedUsername; }
-    public String getPasswordHash() { return passwordHash; }
-    public RegistrationRole getRole() { return role; }
-    public String getName() { return name; }
-    public String getContactName() { return contactName; }
-    public String getPhone() { return phone; }
-    public String getAddress() { return address; }
-    public Instant getSubmittedAt() { return submittedAt; }
-    public RegistrationStatus getStatus() { return status == null ? RegistrationStatus.PENDING_PROVISIONING : status; }
-    public Long getProfileId() { return profileId; }
-    public Long getAccountId() { return accountId; }
+    public String getUsername() {
+        return username;
+    }
 
+    public String getNormalizedUsername() {
+        return normalizedUsername;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public RegistrationRole getRole() {
+        return role;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getContactName() {
+        return contactName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public Instant getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public RegistrationStatus getStatus() {
+        return status == null ? RegistrationStatus.PENDING_PROVISIONING : status;
+    }
+
+    public Long getProfileId() {
+        return profileId;
+    }
+
+    public Long getAccountId() {
+        return accountId;
+    }
+
+    /**
+     * Saves the external profile ID before creating a login account, making retries
+     * idempotent.
+     */
     public void markProfileCreated(Long id) {
         profileId = id;
         status = RegistrationStatus.REPAIR_REQUIRED;
     }
 
+    /**
+     * Links the created login account and marks the registration workflow complete.
+     */
     public void markProvisioned(Long id) {
         accountId = id;
         status = RegistrationStatus.PROVISIONED;
     }
 
+    /**
+     * Keeps incomplete work in the state appropriate to whether a profile already
+     * exists.
+     */
     public void markRetryable() {
         status = profileId == null ? RegistrationStatus.PENDING_PROVISIONING : RegistrationStatus.REPAIR_REQUIRED;
     }

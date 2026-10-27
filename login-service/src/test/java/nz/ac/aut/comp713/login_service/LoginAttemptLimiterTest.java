@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import nz.ac.aut.comp713.login_service.service.LoginAttemptLimiter;
 
+/** Verifies that repeated failures back off only the matching address and username. */
 class LoginAttemptLimiterTest {
 
     @Test

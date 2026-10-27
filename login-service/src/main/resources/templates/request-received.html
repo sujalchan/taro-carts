@@ -1,5 +1,7 @@
 <!doctype html>
+<!-- Confirms a saved registration request and explains that activation is still required. -->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,27 +9,32 @@
     <title>Request received · Taro Carts</title>
     <link rel="stylesheet" th:href="@{/css/auth.css}" href="/css/auth.css">
 </head>
+
 <body>
-<div class="page-shell">
-    <nav class="app-nav" aria-label="Service navigation">
-        <a class="app-nav__brand" href="/login">Taro Carts</a>
-        <div class="app-nav__links">
-            <a href="/login" aria-current="page">Login Service</a>
-            <a href="/register">Create account</a>
-        </div>
-    </nav>
+    <div class="page-shell">
+        <nav class="app-nav" aria-label="Service navigation">
+            <a class="app-nav__brand" href="/login">Taro Carts</a>
+            <div class="app-nav__links">
+                <a href="/login" aria-current="page">Login Service</a>
+                <a href="/register">Create account</a>
+            </div>
+        </nav>
 
-    <main class="receipt-panel" aria-labelledby="receipt-title">
-        <div class="receipt-icon" aria-hidden="true">✓</div>
-        <span class="eyebrow">Account request</span>
-        <h1 id="receipt-title">Your request was received.</h1>
-        <p th:if="${requestStatus.name() == 'PROVISIONED'}">Your account was created inactive. An administrator must enable it before you can sign in.</p>
-        <p th:if="${requestStatus.name() != 'PROVISIONED'}">We saved your request, but profile setup is still pending. An administrator can retry it; you cannot sign in yet.</p>
-        <p class="receipt-reference">Reference number <strong th:text="${requestId}">123</strong></p>
-        <a class="receipt-link" th:href="@{/login}" href="/login">Back to sign in <span aria-hidden="true">→</span></a>
-    </main>
+        <main class="receipt-panel" aria-labelledby="receipt-title">
+            <div class="receipt-icon" aria-hidden="true">✓</div>
+            <span class="eyebrow">Account request</span>
+            <h1 id="receipt-title">Your request was received.</h1>
+            <p th:if="${requestStatus.name() == 'PROVISIONED'}">Your account was created inactive. An administrator must
+                enable it before you can sign in.</p>
+            <p th:if="${requestStatus.name() != 'PROVISIONED'}">We saved your request, but profile setup is still
+                pending. An administrator can retry it; you cannot sign in yet.</p>
+            <p class="receipt-reference">Reference number <strong th:text="${requestId}">123</strong></p>
+            <a class="receipt-link" th:href="@{/login}" href="/login">Back to sign in <span
+                    aria-hidden="true">→</span></a>
+        </main>
 
-    <footer class="site-footer"><span>© Taro Carts</span></footer>
-</div>
+        <footer class="site-footer"><span>© Taro Carts</span></footer>
+    </div>
 </body>
+
 </html>

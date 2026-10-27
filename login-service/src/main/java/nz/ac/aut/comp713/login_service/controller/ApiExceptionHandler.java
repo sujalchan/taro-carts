@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
-/** Keeps login-service REST errors in the same code/message/path format as the other services. */
+/** Converts REST failures into the shared code/message/path response without exposing internal exception details. */
 @RestControllerAdvice(annotations = org.springframework.web.bind.annotation.RestController.class)
 public class ApiExceptionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
@@ -25,6 +25,7 @@ public class ApiExceptionHandler {
                 .body(new ApiError(codeFor(status), safeReason(exception.getReason(), status), request.getRequestURI()));
     }
 
+    /** Uses the first field-level validation message as the client-facing explanation. */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException exception,
                                                       HttpServletRequest request) {
@@ -36,6 +37,7 @@ public class ApiExceptionHandler {
                 .body(new ApiError("VALIDATION_ERROR", message, request.getRequestURI()));
     }
 
+    /** Hides parser details while identifying a missing or malformed JSON request body. */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException exception,
                                                       HttpServletRequest request) {
@@ -43,6 +45,7 @@ public class ApiExceptionHandler {
                 "INVALID_REQUEST", "Request body is missing or invalid.", request.getRequestURI()));
     }
 
+    /** Logs unexpected failures server-side and returns a safe generic message to the caller. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception exception, HttpServletRequest request) {
         if (exception instanceof ErrorResponse error) {

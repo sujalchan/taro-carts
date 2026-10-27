@@ -23,11 +23,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import nz.ac.aut.comp713.login_service.service.SessionService;
 
-/** Private, uncached session validation for backend services. */
+/** Validates sessions for loopback backend callers holding a configured service credential. */
 @RestController
 public class SessionIntrospectionController {
 
-    public record IntrospectionRequest(@NotBlank String token) {}
+    /** Opaque token supplied by a backend service for validation. */
+    public record IntrospectionRequest(@NotBlank(message = "Session token is required.") String token) {}
+    /** Minimum identity and session state returned to the trusted backend caller. */
     public record SessionPrincipal(Long accountId, String username, String role,
                                    Long profileId, boolean active, Instant expiresAt) {}
 
@@ -54,6 +56,7 @@ public class SessionIntrospectionController {
         credentialDigests = credentials.stream().map(SessionIntrospectionController::digest).toList();
     }
 
+    /** Returns the minimum identity data required by a trusted service to authorize a request. */
     @PostMapping("/internal/v1/sessions/introspect")
     public ResponseEntity<SessionPrincipal> introspect(
             @RequestHeader(value = "X-Service-Validation-Key", required = false) String credential,
@@ -67,10 +70,14 @@ public class SessionIntrospectionController {
         byte[] providedDigest = digest(credential == null ? "" : credential);
         boolean trusted = false;
         for (byte[] expected : credentialDigests) trusted |= MessageDigest.isEqual(expected, providedDigest);
-        if (!loopback || !trusted) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        if (!loopback || !trusted) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "This session validation request is not authorized.");
+        }
 
         var session = sessions.validate(request.token())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "This session is invalid or has expired. Ask the user to sign in again."));
         var account = session.getAccount();
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .body(new SessionPrincipal(account.getId(), account.getUsername(), account.getRole().name(),

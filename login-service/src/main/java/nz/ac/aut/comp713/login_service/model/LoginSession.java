@@ -12,6 +12,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+/**
+ * Persisted session metadata; the raw token held by the client is never stored
+ * here.
+ */
 @Entity
 @Table(name = "login_sessions")
 public class LoginSession {
@@ -49,11 +53,28 @@ public class LoginSession {
         this.lastSeenAt = createdAt;
     }
 
-    public Account getAccount() { return account; }
-    public String getTokenHash() { return tokenHash; }
-    public Instant getExpiresAt() { return expiresAt; }
-    public Instant getRevokedAt() { return revokedAt; }
+    public Account getAccount() {
+        return account;
+    }
 
-    public void seenAt(Instant when) { lastSeenAt = when; }
-    public void revokeAt(Instant when) { revokedAt = when; }
+    public String getTokenHash() {
+        return tokenHash;
+    }
+
+    public Instant getExpiresAt() {
+        return expiresAt;
+    }
+
+    public Instant getRevokedAt() {
+        return revokedAt;
+    }
+
+    public void seenAt(Instant when) {
+        lastSeenAt = when;
+    }
+
+    /** Marks the session unusable from the supplied instant onward. */
+    public void revokeAt(Instant when) {
+        revokedAt = when;
+    }
 }

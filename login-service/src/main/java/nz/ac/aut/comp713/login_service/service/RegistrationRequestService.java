@@ -13,7 +13,10 @@ import nz.ac.aut.comp713.login_service.repository.AccountRepository;
 import nz.ac.aut.comp713.login_service.repository.RegistrationRequestRepository;
 import nz.ac.aut.comp713.login_service.web.RegistrationForm;
 
-/** Persists a pending request before the UI is allowed to show a receipt. */
+/**
+ * Normalizes and persists a unique registration request before returning its
+ * receipt ID.
+ */
 @Service
 public class RegistrationRequestService {
 
@@ -23,14 +26,18 @@ public class RegistrationRequestService {
     private final RegistrationProvisioningService provisioning;
 
     public RegistrationRequestService(RegistrationRequestRepository repository,
-                                      AccountRepository accounts, BCryptPasswordEncoder passwordEncoder,
-                                      RegistrationProvisioningService provisioning) {
+            AccountRepository accounts, BCryptPasswordEncoder passwordEncoder,
+            RegistrationProvisioningService provisioning) {
         this.repository = repository;
         this.accounts = accounts;
         this.passwordEncoder = passwordEncoder;
         this.provisioning = provisioning;
     }
 
+    /**
+     * Hashes the submitted password, stores the request, then attempts recoverable
+     * profile provisioning.
+     */
     public Long submit(RegistrationRole role, RegistrationForm form) {
         String username = form.getUsername().trim();
         String normalizedUsername = username.toLowerCase(Locale.ROOT);
@@ -61,6 +68,7 @@ public class RegistrationRequestService {
         }
     }
 
+    /** Returns the latest provisioning state used by the registration receipt. */
     public RegistrationStatus status(Long id) {
         return repository.findById(id).map(RegistrationRequest::getStatus).orElse(null);
     }
@@ -69,6 +77,10 @@ public class RegistrationRequestService {
         return value == null ? "" : value.trim();
     }
 
+    /**
+     * Indicates that the normalized username belongs to an account or another
+     * request.
+     */
     public static class DuplicateUsernameException extends RuntimeException {
     }
 }

@@ -11,6 +11,7 @@
     const editingExistingAddress = location.pathname.includes("edit");
     let hasVerifiedAddress = editingExistingAddress && address.value.trim().length > 0;
 
+    // Any edit invalidates a previously selected suggestion until the user selects again.
     address.addEventListener("input", () => {
         hasVerifiedAddress = false;
         address.setCustomValidity("");
@@ -61,6 +62,7 @@
 
             async function selectSuggestion(prediction) {
                 const version = ++requestVersion;
+                // End the autocomplete billing session when the user chooses a place.
                 sessionToken = null;
                 clearTimeout(debounceTimer);
                 closeSuggestions();
@@ -80,7 +82,7 @@
                     const hasLocality = ["locality", "postal_town", "sublocality_level_1", "postal_code"]
                         .some(type => types.has(type));
                     if (!types.has("street_number") || !types.has("route") || !hasLocality
-                            || country?.shortText !== "NZ") {
+                        || country?.shortText !== "NZ") {
                         hasVerifiedAddress = false;
                         status.textContent = "Select a complete New Zealand street address, including its street number.";
                         return;
@@ -123,6 +125,7 @@
                     return;
                 }
                 if (!sessionToken) sessionToken = new AutocompleteSessionToken();
+                // Debouncing reduces duplicate requests while the user is still typing.
                 debounceTimer = setTimeout(async () => {
                     try {
                         const { suggestions } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({

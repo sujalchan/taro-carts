@@ -10,6 +10,10 @@ import nz.ac.aut.comp713.login_service.model.Account;
 import nz.ac.aut.comp713.login_service.model.AccountRole;
 import nz.ac.aut.comp713.login_service.repository.AccountRepository;
 
+/**
+ * Creates the initial development admin once and never overwrites an existing
+ * account or password.
+ */
 @Component
 public class AccountSeeder implements ApplicationRunner {
 
@@ -21,6 +25,7 @@ public class AccountSeeder implements ApplicationRunner {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /** Seeds only when the normalized admin username is absent. */
     @Override
     @Transactional
     public void run(ApplicationArguments arguments) {

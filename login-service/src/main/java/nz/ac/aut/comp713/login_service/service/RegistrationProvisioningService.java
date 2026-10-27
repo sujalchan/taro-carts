@@ -9,7 +9,10 @@ import nz.ac.aut.comp713.login_service.model.RegistrationStatus;
 import nz.ac.aut.comp713.login_service.repository.AccountRepository;
 import nz.ac.aut.comp713.login_service.repository.RegistrationRequestRepository;
 
-/** Recoverable registration job: persisted profile ID prevents duplicate domain creation on retry. */
+/**
+ * Resumes profile and account creation from saved progress without duplicating
+ * profiles on retry.
+ */
 @Service
 public class RegistrationProvisioningService {
 
@@ -18,15 +21,20 @@ public class RegistrationProvisioningService {
     private final DomainProvisioningClient domain;
 
     public RegistrationProvisioningService(RegistrationRequestRepository requests,
-                                           AccountRepository accounts, DomainProvisioningClient domain) {
+            AccountRepository accounts, DomainProvisioningClient domain) {
         this.requests = requests;
         this.accounts = accounts;
         this.domain = domain;
     }
 
+    /**
+     * Returns true when a request is fully provisioned; failures stay marked for
+     * administrator repair.
+     */
     public synchronized boolean provision(Long requestId) {
         RegistrationRequest request = requests.findById(requestId).orElseThrow();
-        if (request.getStatus() == RegistrationStatus.PROVISIONED) return true;
+        if (request.getStatus() == RegistrationStatus.PROVISIONED)
+            return true;
         AccountRole role = AccountRole.valueOf(request.getRole().name());
 
         var existing = accounts.findByNormalizedUsername(request.getNormalizedUsername());

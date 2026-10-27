@@ -28,9 +28,11 @@ import nz.ac.aut.comp713.login_service.service.RegistrationProvisioningService;
 import nz.ac.aut.comp713.login_service.service.SessionService;
 import nz.ac.aut.comp713.login_service.service.SecurityAudit;
 
+/** Serves admin account pages and protects account changes with session and CSRF checks. */
 @Controller
 public class AdminAccountController {
 
+    /** Presentation state calculated for each request in the administrator's pending-work list. */
     public record PendingRequestRow(RegistrationRequest request, String status, boolean retryable) {}
 
     private final SessionService sessions;
@@ -54,6 +56,7 @@ public class AdminAccountController {
         this.provisioning = provisioning;
     }
 
+    /** Lists accounts and derives whether pending requests can be retried or need repair. */
     @GetMapping("/admin/accounts")
     public String accounts(@CookieValue(value = AuthCookies.SESSION, required = false) String sessionToken,
                            @RequestParam(value = "passwordError", required = false) String passwordError,
@@ -106,6 +109,7 @@ public class AdminAccountController {
         return "admin-accounts";
     }
 
+    /** Retries a saved registration's domain provisioning using its persisted progress. */
     @PostMapping("/admin/requests/{id}/retry")
     public String retryProvisioning(@PathVariable Long id,
                                     @CookieValue(value = AuthCookies.SESSION, required = false) String sessionToken,
@@ -117,6 +121,7 @@ public class AdminAccountController {
                 : "redirect:/admin/accounts?provisioningError=1";
     }
 
+    /** Requests a coordinated login and domain-profile activation change. */
     @PostMapping("/admin/accounts/{id}/active")
     public String changeActive(@PathVariable Long id,
                                @CookieValue(value = AuthCookies.SESSION, required = false) String sessionToken,
@@ -135,6 +140,7 @@ public class AdminAccountController {
         return changed ? "redirect:/admin/accounts" : "redirect:/admin/accounts?activationError=1";
     }
 
+    /** Changes the current admin password and signs that admin out of all sessions. */
     @PostMapping("/admin/password")
     public String changePassword(@CookieValue(value = AuthCookies.SESSION, required = false) String sessionToken,
                                  @CookieValue(value = AuthCookies.CSRF, required = false) String csrfCookie,
@@ -156,6 +162,7 @@ public class AdminAccountController {
         return "redirect:/login?passwordChanged=1";
     }
 
+    /** Requires both a valid CSRF pair and an active administrator session. */
     private Long requireAdmin(String sessionToken, String csrfCookie, String csrf) {
         if (!cookies.validCsrf(csrf, csrfCookie)) {
             SecurityAudit.denied("admin.authorization.denied", "reason=csrf");

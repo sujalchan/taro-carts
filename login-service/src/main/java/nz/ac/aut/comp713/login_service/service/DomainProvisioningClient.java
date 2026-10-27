@@ -14,13 +14,32 @@ import nz.ac.aut.comp713.login_service.model.AccountRole;
 import nz.ac.aut.comp713.login_service.model.RegistrationRequest;
 import nz.ac.aut.comp713.login_service.model.RegistrationRole;
 
-/** Login-service is the sole caller of the domain services' private write endpoints. */
+/**
+ * Calls customer and dispatcher private write endpoints using separate
+ * credentials and bounded timeouts.
+ */
 @Service
 public class DomainProvisioningClient {
 
-    private record ProfileRequest(String name, String contactName, String phone, String address) {}
-    private record ActivationRequest(boolean active) {}
-    public record ProfileResponse(Long id, boolean active) {}
+    /**
+     * Profile fields sent to the relevant domain service when a registration is
+     * provisioned.
+     */
+    private record ProfileRequest(String name, String contactName, String phone, String address) {
+    }
+
+    /**
+     * Desired active flag sent to a domain service during an administrator state
+     * change.
+     */
+    private record ActivationRequest(boolean active) {
+    }
+
+    /**
+     * Minimal profile state required to verify a domain-service write succeeded.
+     */
+    public record ProfileResponse(Long id, boolean active) {
+    }
 
     private final RestClient customer;
     private final RestClient dispatcher;
@@ -51,10 +70,15 @@ public class DomainProvisioningClient {
         this.dispatcherSecret = dispatcherSecret;
     }
 
+    /**
+     * Creates the requested domain profile and rejects responses without a positive
+     * profile ID.
+     */
     public ProfileResponse create(RegistrationRequest request) {
         RestClient client = request.getRole() == RegistrationRole.CUSTOMER ? customer : dispatcher;
         String path = request.getRole() == RegistrationRole.CUSTOMER
-                ? "/internal/v1/customers" : "/internal/v1/dispatchers";
+                ? "/internal/v1/customers"
+                : "/internal/v1/dispatchers";
         ProfileResponse response = client.post().uri(path)
                 .header("X-Login-Provisioning-Key", secret(request.getRole()))
                 .header("X-Registration-Request-Id", request.getId().toString())
@@ -68,6 +92,10 @@ public class DomainProvisioningClient {
         return response;
     }
 
+    /**
+     * Changes the linked domain profile state and rejects a response that does not
+     * confirm the requested state.
+     */
     public void setActive(Account account, boolean active) {
         if (account.getProfileId() == null || account.getRole() == AccountRole.ADMIN) {
             throw new IllegalArgumentException("Account has no domain profile");

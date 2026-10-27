@@ -1,120 +1,169 @@
 <!doctype html>
+<!-- Customer/dispatcher registration form; JavaScript advances the account and profile steps. -->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
-    <title th:text="${accountType == 'customer' ? 'Customer registration · Taro Carts' : 'Dispatcher registration · Taro Carts'}">Register · Taro Carts</title>
+    <title
+        th:text="${accountType == 'customer' ? 'Customer registration · Taro Carts' : 'Dispatcher registration · Taro Carts'}">
+        Register · Taro Carts</title>
     <link rel="stylesheet" th:href="@{/css/auth.css}" href="/css/auth.css">
     <script defer th:src="@{/js/address-autocomplete.js}" src="/js/address-autocomplete.js"></script>
     <script defer th:src="@{/js/register-wizard.js}" src="/js/register-wizard.js"></script>
 </head>
+
 <body th:class="${accountType == 'customer' ? 'role-customer' : 'role-dispatcher'}">
-<div class="page-shell">
-    <nav class="app-nav" aria-label="Service navigation">
-        <a class="app-nav__brand" href="/login">Taro Carts</a>
-        <div class="app-nav__links">
-            <a href="/login">Login Service</a>
-            <a href="/register" aria-current="page">Create account</a>
-        </div>
-    </nav>
-
-    <main class="register-layout">
-        <aside class="register-aside" aria-labelledby="register-aside-title">
-            <span class="eyebrow" th:text="${accountType == 'customer' ? 'For customers' : 'For dispatchers'}">For customers</span>
-            <div class="role-symbol" aria-hidden="true" th:text="${accountType == 'customer' ? '◈' : '↗'}">◈</div>
-            <h1 id="register-aside-title" th:text="${accountType == 'customer' ? 'Your weekly order, within reach.' : 'Every delivery, clearly in view.'}">Your weekly order, within reach.</h1>
-            <p th:text="${accountType == 'customer' ? 'Request taro for your business and keep up with each allocation.' : 'See the allocations assigned to you and stay ready for the next delivery.'}">Request taro for your business and keep up with each allocation.</p>
-            <div class="approval-card">
-                <span class="approval-icon" aria-hidden="true">✓</span>
-                <div><strong>Approval required</strong><span>Your request will be saved for review. An administrator must enable your account before sign-in.</span></div>
+    <div class="page-shell">
+        <nav class="app-nav" aria-label="Service navigation">
+            <a class="app-nav__brand" href="/login">Taro Carts</a>
+            <div class="app-nav__links">
+                <a href="/login">Login Service</a>
+                <a href="/register" aria-current="page">Create account</a>
             </div>
-        </aside>
+        </nav>
 
-        <section class="register-panel" aria-labelledby="register-title">
-            <div class="register-panel-inner">
-                <ol class="registration-steps" aria-label="Registration progress">
-                    <li><a th:href="@{/register}" href="/register"><span class="step-dot">✓</span><span>Account type</span></a></li>
-                    <li data-step-indicator="2" aria-current="step"><span class="step-dot">2</span><span>Account details</span></li>
-                    <li data-step-indicator="3"><span class="step-dot">3</span><span th:text="${accountType == 'customer' ? 'Customer details' : 'Dispatcher details'}">Profile details</span></li>
-                </ol>
-
-                <span class="eyebrow" id="wizard-step-label" aria-live="polite">Step 2 of 3</span>
-                <h2 id="register-title" th:text="${accountType == 'customer' ? 'Create a customer account' : 'Create a dispatcher account'}">Create an account</h2>
-                <p class="intro" id="wizard-step-intro" aria-live="polite">Choose the details you’ll use to sign in after approval.</p>
-
-                <div class="form-error" role="alert" th:if="${errors != null && !errors.isEmpty()}">
-                    <strong>Please check your request:</strong>
-                    <ul><li th:each="error : ${errors}" th:text="${error}">Please check your details.</li></ul>
+        <main class="register-layout">
+            <aside class="register-aside" aria-labelledby="register-aside-title">
+                <span class="eyebrow" th:text="${accountType == 'customer' ? 'For customers' : 'For dispatchers'}">For
+                    customers</span>
+                <div class="role-symbol" aria-hidden="true" th:text="${accountType == 'customer' ? '◈' : '↗'}">◈</div>
+                <h1 id="register-aside-title"
+                    th:text="${accountType == 'customer' ? 'Your weekly order, within reach.' : 'Every delivery, clearly in view.'}">
+                    Your weekly order, within reach.</h1>
+                <p
+                    th:text="${accountType == 'customer' ? 'Request taro for your business and keep up with each allocation.' : 'See the allocations assigned to you and stay ready for the next delivery.'}">
+                    Request taro for your business and keep up with each allocation.</p>
+                <div class="approval-card">
+                    <span class="approval-icon" aria-hidden="true">✓</span>
+                    <div><strong>Approval required</strong><span>Your request will be saved for review. An administrator
+                            must enable your account before sign-in.</span></div>
                 </div>
+            </aside>
 
-                <form id="registration-form" method="post" th:action="${accountType == 'customer' ? '/register/customer' : '/register/dispatcher'}" action="/register/customer" autocomplete="on">
-                    <input type="hidden" name="csrf" th:value="${csrfToken}">
-                    <fieldset class="wizard-step" data-wizard-step="2">
-                        <legend>Account details</legend>
-                        <div class="field-grid account-fields">
-                            <div class="field">
-                                <label for="username">Username <span class="required">*</span></label>
-                                <input id="username" name="username" type="text" autocomplete="username" required minlength="3" maxlength="100" placeholder="Choose a username" th:value="${registration.username}">
-                            </div>
-                            <div class="field">
-                                <label for="password">Password <span class="required">*</span></label>
-                                <input id="password" name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="72" placeholder="At least 12 characters">
-                            </div>
-                            <div class="field">
-                                <label for="confirmPassword">Confirm password <span class="required">*</span></label>
-                                <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required minlength="12" maxlength="72" placeholder="Enter your password again">
-                            </div>
-                        </div>
-                        <div class="wizard-actions">
-                            <a class="text-back" th:href="@{/register}" href="/register"><span aria-hidden="true">←</span> Account type</a>
-                            <button class="primary-button" id="continue-to-profile" type="button">Continue <span aria-hidden="true">→</span></button>
-                        </div>
-                    </fieldset>
+            <section class="register-panel" aria-labelledby="register-title">
+                <div class="register-panel-inner">
+                    <ol class="registration-steps" aria-label="Registration progress">
+                        <li><a th:href="@{/register}" href="/register"><span class="step-dot">✓</span><span>Account
+                                    type</span></a></li>
+                        <li data-step-indicator="2" aria-current="step"><span class="step-dot">2</span><span>Account
+                                details</span></li>
+                        <li data-step-indicator="3"><span class="step-dot">3</span><span
+                                th:text="${accountType == 'customer' ? 'Customer details' : 'Dispatcher details'}">Profile
+                                details</span></li>
+                    </ol>
 
-                    <fieldset class="wizard-step" data-wizard-step="3">
-                        <legend th:text="${accountType == 'customer' ? 'Customer details' : 'Dispatcher details'}">Profile details</legend>
-                        <p class="step-help" th:text="${accountType == 'customer' ? 'Tell us about the business receiving your taro allocations.' : 'Tell us who will be delivering the assigned allocations.'}">Tell us about your profile.</p>
-                        <div class="field-grid">
-                            <div class="field full-width">
-                                <label for="name" th:text="${accountType == 'customer' ? 'Business name *' : 'Dispatcher name *'}">Name *</label>
-                                <input id="name" name="name" type="text" required maxlength="100" th:attr="autocomplete=${accountType == 'customer' ? 'organization' : 'name'}" placeholder="Name for your profile" th:value="${registration.name}">
-                            </div>
-                            <div class="field">
-                                <label for="contactName">Contact name</label>
-                                <input id="contactName" name="contactName" type="text" maxlength="100" autocomplete="name" placeholder="Main contact" th:value="${registration.contactName}">
-                            </div>
-                            <div class="field">
-                                <label for="phone">Phone number</label>
-                                <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" pattern="\+?[0-9]{7,15}" title="7 to 15 digits, optionally starting with +" placeholder="e.g. +64211234567" th:value="${registration.phone}">
-                            </div>
-                            <div class="field full-width">
-                                <label for="address">Address <span class="required">*</span></label>
-                                <div class="address-field">
-                                    <input id="address" name="address" type="text" maxlength="500" required
-                                           placeholder="Search and select a New Zealand address" autocomplete="off"
-                                           role="combobox" aria-autocomplete="list" aria-controls="addressSuggestions"
-                                           aria-expanded="false" aria-describedby="addressAutocompleteStatus" th:value="${registration.address}">
-                                    <div id="addressAutocomplete" class="address-suggestions" hidden>
-                                        <div id="addressSuggestions" role="listbox" aria-label="Suggested addresses"></div>
-                                        <div class="address-attribution"><img th:src="@{/images/google-maps-logo.svg}" src="/images/google-maps-logo.svg" alt="Google Maps"></div>
-                                    </div>
+                    <span class="eyebrow" id="wizard-step-label" aria-live="polite">Step 2 of 3</span>
+                    <h2 id="register-title"
+                        th:text="${accountType == 'customer' ? 'Create a customer account' : 'Create a dispatcher account'}">
+                        Create an account</h2>
+                    <p class="intro" id="wizard-step-intro" aria-live="polite">Choose the details you’ll use to sign in
+                        after approval.</p>
+
+                    <div class="form-error" role="alert" th:if="${errors != null && !errors.isEmpty()}">
+                        <strong>Please check your request:</strong>
+                        <ul>
+                            <li th:each="error : ${errors}" th:text="${error}">Please check your details.</li>
+                        </ul>
+                    </div>
+
+                    <form id="registration-form" method="post"
+                        th:action="${accountType == 'customer' ? '/register/customer' : '/register/dispatcher'}"
+                        action="/register/customer" autocomplete="on">
+                        <input type="hidden" name="csrf" th:value="${csrfToken}">
+                        <fieldset class="wizard-step" data-wizard-step="2">
+                            <legend>Account details</legend>
+                            <div class="field-grid account-fields">
+                                <div class="field">
+                                    <label for="username">Username <span class="required">*</span></label>
+                                    <input id="username" name="username" type="text" autocomplete="username" required
+                                        minlength="3" maxlength="100" placeholder="Choose a username"
+                                        th:value="${registration.username}">
                                 </div>
-                                <p id="addressAutocompleteStatus" class="form-hint" role="status" aria-live="polite"></p>
+                                <div class="field">
+                                    <label for="password">Password <span class="required">*</span></label>
+                                    <input id="password" name="password" type="password" autocomplete="new-password"
+                                        required minlength="12" maxlength="72" placeholder="At least 12 characters">
+                                </div>
+                                <div class="field">
+                                    <label for="confirmPassword">Confirm password <span
+                                            class="required">*</span></label>
+                                    <input id="confirmPassword" name="confirmPassword" type="password"
+                                        autocomplete="new-password" required minlength="12" maxlength="72"
+                                        placeholder="Enter your password again">
+                                </div>
                             </div>
-                        </div>
-                        <div class="wizard-actions">
-                            <button class="text-back" id="back-to-account" type="button"><span aria-hidden="true">←</span> Account details</button>
-                            <button class="primary-button" type="submit">Request an account <span aria-hidden="true">→</span></button>
-                        </div>
-                        <p class="phase-note">A receipt appears only after your request is saved.</p>
-                    </fieldset>
-                </form>
-            </div>
-        </section>
-    </main>
+                            <div class="wizard-actions">
+                                <a class="text-back" th:href="@{/register}" href="/register"><span
+                                        aria-hidden="true">←</span> Account type</a>
+                                <button class="primary-button" id="continue-to-profile" type="button">Continue <span
+                                        aria-hidden="true">→</span></button>
+                            </div>
+                        </fieldset>
 
-    <footer class="site-footer"><span>© Taro Carts</span></footer>
-</div>
+                        <fieldset class="wizard-step" data-wizard-step="3">
+                            <legend th:text="${accountType == 'customer' ? 'Customer details' : 'Dispatcher details'}">
+                                Profile details</legend>
+                            <p class="step-help"
+                                th:text="${accountType == 'customer' ? 'Tell us about the business receiving your taro allocations.' : 'Tell us who will be delivering the assigned allocations.'}">
+                                Tell us about your profile.</p>
+                            <div class="field-grid">
+                                <div class="field full-width">
+                                    <label for="name"
+                                        th:text="${accountType == 'customer' ? 'Business name *' : 'Dispatcher name *'}">Name
+                                        *</label>
+                                    <input id="name" name="name" type="text" required maxlength="100"
+                                        th:attr="autocomplete=${accountType == 'customer' ? 'organization' : 'name'}"
+                                        placeholder="Name for your profile" th:value="${registration.name}">
+                                </div>
+                                <div class="field">
+                                    <label for="contactName">Contact name</label>
+                                    <input id="contactName" name="contactName" type="text" maxlength="100"
+                                        autocomplete="name" placeholder="Main contact"
+                                        th:value="${registration.contactName}">
+                                </div>
+                                <div class="field">
+                                    <label for="phone">Phone number</label>
+                                    <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel"
+                                        pattern="\+?[0-9]{7,15}" title="7 to 15 digits, optionally starting with +"
+                                        placeholder="e.g. +64211234567" th:value="${registration.phone}">
+                                </div>
+                                <div class="field full-width">
+                                    <label for="address">Address <span class="required">*</span></label>
+                                    <div class="address-field">
+                                        <input id="address" name="address" type="text" maxlength="500" required
+                                            placeholder="Search and select a New Zealand address" autocomplete="off"
+                                            role="combobox" aria-autocomplete="list" aria-controls="addressSuggestions"
+                                            aria-expanded="false" aria-describedby="addressAutocompleteStatus"
+                                            th:value="${registration.address}">
+                                        <div id="addressAutocomplete" class="address-suggestions" hidden>
+                                            <div id="addressSuggestions" role="listbox"
+                                                aria-label="Suggested addresses"></div>
+                                            <div class="address-attribution"><img
+                                                    th:src="@{/images/google-maps-logo.svg}"
+                                                    src="/images/google-maps-logo.svg" alt="Google Maps"></div>
+                                        </div>
+                                    </div>
+                                    <p id="addressAutocompleteStatus" class="form-hint" role="status"
+                                        aria-live="polite"></p>
+                                </div>
+                            </div>
+                            <div class="wizard-actions">
+                                <button class="text-back" id="back-to-account" type="button"><span
+                                        aria-hidden="true">←</span> Account details</button>
+                                <button class="primary-button" type="submit">Request an account <span
+                                        aria-hidden="true">→</span></button>
+                            </div>
+                            <p class="phase-note">A receipt appears only after your request is saved.</p>
+                        </fieldset>
+                    </form>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer"><span>© Taro Carts</span></footer>
+    </div>
 </body>
+
 </html>

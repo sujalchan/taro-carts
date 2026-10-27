@@ -1,0 +1,623 @@
+openapi: 3.0.3
+
+info:
+  title: Login Service API
+  version: 1.0.0
+  description: >-
+    JSON authentication and registration endpoints for the mobile application,
+    public Google Places browser configuration, and the private session
+    introspection endpoint used by trusted backend services. Server-rendered
+    browser pages are not part of this REST contract.
+
+servers:
+  - url: http://localhost:8085
+    description: Local login service
+
+tags:
+  - name: Mobile authentication
+    description: JSON sign-in, registration, and sign-out for the Android app
+  - name: Google Places configuration
+    description: Public browser configuration for address autocomplete
+  - name: Internal sessions
+    description: Private session validation for trusted backend services
+
+paths:
+  /api/v1/mobile/login:
+    post:
+      tags: [Mobile authentication]
+      summary: Sign in from the mobile app
+      operationId: mobileLogin
+      description: >-
+        Authenticates an active account and creates a session. Sign-in failures
+        use a general message so the response does not reveal whether a
+        username exists. Accounts awaiting administrator activation receive a
+        distinct response so the user knows why sign-in is unavailable.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileLoginRequest"
+            example:
+              username: islandfoods
+              password: correct-horse-battery-staple
+      responses:
+        "200":
+          description: Sign-in succeeded.
+          headers:
+            Cache-Control:
+              description: Authentication responses are not stored by caches.
+              schema:
+                type: string
+              example: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileLoginResponse"
+              example:
+                sessionToken: eyJhbGciOiJIUzI1NiJ9.example-token
+                username: islandfoods
+                role: CUSTOMER
+                profileId: 12
+        "400":
+          $ref: "#/components/responses/MobileLoginBadRequest"
+        "401":
+          description: The credentials are incorrect or the account cannot sign in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: UNAUTHORIZED
+                message: Sign-in failed. Check your details or account status and try again.
+                path: /api/v1/mobile/login
+        "403":
+          description: The account is waiting for administrator activation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: ACCOUNT_AWAITING_ACTIVATION
+                message: Your account is waiting for administrator activation. You can sign in once it has been enabled.
+                path: /api/v1/mobile/login
+        "429":
+          description: Too many sign-in attempts were made. Wait before trying again.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: TOO_MANY_REQUESTS
+                message: Too many attempts. Please wait before trying again.
+                path: /api/v1/mobile/login
+        "500":
+          $ref: "#/components/responses/UnexpectedError"
+
+  /api/v1/mobile/register/{role}:
+    post:
+      tags: [Mobile authentication]
+      summary: Submit a customer or dispatcher account request
+      operationId: submitMobileRegistration
+      description: >-
+        Saves a pending registration request. A successful response means the
+        request was received; an administrator must approve the account before
+        it can be used to sign in. The role is case-insensitive.
+      parameters:
+        - name: role
+          in: path
+          required: true
+          description: Account type being requested.
+          schema:
+            type: string
+            enum: [customer, dispatcher]
+          example: customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileRegistrationRequest"
+            example:
+              username: islandfoods
+              password: correct-horse-battery-staple
+              confirmPassword: correct-horse-battery-staple
+              name: Island Foods
+              contactName: Hana
+              phone: "+64211234567"
+              address: 12 Market Street, Auckland
+      responses:
+        "202":
+          description: Registration request saved for review.
+          headers:
+            Cache-Control:
+              description: Registration responses are not stored by caches.
+              schema:
+                type: string
+              example: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationResponse"
+              example:
+                requestId: 41
+                status: PENDING
+                message: Request received. An administrator must approve the account before sign-in.
+        "400":
+          description: The request body is invalid, a field fails validation, or the passwords do not match.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                invalidRequest:
+                  summary: Missing or malformed JSON
+                  value:
+                    code: INVALID_REQUEST
+                    message: Request body is missing or invalid.
+                    path: /api/v1/mobile/register/customer
+                invalidUsername:
+                  summary: Username format is invalid
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Username can use letters, numbers, periods, underscores, and hyphens.
+                    path: /api/v1/mobile/register/customer
+                invalidPasswordLength:
+                  summary: Password length is invalid
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Password must be 12 to 72 characters.
+                    path: /api/v1/mobile/register/customer
+                missingConfirmation:
+                  summary: Password confirmation is blank
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Please confirm your password.
+                    path: /api/v1/mobile/register/customer
+                missingName:
+                  summary: Profile name is blank
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Name is required.
+                    path: /api/v1/mobile/register/customer
+                invalidPhone:
+                  summary: Phone number format is invalid
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Phone must contain 7 to 15 digits, optionally starting with +.
+                    path: /api/v1/mobile/register/customer
+                missingAddress:
+                  summary: Address is blank
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Address is required.
+                    path: /api/v1/mobile/register/customer
+                passwordMismatch:
+                  summary: Password confirmation does not match
+                  value:
+                    code: BAD_REQUEST
+                    message: Passwords do not match.
+                    path: /api/v1/mobile/register/customer
+        "404":
+          description: The requested account type is not supported.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: NOT_FOUND
+                message: Choose customer or dispatcher as the account type.
+                path: /api/v1/mobile/register/admin
+        "409":
+          description: This username is already in use or has already been requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: CONFLICT
+                message: That username is already in use or has a pending request. Choose another username.
+                path: /api/v1/mobile/register/customer
+        "500":
+          $ref: "#/components/responses/UnexpectedError"
+
+  /api/v1/mobile/logout:
+    post:
+      tags: [Mobile authentication]
+      summary: Revoke a mobile session
+      operationId: mobileLogout
+      description: >-
+        Revokes the session token when it is valid. The operation is idempotent:
+        an unknown, expired, or already revoked token is also accepted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileLogoutRequest"
+            example:
+              sessionToken: eyJhbGciOiJIUzI1NiJ9.example-token
+      responses:
+        "204":
+          description: The session token was accepted for revocation.
+          headers:
+            Cache-Control:
+              description: Logout responses are not stored by caches.
+              schema:
+                type: string
+              example: no-store
+        "400":
+          description: The request body is missing, malformed, or has no session token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                invalidRequest:
+                  summary: Missing or malformed JSON
+                  value:
+                    code: INVALID_REQUEST
+                    message: Request body is missing or invalid.
+                    path: /api/v1/mobile/logout
+                missingToken:
+                  summary: Session token is blank
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Session token is required.
+                    path: /api/v1/mobile/logout
+        "500":
+          $ref: "#/components/responses/UnexpectedError"
+
+  /api/v1/google-places/config:
+    get:
+      tags: [Google Places configuration]
+      summary: Get Google Places browser configuration
+      operationId: getGooglePlacesConfig
+      description: >-
+        Returns the browser API key used by login-service address autocomplete.
+        The key is an empty string when it has not been configured. This
+        endpoint does not validate addresses.
+      responses:
+        "200":
+          description: Google Places browser configuration returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GooglePlacesConfigResponse"
+              example:
+                apiKey: browser-api-key
+        "500":
+          $ref: "#/components/responses/UnexpectedError"
+
+  /internal/v1/sessions/introspect:
+    post:
+      tags: [Internal sessions]
+      summary: Validate a session for a backend service
+      operationId: introspectSession
+      description: >-
+        This endpoint is for trusted backend services only. Requests must come
+        from loopback and include one of the configured service validation
+        keys. It returns the account and session state without caching the
+        response.
+      security:
+        - ServiceValidationKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionIntrospectionRequest"
+            example:
+              token: eyJhbGciOiJIUzI1NiJ9.example-token
+      responses:
+        "200":
+          description: The session is valid.
+          headers:
+            Cache-Control:
+              description: Session validation responses are not stored by caches.
+              schema:
+                type: string
+              example: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionPrincipal"
+              example:
+                accountId: 12
+                username: islandfoods
+                role: CUSTOMER
+                profileId: 12
+                active: true
+                expiresAt: "2026-10-27T09:00:00Z"
+        "400":
+          description: The request body is missing, malformed, or has no session token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                invalidRequest:
+                  summary: Missing or malformed JSON
+                  value:
+                    code: INVALID_REQUEST
+                    message: Request body is missing or invalid.
+                    path: /internal/v1/sessions/introspect
+                missingToken:
+                  summary: Session token is blank
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Session token is required.
+                    path: /internal/v1/sessions/introspect
+        "401":
+          description: The session token is invalid, expired, revoked, or belongs to an inactive account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: UNAUTHORIZED
+                message: This session is invalid or has expired. Ask the user to sign in again.
+                path: /internal/v1/sessions/introspect
+        "403":
+          description: The caller is not an authorized local backend service.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: FORBIDDEN
+                message: This session validation request is not authorized.
+                path: /internal/v1/sessions/introspect
+        "500":
+          $ref: "#/components/responses/UnexpectedError"
+
+components:
+  securitySchemes:
+    ServiceValidationKey:
+      type: apiKey
+      in: header
+      name: X-Service-Validation-Key
+      description: A configured service validation secret. Requests must also originate from loopback.
+
+  responses:
+    MobileLoginBadRequest:
+      description: The request body is missing, malformed, or fails field validation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          examples:
+            invalidRequest:
+              summary: Missing or malformed JSON
+              value:
+                code: INVALID_REQUEST
+                message: Request body is missing or invalid.
+                path: /api/v1/mobile/login
+            missingUsername:
+              summary: Username is blank
+              value:
+                code: VALIDATION_ERROR
+                message: Username is required.
+                path: /api/v1/mobile/login
+            missingPassword:
+              summary: Password is blank
+              value:
+                code: VALIDATION_ERROR
+                message: Password is required.
+                path: /api/v1/mobile/login
+
+    UnexpectedError:
+      description: The service could not complete the request because of an unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            code: INTERNAL_SERVER_ERROR
+            message: An unexpected error occurred. Please try again.
+            path: /<request-path>
+
+  schemas:
+    MobileLoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '\S'
+          description: Account username.
+          example: islandfoods
+        password:
+          type: string
+          format: password
+          minLength: 1
+          maxLength: 72
+          pattern: '\S'
+          description: Account password.
+          example: correct-horse-battery-staple
+
+    MobileLoginResponse:
+      type: object
+      required: [sessionToken, username, role]
+      properties:
+        sessionToken:
+          type: string
+          description: Opaque bearer token for the signed-in session.
+          example: eyJhbGciOiJIUzI1NiJ9.example-token
+        username:
+          type: string
+          example: islandfoods
+        role:
+          type: string
+          enum: [ADMIN, CUSTOMER, DISPATCHER]
+          example: CUSTOMER
+        profileId:
+          type: integer
+          format: int64
+          nullable: true
+          description: Customer or dispatcher profile ID. Admin accounts do not have a domain profile.
+          example: 12
+
+    MobileRegistrationRequest:
+      type: object
+      required: [username, password, confirmPassword, name, address]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 100
+          pattern: '^[A-Za-z0-9._-]{3,100}$'
+          description: 3 to 100 letters, numbers, periods, underscores, or hyphens.
+          example: islandfoods
+        password:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 72
+          pattern: '\S'
+          description: Password must contain 12 to 72 characters.
+          example: correct-horse-battery-staple
+        confirmPassword:
+          type: string
+          format: password
+          minLength: 1
+          pattern: '\S'
+          description: Must match password.
+          example: correct-horse-battery-staple
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '\S'
+          description: Customer business name or dispatcher name.
+          example: Island Foods
+        contactName:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Optional customer contact person's name.
+          example: Hana
+        phone:
+          type: string
+          nullable: true
+          pattern: '^$|^\+?[0-9]{7,15}$'
+          description: Optional phone number with 7 to 15 digits, optionally starting with +.
+          example: "+64211234567"
+        address:
+          type: string
+          minLength: 1
+          maxLength: 500
+          pattern: '\S'
+          description: Address for the customer business or dispatcher.
+          example: 12 Market Street, Auckland
+
+    RegistrationResponse:
+      type: object
+      required: [requestId, status, message]
+      properties:
+        requestId:
+          type: integer
+          format: int64
+          description: ID of the saved registration request.
+          example: 41
+        status:
+          type: string
+          enum: [PENDING]
+          description: Account request is awaiting administrator review.
+          example: PENDING
+        message:
+          type: string
+          description: User-facing confirmation of the request status.
+          example: Request received. An administrator must approve the account before sign-in.
+
+    MobileLogoutRequest:
+      type: object
+      required: [sessionToken]
+      properties:
+        sessionToken:
+          type: string
+          minLength: 1
+          pattern: '\S'
+          description: Opaque session token to revoke.
+          example: eyJhbGciOiJIUzI1NiJ9.example-token
+
+    GooglePlacesConfigResponse:
+      type: object
+      required: [apiKey]
+      properties:
+        apiKey:
+          type: string
+          description: Browser API key for Google Places, or an empty string when unset.
+          example: browser-api-key
+
+    SessionIntrospectionRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          pattern: '\S'
+          description: Opaque session token to validate.
+          example: eyJhbGciOiJIUzI1NiJ9.example-token
+
+    SessionPrincipal:
+      type: object
+      required: [accountId, username, role, active, expiresAt]
+      properties:
+        accountId:
+          type: integer
+          format: int64
+          example: 12
+        username:
+          type: string
+          example: islandfoods
+        role:
+          type: string
+          enum: [ADMIN, CUSTOMER, DISPATCHER]
+          example: CUSTOMER
+        profileId:
+          type: integer
+          format: int64
+          nullable: true
+          description: Customer or dispatcher profile ID; null for admin accounts.
+          example: 12
+        active:
+          type: boolean
+          example: true
+        expiresAt:
+          type: string
+          format: date-time
+          example: "2026-10-27T09:00:00Z"
+
+    ApiError:
+      type: object
+      required: [code, message, path]
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error code.
+          enum:
+            - VALIDATION_ERROR
+            - INVALID_REQUEST
+            - BAD_REQUEST
+            - UNAUTHORIZED
+            - ACCOUNT_AWAITING_ACTIVATION
+            - FORBIDDEN
+            - NOT_FOUND
+            - CONFLICT
+            - TOO_MANY_REQUESTS
+            - SERVICE_UNAVAILABLE
+            - INTERNAL_SERVER_ERROR
+            - REQUEST_FAILED
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: User-facing explanation of the error and, where appropriate, how to proceed.
+          example: Username is required.
+        path:
+          type: string
+          description: Request path that produced the error.
+          example: /api/v1/mobile/login

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Exposes the restricted browser key used by registration address autocomplete. */
+/** Exposes the browser-restricted Google Places key used by registration address autocomplete. */
 @RestController
 @RequestMapping("/api/v1/google-places")
 public class GooglePlacesConfigController {

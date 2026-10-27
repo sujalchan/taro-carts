@@ -23,7 +23,7 @@ import nz.ac.aut.comp713.login_service.service.RegistrationRequestService.Duplic
 import nz.ac.aut.comp713.login_service.service.SecurityAudit;
 import nz.ac.aut.comp713.login_service.web.RegistrationForm;
 
-/** Public account request pages. */
+/** Serves public registration pages and converts validated browser forms into account requests. */
 @Controller
 public class AccountPageController {
 

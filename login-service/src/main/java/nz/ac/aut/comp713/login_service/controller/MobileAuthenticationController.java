@@ -19,15 +19,22 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-/** JSON authentication endpoints for the native Android client. */
+/** JSON sign-in, registration, and sign-out endpoints for the native Android client. */
 @RestController
 @RequestMapping("/api/v1/mobile")
 public class MobileAuthenticationController {
-    public record LoginRequest(@NotBlank @Size(max = 100) String username,
-                               @NotBlank @Size(max = 72) String password) {}
+    /** Credentials accepted by the native client sign-in endpoint. */
+    public record LoginRequest(
+            @NotBlank(message = "Username is required.")
+            @Size(max = 100, message = "Username must be 100 characters or fewer.") String username,
+            @NotBlank(message = "Password is required.")
+            @Size(max = 72, message = "Password must be 72 characters or fewer.") String password) {}
+    /** Session credential and role/profile identity returned after successful sign-in. */
     public record LoginResponse(String sessionToken, String username, String role, Long profileId) {}
+    /** Receipt returned after a pending account request has been saved. */
     public record RegistrationResponse(long requestId, String status, String message) {}
-    public record LogoutRequest(@NotBlank String sessionToken) {}
+    /** Token submitted to revoke a native-client session. */
+    public record LogoutRequest(@NotBlank(message = "Session token is required.") String sessionToken) {}
 
     private final AuthenticationService authentication;
     private final RegistrationRequestService registrations;
@@ -42,6 +49,7 @@ public class MobileAuthenticationController {
         this.limiter = limiter;
     }
 
+    /** Returns a one-time session token, or an API error that explains the sign-in failure safely. */
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request,
                                                 HttpServletRequest servletRequest) {
@@ -76,6 +84,7 @@ public class MobileAuthenticationController {
                         account.getProfileId()));
     }
 
+    /** Persists a pending customer/dispatcher request and returns its receipt without activating it. */
     @PostMapping("/register/{role}")
     public ResponseEntity<RegistrationResponse> register(@PathVariable String role,
                                                           @Valid @RequestBody MobileRegistrationRequest request) {
@@ -83,7 +92,8 @@ public class MobileAuthenticationController {
         try {
             accountRole = RegistrationRole.valueOf(role.toUpperCase(java.util.Locale.ROOT));
         } catch (IllegalArgumentException exception) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Choose customer or dispatcher as the account type.");
         }
         if (!request.password().equals(request.confirmPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match.");
@@ -103,10 +113,12 @@ public class MobileAuthenticationController {
                     .body(new RegistrationResponse(id, "PENDING",
                             "Request received. An administrator must approve the account before sign-in."));
         } catch (RegistrationRequestService.DuplicateUsernameException exception) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "That username has already been requested.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That username is already in use or has a pending request. Choose another username.");
         }
     }
 
+    /** Revokes the supplied session token; unknown tokens are treated as already signed out. */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
         sessions.revoke(request.sessionToken());
@@ -114,13 +126,20 @@ public class MobileAuthenticationController {
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 
+    /** Validated account and profile fields accepted by mobile registration. */
     public record MobileRegistrationRequest(
-            @NotBlank @Size(min = 3, max = 100) @jakarta.validation.constraints.Pattern(
-                    regexp = "[A-Za-z0-9._-]{3,100}") String username,
-            @NotBlank @Size(min = 12, max = 72) String password,
-            @NotBlank String confirmPassword,
-            @NotBlank @Size(max = 100) String name,
-            @Size(max = 100) String contactName,
-            @jakarta.validation.constraints.Pattern(regexp = "^$|^\\+?[0-9]{7,15}$") String phone,
-            @NotBlank @Size(max = 500) String address) {}
+            @NotBlank(message = "Username is required.")
+            @Size(min = 3, max = 100, message = "Username must be 3 to 100 characters.")
+            @jakarta.validation.constraints.Pattern(regexp = "[A-Za-z0-9._-]{3,100}",
+                    message = "Username can use letters, numbers, periods, underscores, and hyphens.") String username,
+            @NotBlank(message = "Password is required.")
+            @Size(min = 12, max = 72, message = "Password must be 12 to 72 characters.") String password,
+            @NotBlank(message = "Please confirm your password.") String confirmPassword,
+            @NotBlank(message = "Name is required.")
+            @Size(max = 100, message = "Name must be 100 characters or fewer.") String name,
+            @Size(max = 100, message = "Contact name must be 100 characters or fewer.") String contactName,
+            @jakarta.validation.constraints.Pattern(regexp = "^$|^\\+?[0-9]{7,15}$",
+                    message = "Phone must contain 7 to 15 digits, optionally starting with +.") String phone,
+            @NotBlank(message = "Address is required.")
+            @Size(max = 500, message = "Address must be 500 characters or fewer.") String address) {}
 }

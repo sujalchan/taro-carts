@@ -39,6 +39,7 @@ import nz.ac.aut.comp713.login_service.repository.RegistrationRequestRepository;
 import nz.ac.aut.comp713.login_service.service.AccountSeeder;
 import nz.ac.aut.comp713.login_service.service.AuthCookies;
 
+/** Exercises browser/mobile authentication, registration, CSRF, and session behavior over HTTP. */
 @SpringBootTest(properties = {"debug=false", "logging.level.root=ERROR", "logging.level.org.hibernate.SQL=OFF",
         "login.customer-provisioning-secret=test-customer-secret-0123456789abcdef0123456789abcdef",
         "login.dispatcher-provisioning-secret=test-dispatcher-secret-0123456789abcdef0123456789abcdef",

@@ -18,6 +18,7 @@ import nz.ac.aut.comp713.login_service.service.LoginDestinations;
 import nz.ac.aut.comp713.login_service.service.SessionService;
 import nz.ac.aut.comp713.login_service.service.SecurityAudit;
 
+/** Handles browser sign-in and sign-out with CSRF-protected forms and opaque session cookies. */
 @Controller
 public class LoginController {
 
@@ -36,6 +37,7 @@ public class LoginController {
         this.destinations = destinations;
     }
 
+    /** Prepares the sign-in page, validates any existing cookie, and issues a CSRF token. */
     @GetMapping("/login")
     public String loginPage(@CookieValue(value = AuthCookies.SESSION, required = false) String sessionToken,
                             @RequestParam(value = "returnTo", required = false) String returnTo,
@@ -50,6 +52,7 @@ public class LoginController {
         return "login";
     }
 
+    /** Authenticates the form and replaces any previous browser session on success. */
     @PostMapping("/login")
     public String login(@RequestParam String username, @RequestParam String password,
                         @RequestParam(value = "csrf", required = false) String csrf,
@@ -89,6 +92,7 @@ public class LoginController {
         return "redirect:" + destinations.destination(account.getRole(), returnTo);
     }
 
+    /** Revokes the presented session only after validating the form CSRF token. */
     @PostMapping("/logout")
     public String logout(@RequestParam(value = "csrf", required = false) String csrf,
                          @CookieValue(value = AuthCookies.CSRF, required = false) String csrfCookie,

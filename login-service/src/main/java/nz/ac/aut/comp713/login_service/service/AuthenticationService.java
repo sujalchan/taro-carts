@@ -12,10 +12,19 @@ import nz.ac.aut.comp713.login_service.model.Account;
 import nz.ac.aut.comp713.login_service.model.AccountRole;
 import nz.ac.aut.comp713.login_service.repository.AccountRepository;
 
+/**
+ * Checks credentials and account eligibility without revealing whether an
+ * unknown username exists.
+ */
 @Service
 public class AuthenticationService {
 
-    public record LoginResult(Account account, boolean awaitingActivation) {}
+    /**
+     * Separates a valid account from the correct-password-but-inactive account
+     * case.
+     */
+    public record LoginResult(Account account, boolean awaitingActivation) {
+    }
 
     private final AccountRepository accounts;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -28,21 +37,37 @@ public class AuthenticationService {
         this.dummyHash = passwordEncoder.encode("not-a-real-account-password");
     }
 
+    /**
+     * Convenience authentication result for callers that only need an eligible
+     * account.
+     */
     @Transactional
     public Optional<Account> authenticate(String username, String password) {
         return Optional.ofNullable(authenticateForLogin(username, password).account());
     }
 
+    /**
+     * Returns either an active account, an activation-pending result, or a generic
+     * failed result.
+     */
     @Transactional
     public LoginResult authenticateForLogin(String username, String password) {
         String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
+
         Optional<Account> account = normalized.length() > 100 ? Optional.empty()
                 : accounts.findByNormalizedUsername(normalized);
+
         boolean passwordMatches = passwordEncoder.matches(password == null ? "" : password,
                 account.map(Account::getPasswordHash).orElse(dummyHash));
-        if (account.isEmpty() || !passwordMatches) return new LoginResult(null, false);
+
+        if (account.isEmpty() || !passwordMatches)
+            return new LoginResult(null, false);
+
         Account matched = account.get();
-        if (!matched.isActive()) return new LoginResult(null, true);
+
+        if (!matched.isActive())
+            return new LoginResult(null, true);
+
         if (matched.getRole() != AccountRole.ADMIN && matched.getProfileId() == null) {
             return new LoginResult(null, false);
         }

@@ -20,17 +20,23 @@ import nz.ac.aut.comp713.login_service.model.AccountRole;
 import nz.ac.aut.comp713.login_service.model.LoginSession;
 import nz.ac.aut.comp713.login_service.repository.LoginSessionRepository;
 
+/**
+ * Issues opaque sessions while persisting only token hashes, and validates
+ * revocation, expiry, and account state.
+ */
 @Service
 public class SessionService {
 
-    public record IssuedSession(String token, Instant expiresAt) {}
+    /** Raw token is returned once to the caller; only its hash is persisted. */
+    public record IssuedSession(String token, Instant expiresAt) {
+    }
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private final LoginSessionRepository sessions;
     private final Duration lifetime;
 
     public SessionService(LoginSessionRepository sessions,
-                          @Value("${login.session.lifetime:PT8H}") Duration lifetime) {
+            @Value("${login.session.lifetime:PT8H}") Duration lifetime) {
         if (lifetime.isNegative() || lifetime.isZero()) {
             throw new IllegalArgumentException("Session lifetime must be positive");
         }
@@ -38,6 +44,10 @@ public class SessionService {
         this.lifetime = lifetime;
     }
 
+    /**
+     * Creates a random 256-bit token, stores its SHA-256 hash, and returns the raw
+     * token only once.
+     */
     @Transactional
     public IssuedSession issue(Account account) {
         byte[] random = new byte[32];
@@ -49,32 +59,49 @@ public class SessionService {
         return new IssuedSession(token, expiresAt);
     }
 
+    /**
+     * Returns a session only if its token, expiry, account, and linked profile are
+     * still eligible.
+     */
     @Transactional(readOnly = true)
     public Optional<LoginSession> validate(String token) {
-        if (!isTokenShapeValid(token)) return Optional.empty();
+        if (!isTokenShapeValid(token))
+            return Optional.empty();
         Optional<LoginSession> session = sessions.findByTokenHashAndRevokedAtIsNull(hash(token));
         Instant now = Instant.now();
         if (session.isEmpty() || !session.get().getExpiresAt().isAfter(now)
                 || !session.get().getAccount().isActive()
                 || (session.get().getAccount().getRole() != AccountRole.ADMIN
-                    && session.get().getAccount().getProfileId() == null)) {
+                        && session.get().getAccount().getProfileId() == null)) {
             return Optional.empty();
         }
         return session;
     }
 
+    /**
+     * Revokes a matching session; malformed or unknown tokens are harmless no-ops.
+     */
     @Transactional
     public void revoke(String token) {
-        if (!isTokenShapeValid(token)) return;
+        if (!isTokenShapeValid(token))
+            return;
         sessions.findByTokenHashAndRevokedAtIsNull(hash(token))
                 .ifPresent(session -> session.revokeAt(Instant.now()));
     }
 
+    /**
+     * Invalidates all current sessions when an account is disabled or its password
+     * changes.
+     */
     @Transactional
     public void revokeAllForAccount(Long accountId) {
         sessions.revokeAllForAccount(accountId, Instant.now());
     }
 
+    /**
+     * Removes expired rows periodically so they do not accumulate in the session
+     * table.
+     */
     @Scheduled(fixedDelayString = "${login.session.cleanup-delay-ms:3600000}")
     @Transactional
     public void removeExpiredSessions() {

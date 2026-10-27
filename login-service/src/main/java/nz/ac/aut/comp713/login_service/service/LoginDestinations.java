@@ -6,7 +6,10 @@ import org.springframework.stereotype.Service;
 
 import nz.ac.aut.comp713.login_service.model.AccountRole;
 
-/** Exact return destinations avoid open redirects and cross-role navigation. */
+/**
+ * Restricts redirects to role-appropriate destinations and exact admin return
+ * URLs.
+ */
 @Service
 public class LoginDestinations {
 
@@ -18,6 +21,10 @@ public class LoginDestinations {
             "http://localhost:8084/dispatchers-client.html",
             "http://localhost:8081/portal/allocations", "http://localhost:8084/portal/deliveries");
 
+    /**
+     * Resolves the post-login destination without accepting arbitrary redirect
+     * URLs.
+     */
     public String destination(AccountRole role, String requested) {
         if (role == AccountRole.ADMIN) {
             if (requested != null && ADMIN_RETURN_URLS.contains(requested)) {
@@ -25,10 +32,15 @@ public class LoginDestinations {
             }
             return "/admin/accounts";
         }
-        if (role == AccountRole.CUSTOMER) return "http://localhost:8081/portal/allocations";
+        if (role == AccountRole.CUSTOMER)
+            return "http://localhost:8081/portal/allocations";
         return "http://localhost:8084/portal/deliveries";
     }
 
+    /**
+     * Returns an allow-listed admin destination for rendering the login form,
+     * otherwise an empty string.
+     */
     public String permittedReturnTo(String requested) {
         return requested != null && ADMIN_RETURN_URLS.contains(requested) ? requested : "";
     }

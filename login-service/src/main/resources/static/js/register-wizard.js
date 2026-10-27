@@ -15,6 +15,7 @@
     const profileIntro = document.querySelector(".step-help").textContent;
     let currentStep = 2;
 
+    // Keep the visible fieldset, progress indicators, helper text, and keyboard focus in sync.
     function showStep(step, focusTitle = false) {
         currentStep = step;
         accountStep.hidden = step !== 2;
@@ -40,6 +41,7 @@
         }
     }
 
+    // Use native field validation first, then enforce the cross-field password match.
     function continueToProfile() {
         confirmation.setCustomValidity("");
         for (const input of accountStep.querySelectorAll("input")) {

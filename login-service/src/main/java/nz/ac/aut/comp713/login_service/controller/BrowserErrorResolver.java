@@ -14,7 +14,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.stereotype.Component;
 import org.springframework.core.annotation.AnnotationUtils;
 
-/** Render safe HTML for browser failures while preserving the existing API error handlers. */
+/** Renders a safe HTML error page for browser requests while leaving API errors to the JSON advice. */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class BrowserErrorResolver implements HandlerExceptionResolver {

@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/** Login identity linked to an optional customer or dispatcher profile. */
 @Entity
 @Table(name = "accounts")
 public class Account {
@@ -37,7 +38,10 @@ public class Account {
     @Column(nullable = false)
     private boolean active;
 
-    // Non-null while a cross-service activation change needs completion or repair.
+    /**
+     * Target activation state retained while a domain profile update needs
+     * retrying.
+     */
     private Boolean desiredActive;
 
     @Column(nullable = false)
@@ -52,7 +56,7 @@ public class Account {
     }
 
     public Account(String username, String normalizedUsername, String passwordHash,
-                   AccountRole role, Long profileId, boolean active) {
+            AccountRole role, Long profileId, boolean active) {
         this.username = username;
         this.normalizedUsername = normalizedUsername;
         this.passwordHash = passwordHash;
@@ -63,16 +67,45 @@ public class Account {
         this.updatedAt = createdAt;
     }
 
-    public Long getId() { return id; }
-    public String getUsername() { return username; }
-    public String getNormalizedUsername() { return normalizedUsername; }
-    public String getPasswordHash() { return passwordHash; }
-    public AccountRole getRole() { return role; }
-    public Long getProfileId() { return profileId; }
-    public boolean isActive() { return active; }
-    public Boolean getDesiredActive() { return desiredActive; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getLastLoginAt() { return lastLoginAt; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getNormalizedUsername() {
+        return normalizedUsername;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public AccountRole getRole() {
+        return role;
+    }
+
+    public Long getProfileId() {
+        return profileId;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public Boolean getDesiredActive() {
+        return desiredActive;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
 
     public void recordLogin(Instant when) {
         lastLoginAt = when;
@@ -84,12 +117,18 @@ public class Account {
         updatedAt = when;
     }
 
+    /**
+     * Persists the target state; disabling takes effect locally before the remote
+     * call.
+     */
     public void beginActivationChange(boolean desired, Instant when) {
         desiredActive = desired;
-        if (!desired) active = false;
+        if (!desired)
+            active = false;
         updatedAt = when;
     }
 
+    /** Commits the remote state locally and clears the retry marker. */
     public void finishActivationChange(boolean value, Instant when) {
         active = value;
         desiredActive = null;

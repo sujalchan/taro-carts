@@ -1,96 +1,140 @@
 <!doctype html>
+<!-- Admin view for account status, pending registration repair, and password changes. -->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Account requests · Taro Carts</title>
     <link rel="stylesheet" th:href="@{/css/auth.css}" href="/css/auth.css">
 </head>
+
 <body>
-<div class="page-shell">
-    <nav class="app-nav" aria-label="Admin navigation">
-        <a class="app-nav__brand" href="http://localhost:8081/customers">Taro Carts</a>
-        <div class="app-nav__links">
-            <a href="http://localhost:8081/customers">Customers</a>
-            <a href="http://localhost:8084/dispatchers">Dispatchers</a>
-            <a href="http://localhost:8083/taro-types">Taro</a>
-            <a href="http://localhost:8082/allocations">Allocations</a>
-            <a href="http://localhost:8081/portal/allocations">Customer portal</a>
-            <a href="http://localhost:8084/portal/deliveries">Dispatcher portal</a>
-            <a href="/admin/accounts" aria-current="page">Accounts</a>
-            <a th:href="@{/logout}" href="/logout">Sign out</a>
-        </div>
-    </nav>
-
-    <main class="admin-panel">
-        <span class="eyebrow">Account administration</span>
-        <h1>Account requests</h1>
-        <p class="intro">Review account requests, then enable linked profiles when they are ready to sign in.</p>
-        <div class="form-error" role="alert" th:if="${provisioningError}">Provisioning could not be completed. The request is saved; check the domain service and retry.</div>
-        <div class="form-error" role="alert" th:if="${activationError}">The account and profile could not be fully synchronized. The pending state is shown below; retry the action.</div>
-
-        <section aria-labelledby="pending-title">
-            <h2 id="pending-title">Pending requests <span th:text="${#lists.size(pendingRequests)}">0</span></h2>
-            <div class="table-scroll" th:if="${!pendingRequests.isEmpty()}">
-                <table>
-                    <thead><tr><th scope="col">Reference</th><th scope="col">Username</th><th scope="col">Type</th><th scope="col">Profile name</th><th scope="col">Submitted</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
-                    <tbody><tr th:each="row : ${pendingRequests}">
-                        <td th:text="${row.request.id}">1</td>
-                        <td th:text="${row.request.username}">username</td>
-                        <td th:text="${row.request.role}">CUSTOMER</td>
-                        <td th:text="${row.request.name}">Profile</td>
-                        <td th:text="${#temporals.format(row.request.submittedAt, 'dd MMM yyyy HH:mm')}">Date</td>
-                        <td><span class="status-pill" th:text="${row.status}">Awaiting approval</span></td>
-                        <td>
-                            <form method="post" th:if="${row.retryable}" th:action="@{/admin/requests/{id}/retry(id=${row.request.id})}">
-                                <input type="hidden" name="csrf" th:value="${csrfToken}">
-                                <button class="table-action" type="submit">Retry provisioning</button>
-                            </form>
-                            <span th:if="${!row.retryable}">—</span>
-                        </td>
-                    </tr></tbody>
-                </table>
+    <div class="page-shell">
+        <nav class="app-nav" aria-label="Admin navigation">
+            <a class="app-nav__brand" href="http://localhost:8081/customers">Taro Carts</a>
+            <div class="app-nav__links">
+                <a href="http://localhost:8081/customers">Customers</a>
+                <a href="http://localhost:8084/dispatchers">Dispatchers</a>
+                <a href="http://localhost:8083/taro-types">Taro</a>
+                <a href="http://localhost:8082/allocations">Allocations</a>
+                <a href="http://localhost:8081/portal/allocations">Customer portal</a>
+                <a href="http://localhost:8084/portal/deliveries">Dispatcher portal</a>
+                <a href="/admin/accounts" aria-current="page">Accounts</a>
+                <a th:href="@{/logout}" href="/logout">Sign out</a>
             </div>
-            <p class="empty-state" th:if="${pendingRequests.isEmpty()}">No pending account requests.</p>
-        </section>
+        </nav>
 
-        <section aria-labelledby="existing-title">
-            <h2 id="existing-title">Login accounts <span th:text="${#lists.size(accounts)}">1</span></h2>
-            <div class="table-scroll">
-                <table>
-                    <thead><tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Profile ID</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
-                    <tbody><tr th:each="account : ${accounts}">
-                        <td th:text="${account.username}">admin</td>
-                        <td th:text="${account.role}">ADMIN</td>
-                        <td th:text="${account.profileId ?: '—'}">—</td>
-                        <td><span class="status-pill" th:text="${account.desiredActive != null ? 'Sync pending' : (account.active ? 'Active' : 'Inactive')}">Active</span></td>
-                        <td>
-                            <form method="post" th:if="${account.role.name() != 'ADMIN' && account.profileId != null}" th:action="@{/admin/accounts/{id}/active(id=${account.id})}">
-                                <input type="hidden" name="csrf" th:value="${csrfToken}">
-                                <input type="hidden" name="active" th:value="${account.desiredActive != null ? account.desiredActive : !account.active}">
-                                <button class="table-action" type="submit" th:text="${account.desiredActive != null ? 'Retry sync' : (account.active ? 'Disable' : 'Enable')}">Enable</button>
-                            </form>
-                            <span th:if="${account.role.name() == 'ADMIN'}">—</span>
-                        </td>
-                    </tr></tbody>
-                </table>
-            </div>
-        </section>
+        <main class="admin-panel">
+            <span class="eyebrow">Account administration</span>
+            <h1>Account requests</h1>
+            <p class="intro">Review account requests, then enable linked profiles when they are ready to sign in.</p>
+            <div class="form-error" role="alert" th:if="${provisioningError}">Provisioning could not be completed. The
+                request is saved; check the domain service and retry.</div>
+            <div class="form-error" role="alert" th:if="${activationError}">The account and profile could not be fully
+                synchronized. The pending state is shown below; retry the action.</div>
 
-        <section aria-labelledby="password-title" class="admin-password-section">
-            <h2 id="password-title">Change admin password</h2>
-            <p class="intro">Change the initial development password before using this service with real data. Changing it signs out all sessions for this account.</p>
-            <div class="form-error" role="alert" th:if="${passwordError}">Password was not changed. Check your current password and enter a matching new password of 12–72 characters.</div>
-            <form method="post" th:action="@{/admin/password}" action="/admin/password" class="admin-password-form">
-                <input type="hidden" name="csrf" th:value="${csrfToken}">
-                <div class="field"><label for="currentPassword">Current password</label><input id="currentPassword" name="currentPassword" type="password" autocomplete="current-password" required></div>
-                <div class="field"><label for="newPassword">New password</label><input id="newPassword" name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="72" required></div>
-                <div class="field"><label for="confirmPassword">Confirm new password</label><input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="72" required></div>
-                <button class="primary-button" type="submit">Change password <span aria-hidden="true">→</span></button>
-            </form>
-        </section>
-    </main>
-    <footer class="site-footer"><span>© Taro Carts</span></footer>
-</div>
+            <section aria-labelledby="pending-title">
+                <h2 id="pending-title">Pending requests <span th:text="${#lists.size(pendingRequests)}">0</span></h2>
+                <div class="table-scroll" th:if="${!pendingRequests.isEmpty()}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Reference</th>
+                                <th scope="col">Username</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Profile name</th>
+                                <th scope="col">Submitted</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="row : ${pendingRequests}">
+                                <td th:text="${row.request.id}">1</td>
+                                <td th:text="${row.request.username}">username</td>
+                                <td th:text="${row.request.role}">CUSTOMER</td>
+                                <td th:text="${row.request.name}">Profile</td>
+                                <td th:text="${#temporals.format(row.request.submittedAt, 'dd MMM yyyy HH:mm')}">Date
+                                </td>
+                                <td><span class="status-pill" th:text="${row.status}">Awaiting approval</span></td>
+                                <td>
+                                    <form method="post" th:if="${row.retryable}"
+                                        th:action="@{/admin/requests/{id}/retry(id=${row.request.id})}">
+                                        <input type="hidden" name="csrf" th:value="${csrfToken}">
+                                        <button class="table-action" type="submit">Retry provisioning</button>
+                                    </form>
+                                    <span th:if="${!row.retryable}">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="empty-state" th:if="${pendingRequests.isEmpty()}">No pending account requests.</p>
+            </section>
+
+            <section aria-labelledby="existing-title">
+                <h2 id="existing-title">Login accounts <span th:text="${#lists.size(accounts)}">1</span></h2>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Username</th>
+                                <th scope="col">Role</th>
+                                <th scope="col">Profile ID</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="account : ${accounts}">
+                                <td th:text="${account.username}">admin</td>
+                                <td th:text="${account.role}">ADMIN</td>
+                                <td th:text="${account.profileId ?: '—'}">—</td>
+                                <td><span class="status-pill"
+                                        th:text="${account.desiredActive != null ? 'Sync pending' : (account.active ? 'Active' : 'Inactive')}">Active</span>
+                                </td>
+                                <td>
+                                    <form method="post"
+                                        th:if="${account.role.name() != 'ADMIN' && account.profileId != null}"
+                                        th:action="@{/admin/accounts/{id}/active(id=${account.id})}">
+                                        <input type="hidden" name="csrf" th:value="${csrfToken}">
+                                        <input type="hidden" name="active"
+                                            th:value="${account.desiredActive != null ? account.desiredActive : !account.active}">
+                                        <button class="table-action" type="submit"
+                                            th:text="${account.desiredActive != null ? 'Retry sync' : (account.active ? 'Disable' : 'Enable')}">Enable</button>
+                                    </form>
+                                    <span th:if="${account.role.name() == 'ADMIN'}">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section aria-labelledby="password-title" class="admin-password-section">
+                <h2 id="password-title">Change admin password</h2>
+                <p class="intro">Change the initial development password before using this service with real data.
+                    Changing it signs out all sessions for this account.</p>
+                <div class="form-error" role="alert" th:if="${passwordError}">Password was not changed. Check your
+                    current password and enter a matching new password of 12–72 characters.</div>
+                <form method="post" th:action="@{/admin/password}" action="/admin/password" class="admin-password-form">
+                    <input type="hidden" name="csrf" th:value="${csrfToken}">
+                    <div class="field"><label for="currentPassword">Current password</label><input id="currentPassword"
+                            name="currentPassword" type="password" autocomplete="current-password" required></div>
+                    <div class="field"><label for="newPassword">New password</label><input id="newPassword"
+                            name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="72"
+                            required></div>
+                    <div class="field"><label for="confirmPassword">Confirm new password</label><input
+                            id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
+                            minlength="12" maxlength="72" required></div>
+                    <button class="primary-button" type="submit">Change password <span
+                            aria-hidden="true">→</span></button>
+                </form>
+            </section>
+        </main>
+        <footer class="site-footer"><span>© Taro Carts</span></footer>
+    </div>
 </body>
+
 </html>

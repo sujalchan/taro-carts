@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import nz.ac.aut.comp713.login_service.model.AccountRole;
 import nz.ac.aut.comp713.login_service.service.LoginDestinations;
 
+/** Verifies that role redirects work and arbitrary return URLs are rejected. */
 class LoginDestinationsTest {
 
     private final LoginDestinations destinations = new LoginDestinations();
