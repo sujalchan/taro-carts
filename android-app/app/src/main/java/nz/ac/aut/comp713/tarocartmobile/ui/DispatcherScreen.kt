@@ -72,6 +72,7 @@ fun DispatcherScreen(
     var deliveriesRefresh by remember { mutableStateOf(0) }
     var updatingDeliveryId by remember { mutableStateOf<Long?>(null) }
     var updateError by remember { mutableStateOf<String?>(null) }
+    var navigationAllocationId by rememberSaveable { mutableStateOf<Long?>(null) }
     var changingPassword by rememberSaveable { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -118,6 +119,12 @@ fun DispatcherScreen(
             onBack = { changingPassword = false },
             onSessionEnded = onSessionEnded
         )
+        return
+    }
+
+    navigationAllocationId?.let { allocationId ->
+        DispatcherNavigationScreen(allocationId, sessionToken,
+            onBack = { navigationAllocationId = null })
         return
     }
 
@@ -196,6 +203,7 @@ fun DispatcherScreen(
                         items(deliveries, key = { it.allocation.id }) { delivery ->
                             DeliveryCard(delivery,
                                 updating = updatingDeliveryId == delivery.allocation.id,
+                                onNavigate = { navigationAllocationId = delivery.allocation.id },
                                 onAdvance = { status ->
                                     updateError = null
                                     updatingDeliveryId = delivery.allocation.id
@@ -223,6 +231,7 @@ fun DispatcherScreen(
 
 @Composable
 private fun DeliveryCard(delivery: AssignedDelivery, updating: Boolean,
+                         onNavigate: () -> Unit,
                          onAdvance: (String) -> Unit) {
     val allocation = delivery.allocation
     Card(
@@ -267,6 +276,10 @@ private fun DeliveryCard(delivery: AssignedDelivery, updating: Boolean,
                     onClick = { onAdvance("DELIVERED") }) {
                     if (updating) CircularProgressIndicator() else Text("Mark delivered")
                 }
+            }
+            if (allocation.deliveryStatus == "AWAITING_DISPATCH"
+                || allocation.deliveryStatus == "IN_TRANSIT") {
+                OutlinedButton(onClick = onNavigate) { Text("Navigate") }
             }
         }
     }

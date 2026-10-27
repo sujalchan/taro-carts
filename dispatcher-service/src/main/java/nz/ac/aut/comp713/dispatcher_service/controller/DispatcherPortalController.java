@@ -138,10 +138,13 @@ public class DispatcherPortalController {
         var delivery = deliveries.list(request, "ADMIN".equals(principal(request).role()) ? selected : null)
                 .stream().filter(item -> id.equals(item.id()) && selected.equals(item.dispatcherId()))
                 .findFirst().orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
-        if (!"IN_TRANSIT".equals(delivery.deliveryStatus())) {
+        if (!("IN_TRANSIT".equals(delivery.deliveryStatus())
+                || "DISPATCHER".equals(principal(request).role())
+                && "AWAITING_DISPATCH".equals(delivery.deliveryStatus()))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         model.addAttribute("delivery", delivery);
+        model.addAttribute("embedded", "true".equals(request.getParameter("embedded")));
         model.addAttribute("startAddress", deliveries.randomStart(request, id, false));
         var points = deliveries.locations(request, id).stream().collect(
                 java.util.stream.Collectors.toMap(PortalDeliveryClient.LocationPoint::kind, point -> point));

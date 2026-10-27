@@ -90,6 +90,35 @@ class DispatcherPortalControllerTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
+        when(deliveries.list(admin, 7L)).thenReturn(List.of(new PortalDeliveryClient.Delivery(
+                11L, 3L, "Customer", LocalDate.now(), "AWAITING_DISPATCH", "UNPAID", 7L,
+                "Auckland", false, List.of())));
+        assertThatThrownBy(() -> controller.locations(11L, 7L, admin, new ExtendedModelMap()))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void assignedDispatcherCanNavigateBeforeTransitButNotAfterDelivery() {
+        var dispatcher = request("DISPATCHER", 7L);
+        when(dispatchers.getById(7L)).thenReturn(
+                new DispatcherResponse(7L, "Driver", null, null, "Auckland", true));
+        when(deliveries.list(dispatcher, null)).thenReturn(List.of(new PortalDeliveryClient.Delivery(
+                11L, 3L, "Customer", LocalDate.now(), "AWAITING_DISPATCH", "UNPAID", 7L,
+                "69 Greenmeadows Avenue", false, List.of())));
+        when(deliveries.randomStart(dispatcher, 11L, false)).thenReturn("16 Putney Way");
+        when(deliveries.locations(dispatcher, 11L)).thenReturn(List.of());
+        assertThat(controller.locations(11L, null, dispatcher, new ExtendedModelMap()))
+                .isEqualTo("delivery-locations");
+        assertThatThrownBy(() -> controller.locations(12L, null, dispatcher, new ExtendedModelMap()))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+        when(deliveries.list(dispatcher, null)).thenReturn(List.of(new PortalDeliveryClient.Delivery(
+                11L, 3L, "Customer", LocalDate.now(), "DELIVERED", "UNPAID", 7L,
+                null, false, List.of())));
+        assertThatThrownBy(() -> controller.locations(11L, null, dispatcher, new ExtendedModelMap()))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     private MockHttpServletRequest request(String role, Long profileId) {

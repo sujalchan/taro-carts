@@ -519,6 +519,11 @@ td:last-child {
     background: #e8efec;
 }
 
+html:has(.embedded-map) { border-top: 0; }
+body.embedded-map { max-width: none; padding: 0; }
+.embedded-map .delivery-map-section { margin: 0; }
+.embedded-map .delivery-map { height: 100vh; min-height: 800px; border: 0; border-radius: 0; }
+
 .delivery-map-summary {
     position: absolute;
     top: 14px;

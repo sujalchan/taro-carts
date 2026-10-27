@@ -4,15 +4,15 @@
 <title>Delivery location - Taro Carts</title><link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/auth-inspired.css"><script defer src="/js/service-navigation.js"></script>
 <script defer src="/js/delivery-locations.js"></script></head>
-<body class="page-list portal-page">
-<nav class="app-nav" aria-label="Portal navigation" th:attr="data-nav-role=${admin ? 'admin' : 'dispatcher'}">
+<body class="page-list portal-page" th:classappend="${embedded ? ' embedded-map' : ''}">
+<nav class="app-nav" th:unless="${embedded}" aria-label="Portal navigation" th:attr="data-nav-role=${admin ? 'admin' : 'dispatcher'}">
 <a class="app-nav__brand" href="/portal/deliveries">Taro Carts</a>
 <div class="app-nav__links"><a href="/portal/deliveries">Deliveries</a><a href="http://localhost:8085/logout">Sign out</a></div></nav>
-<main><p><a th:href="@{/portal/deliveries(dispatcherId=${admin ? dispatcherId : null})}">Back to deliveries</a></p>
-<header class="portal-hero"><p class="portal-eyebrow">Delivery location</p>
+<main><p th:unless="${embedded}"><a th:href="@{/portal/deliveries(dispatcherId=${admin ? dispatcherId : null})}">Back to deliveries</a></p>
+<header class="portal-hero" th:unless="${embedded}"><p class="portal-eyebrow" th:text="${admin ? 'Delivery location' : 'Navigation'}">Delivery location</p>
 <h1 th:text="|Allocation ${delivery.id} - ${delivery.customerName}|">Delivery location</h1></header>
 <section aria-label="Delivery map" class="delivery-map-section">
-<h2>Map</h2>
+<h2 th:unless="${embedded}">Map</h2>
 <div class="delivery-map-shell">
 <div id="deliveryMap" class="delivery-map" role="img" aria-label="Map showing dispatch start, driver locations, and delivery destination"
      th:attr="data-address=${delivery.deliveryAddress},data-start-address=${startAddress}"></div>

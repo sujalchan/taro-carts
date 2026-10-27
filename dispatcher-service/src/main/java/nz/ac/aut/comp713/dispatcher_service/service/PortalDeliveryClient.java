@@ -73,7 +73,7 @@ public class PortalDeliveryClient {
                 .header("X-Allocation-Identity-Assertion", signer.sign(request, "GET", path))
                 .retrieve().body(Delivery[].class));
         return Arrays.stream(deliveries).map(delivery ->
-                "DELIVERED".equals(delivery.deliveryStatus())
+                selectedDispatcherId == null && "DELIVERED".equals(delivery.deliveryStatus())
                         ? new Delivery(delivery.id(), delivery.customerId(), delivery.customerName(),
                                 delivery.weekStart(), delivery.deliveryStatus(), delivery.paymentStatus(),
                                 delivery.dispatcherId(), null, delivery.invoiceAvailable(),

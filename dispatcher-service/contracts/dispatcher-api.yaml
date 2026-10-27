@@ -19,6 +19,31 @@ tags:
     description: Public browser configuration for dispatcher address forms
 
 paths:
+  /api/v1/mobile/portal/deliveries:
+    get:
+      summary: List the signed-in dispatcher's assigned deliveries
+      description: A delivered allocation has a null deliveryAddress for dispatcher accounts. Administrators use the browser portal to select a dispatcher and retain the address.
+      responses:
+        '200':
+          description: Assigned deliveries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/AssignedDelivery'}
+        '403': {description: A dispatcher account is required}
+  /portal/deliveries/{id}/locations:
+    get:
+      summary: View the three-point delivery navigation map
+      description: Assigned dispatchers may view the map while awaiting dispatch or in transit. Administrators may view it while in transit for the selected dispatcher. The middle truck is an estimated route midpoint when no driver position is stored.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: dispatcherId, in: query, required: false, schema: {type: integer, format: int64}, description: Required for administrators}
+        - {name: embedded, in: query, required: false, schema: {type: boolean}, description: Hides browser navigation for the Android in-app map}
+      responses:
+        '200': {description: Delivery map page, content: {text/html: {schema: {type: string}}}}
+        '403': {description: Allocation is not assigned to this dispatcher}
+        '404': {description: Delivery is no longer navigable}
   /api/v1/mobile/portal/deliveries/{id}/locations:
     parameters:
       - name: id
@@ -209,6 +234,13 @@ paths:
 
 components:
   schemas:
+    AssignedDelivery:
+      type: object
+      properties:
+        id: {type: integer, format: int64}
+        deliveryStatus: {type: string}
+        deliveryAddress: {type: string, nullable: true, description: Null after delivery for dispatcher accounts}
+        dispatchStartAddress: {type: string, nullable: true}
     DeliveryLocationRequest:
       type: object
       required: [latitude, longitude]

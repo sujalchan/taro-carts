@@ -42,10 +42,12 @@
                 <tbody><tr th:each="delivery : ${deliveries}">
                     <td th:text="${delivery.weekStart}">2026-10-26</td>
                     <td th:text="${delivery.customerName}">Customer</td>
-                    <td th:text="${delivery.deliveryStatus == 'DELIVERED' ? '—' : (delivery.deliveryAddress ?: 'Address not provided')}">Address</td>
+                    <td th:text="${!admin and delivery.deliveryStatus == 'DELIVERED' ? '—' : (delivery.deliveryAddress ?: 'Address not provided')}">Address</td>
                     <td th:text="${#strings.replace(delivery.deliveryStatus, '_', ' ')}">Awaiting dispatch</td>
-                    <td><a class="portal-location-link" th:if="${delivery.deliveryStatus == 'IN_TRANSIT'}"
-                           th:href="@{/portal/deliveries/{id}/locations(id=${delivery.id},dispatcherId=${admin ? dispatcherId : null})}">View location</a></td>
+                    <td><a class="portal-location-link"
+                           th:if="${delivery.deliveryStatus == 'IN_TRANSIT' or !admin and delivery.deliveryStatus == 'AWAITING_DISPATCH'}"
+                           th:href="@{/portal/deliveries/{id}/locations(id=${delivery.id},dispatcherId=${admin ? dispatcherId : null})}"
+                           th:text="${admin ? 'View location' : 'Navigate'}">Navigate</a></td>
                     <td>
                         <form th:if="${delivery.deliveryStatus == 'AWAITING_DISPATCH' or delivery.deliveryStatus == 'IN_TRANSIT'}"
                               th:action="@{/portal/deliveries/{id}/status(id=${delivery.id})}" method="post">
