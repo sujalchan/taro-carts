@@ -165,7 +165,7 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit customer information") },
+                title = { PortalBrandTitle("My Account") },
                 navigationIcon = {
                     TextButton(onClick = onBack, enabled = !saving) { Text("Back") }
                 }
@@ -177,10 +177,13 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
                 .fillMaxSize()
                 .padding(contentPadding)
                 .imePadding()
-                .padding(20.dp)
+                .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            PortalHero("Customer portal", "Your profile",
+                "Keep your business and delivery information up to date.")
+            PortalPanel {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -328,6 +331,7 @@ fun EditCustomerScreen(customer: Customer, onBack: () -> Unit, onSaved: (Custome
                     Spacer(Modifier.width(10.dp))
                 }
                 Text(if (saving) "Saving changes..." else "Save changes")
+            }
             }
         }
     }

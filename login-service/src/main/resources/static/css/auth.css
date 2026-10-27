@@ -796,9 +796,13 @@ legend {
     border: 1px solid rgba(255, 255, 255, .38);
     border-radius: 18px;
     background: rgba(255, 255, 255, .1);
-    font-family: Georgia, serif;
-    font-size: 2.1rem;
-    line-height: 1;
+}
+
+.role-symbol img {
+    display: block;
+    width: 34px;
+    height: 34px;
+    filter: brightness(0) invert(1);
 }
 
 .role-dispatcher .approval-icon {
@@ -962,6 +966,12 @@ legend {
     background: #e0eee3;
     font-size: 1.6rem;
     line-height: 1;
+}
+
+.type-card-icon img {
+    display: block;
+    width: 25px;
+    height: 25px;
 }
 
 .type-card-dispatcher .type-card-icon {

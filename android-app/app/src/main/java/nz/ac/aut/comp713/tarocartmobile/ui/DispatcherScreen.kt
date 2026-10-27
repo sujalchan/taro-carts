@@ -1,7 +1,7 @@
 package nz.ac.aut.comp713.tarocartmobile.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -143,16 +143,7 @@ fun DispatcherScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = {
-                    if (selectedId != null) {
-                        Column {
-                            Text("Taro Carts", style = MaterialTheme.typography.titleMedium)
-                            Text("Assigned Deliveries", style = MaterialTheme.typography.bodySmall)
-                        }
-                    } else {
-                        Text("My deliveries")
-                    }
-                },
+                title = { PortalBrandTitle("Dispatcher portal") },
                 navigationIcon = {
                     IconButton(onClick = { scope.launch { drawerState.open() } }) {
                         Text("☰", style = MaterialTheme.typography.headlineSmall)
@@ -161,7 +152,10 @@ fun DispatcherScreen(
             )
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
+        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            PortalHero("Dispatcher portal", "Your deliveries",
+                "See assigned deliveries and keep the week moving.")
             if (serviceNotice != null) {
                 Card(colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer)) {
@@ -173,30 +167,30 @@ fun DispatcherScreen(
                 when {
                     loadingDispatchers -> CircularProgressIndicator(Modifier.padding(top = 20.dp))
                     dispatcherError != null -> {
-                        Text(dispatcherError.orEmpty(), color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(top = 16.dp))
-                        Button(onClick = { dispatcherRefresh++ }) { Text("Try again") }
+                        PortalPanel {
+                            Text(dispatcherError.orEmpty(), color = MaterialTheme.colorScheme.error)
+                            Button(onClick = { dispatcherRefresh++ }) { Text("Try again") }
+                        }
                     }
                 }
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PortalPanel {
                     Text("Deliveries for $selectedName", style = MaterialTheme.typography.titleMedium)
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedButton(onClick = { deliveriesRefresh++ }) { Text("Refresh") }
-                    }
+                    OutlinedButton(onClick = { deliveriesRefresh++ },
+                        modifier = Modifier.fillMaxWidth()) { Text("Refresh deliveries") }
                 }
                 when {
                     loadingDispatchers -> CircularProgressIndicator(Modifier.padding(top = 20.dp))
                     loadingDeliveries -> CircularProgressIndicator(Modifier.padding(top = 20.dp))
-                    deliveriesError != null -> {
-                        Text(deliveriesError.orEmpty(), color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(top = 16.dp))
+                    deliveriesError != null -> PortalPanel {
+                        Text(deliveriesError.orEmpty(), color = MaterialTheme.colorScheme.error)
                         Button(onClick = { deliveriesRefresh++ }) { Text("Try again") }
                     }
-                    deliveries.isEmpty() -> Text("No allocations are assigned to you.",
-                        modifier = Modifier.padding(top = 16.dp))
+                    deliveries.isEmpty() -> PortalPanel {
+                        Text("No allocations are assigned to you.")
+                    }
                     else -> LazyColumn(
-                        modifier = Modifier.fillMaxSize().padding(top = 12.dp),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(deliveries, key = { it.allocation.id }) { delivery ->
@@ -234,11 +228,12 @@ private fun DeliveryCard(delivery: AssignedDelivery, updating: Boolean, onAdvanc
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(allocation.customerName, style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold)
+                fontWeight = FontWeight.Medium)
             Text("Delivery address", style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold)
             Text(allocation.deliveryAddress ?: "No delivery address set")
@@ -276,22 +271,14 @@ private fun DeliveryCard(delivery: AssignedDelivery, updating: Boolean, onAdvanc
 
 @Composable
 private fun DeliveryStatusBadge(status: String) {
-    val dark = isSystemInDarkTheme()
     val (background, foreground) = when (status) {
-        "REQUESTED_ALLOCATION" -> if (dark) Color(0xFF3A4440) to Color(0xFFE9F0EC)
-            else Color(0xFFE5E7EB) to Color(0xFF374151)
-        "APPROVED_ALLOCATION" -> if (dark) Color(0xFF164E42) to Color(0xFFC5F2E5)
-            else Color(0xFFD7F2EC) to Color(0xFF075E4E)
-        "PREPARING_ALLOCATION" -> if (dark) Color(0xFF5A430C) to Color(0xFFFFDEA0)
-            else Color(0xFFFFF1C2) to Color(0xFF6B4F00)
-        "AWAITING_DISPATCH" -> if (dark) Color(0xFF66371F) to Color(0xFFFFCFB3)
-            else Color(0xFFFFE4D1) to Color(0xFF8A390C)
-        "IN_TRANSIT" -> if (dark) Color(0xFF1F4568) to Color(0xFFD6E9FF)
-            else Color(0xFFDCEBFF) to Color(0xFF174E83)
-        "DELIVERED" -> if (dark) Color(0xFF245132) to Color(0xFFCEF1D0)
-            else Color(0xFFDCF5DF) to Color(0xFF1B5E20)
-        "CANCELLED" -> if (dark) Color(0xFF632E2B) to Color(0xFFFFDAD7)
-            else Color(0xFFFCE3E1) to Color(0xFF9C2F28)
+        "REQUESTED_ALLOCATION" -> Color(0xFFE5E7EB) to Color(0xFF374151)
+        "APPROVED_ALLOCATION" -> Color(0xFFD7F2EC) to Color(0xFF075E4E)
+        "PREPARING_ALLOCATION" -> Color(0xFFFFF1C2) to Color(0xFF6B4F00)
+        "AWAITING_DISPATCH" -> Color(0xFFFFE4D1) to Color(0xFF8A390C)
+        "IN_TRANSIT" -> Color(0xFFDCEBFF) to Color(0xFF174E83)
+        "DELIVERED" -> Color(0xFFDCF5DF) to Color(0xFF1B5E20)
+        "CANCELLED" -> Color(0xFFFCE3E1) to Color(0xFF9C2F28)
         else -> MaterialTheme.colorScheme.surfaceContainerHigh to MaterialTheme.colorScheme.onSurface
     }
     val label = status.lowercase(Locale.ENGLISH).replace('_', ' ')

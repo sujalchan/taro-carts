@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -31,6 +30,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -46,12 +46,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -64,6 +64,7 @@ import com.google.android.libraries.places.api.net.kotlin.awaitFetchPlace
 import com.google.android.libraries.places.widget.PlaceAutocomplete
 import com.google.android.libraries.places.widget.PlaceAutocompleteActivity
 import nz.ac.aut.comp713.tarocartmobile.BuildConfig
+import nz.ac.aut.comp713.tarocartmobile.R
 import nz.ac.aut.comp713.tarocartmobile.data.CurrentLocationAddress
 import nz.ac.aut.comp713.tarocartmobile.data.MobileAccount
 import nz.ac.aut.comp713.tarocartmobile.data.MobileAuthApi
@@ -184,18 +185,21 @@ fun MobileAuthScreen(
     }
 
     Column(Modifier.fillMaxSize()
-        .background(Color(0xFFF4F6F6))
+        .background(MaterialTheme.colorScheme.background)
         .statusBarsPadding()
         .navigationBarsPadding()
         .imePadding()
         .verticalScroll(rememberScrollState())
-        .padding(16.dp)
-        .background(Color.White, RoundedCornerShape(20.dp))
-        .border(1.dp, Color(0xFFD7DED5), RoundedCornerShape(20.dp))
-        .padding(24.dp),
-        verticalArrangement = if (registering) Arrangement.Top else Arrangement.Center) {
-        Text("Taro Carts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(8.dp))
+        .padding(16.dp)) {
+        PortalHero(
+            eyebrow = if (registering) "Create account" else "Taro Carts",
+            title = if (registering) "Find your place in the week."
+                else "Your weekly taro, all in one place.",
+            description = if (registering) "Choose your role and tell us about your work."
+                else "See requests, follow allocations, and keep deliveries moving."
+        )
+        Spacer(Modifier.height(18.dp))
+        PortalPanel(itemSpacing = 4.dp) {
         if (account != null) {
             Text("Signed in as ${account.username}", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
@@ -217,7 +221,7 @@ fun MobileAuthScreen(
                         error = exception.message ?: "Could not sign out. Check your connection and retry."
                     } finally { busy = false }
                 }
-            }) { Text("Sign out") }
+            }, modifier = Modifier.fillMaxWidth()) { Text("Sign out") }
         } else if (registering) {
             Spacer(Modifier.height(22.dp))
             RegistrationProgress(step = step, role = role)
@@ -232,8 +236,7 @@ fun MobileAuthScreen(
                     2 -> "Create a ${role.lowercase()} account"
                     else -> if (role == "CUSTOMER") "Customer details" else "Dispatcher details"
                 },
-                style = if (step == 1) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge,
-                fontFamily = if (step == 1) FontFamily.Serif else FontFamily.SansSerif,
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.height(8.dp))
@@ -254,7 +257,7 @@ fun MobileAuthScreen(
                         title = "Customer",
                         description = "Request weekly taro allocations and follow your orders.",
                         action = "Continue as customer",
-                        symbol = "◈",
+                        iconRes = R.drawable.ic_customer_store,
                         selected = role == "CUSTOMER",
                         tint = Color(0xFF18564C),
                         container = Color(0xFFF4F9F4),
@@ -265,7 +268,7 @@ fun MobileAuthScreen(
                         title = "Dispatcher",
                         description = "See assigned deliveries and plan your work.",
                         action = "Continue as dispatcher",
-                        symbol = "↗",
+                        iconRes = R.drawable.ic_dispatcher_truck,
                         selected = role == "DISPATCHER",
                         tint = Color(0xFF244C68),
                         container = Color(0xFFF1F6FA),
@@ -459,7 +462,7 @@ fun MobileAuthScreen(
             Field("Username", username, { username = it })
             Field("Password", password, { password = it }, password = true)
             Spacer(Modifier.height(12.dp))
-            Button(enabled = !busy, onClick = {
+            Button(enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), onClick = {
                 busy = true; error = null; message = null
                 scope.launch {
                     try {
@@ -474,10 +477,12 @@ fun MobileAuthScreen(
                 }
             }) { if (busy) CircularProgressIndicator() else Text("Sign in") }
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { registering = true; message = null; error = null }) { Text("Create account") }
+            OutlinedButton(onClick = { registering = true; message = null; error = null },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Create account") }
         }
         error?.let { Spacer(Modifier.height(12.dp)); Text(it, color = MaterialTheme.colorScheme.error) }
         message?.let { Spacer(Modifier.height(12.dp)); Text(it, color = MaterialTheme.colorScheme.primary) }
+        }
     }
 }
 
@@ -526,7 +531,7 @@ private fun RoleCard(
     title: String,
     description: String,
     action: String,
-    symbol: String,
+    iconRes: Int,
     selected: Boolean,
     tint: Color,
     container: Color,
@@ -543,7 +548,8 @@ private fun RoleCard(
         Column(Modifier.padding(20.dp)) {
             Surface(shape = RoundedCornerShape(11.dp), color = if (title == "Customer") Color(0xFFE0EEE3) else Color(0xFFDAE9F2)) {
                 androidx.compose.foundation.layout.Box(Modifier.height(43.dp).width(43.dp), contentAlignment = Alignment.Center) {
-                    Text(symbol, color = tint, style = MaterialTheme.typography.titleLarge)
+                    Icon(painter = painterResource(iconRes), contentDescription = null,
+                        tint = tint, modifier = Modifier.size(26.dp))
                 }
             }
             Spacer(Modifier.height(15.dp))

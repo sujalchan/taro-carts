@@ -29,7 +29,10 @@
             <aside class="register-aside" aria-labelledby="register-aside-title">
                 <span class="eyebrow" th:text="${accountType == 'customer' ? 'For customers' : 'For dispatchers'}">For
                     customers</span>
-                <div class="role-symbol" aria-hidden="true" th:text="${accountType == 'customer' ? '◈' : '↗'}">◈</div>
+                <div class="role-symbol" aria-hidden="true">
+                    <img th:if="${accountType == 'customer'}" src="/images/customer-store.svg" alt="">
+                    <img th:if="${accountType == 'dispatcher'}" src="/images/dispatcher-truck.svg" alt="">
+                </div>
                 <h1 id="register-aside-title"
                     th:text="${accountType == 'customer' ? 'Your weekly order, within reach.' : 'Every delivery, clearly in view.'}">
                     Your weekly order, within reach.</h1>

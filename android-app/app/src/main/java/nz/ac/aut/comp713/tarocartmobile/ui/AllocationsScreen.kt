@@ -1,7 +1,7 @@
 package nz.ac.aut.comp713.tarocartmobile.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +20,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.IconButton
@@ -56,6 +57,7 @@ import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import nz.ac.aut.comp713.tarocartmobile.ui.theme.PortalGreen
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -167,10 +169,10 @@ fun AllocationsScreen(
                 modifier = modifier,
                 topBar = {
                     TopAppBar(
-                        title = { Text("Customer portal") },
+                        title = { PortalBrandTitle("Customer portal") },
                         navigationIcon = {
                             TextButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Text("Back to menu")
+                            Text("Menu")
                             }
                         }
                     )
@@ -377,12 +379,7 @@ fun AllocationsScreen(
                             Text("☰", style = MaterialTheme.typography.headlineSmall)
                         }
                     },
-                    title = {
-                        Column {
-                            Text("Taro Carts", style = MaterialTheme.typography.titleMedium)
-                            Text("Weekly Allocations", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
+                    title = { PortalBrandTitle("Customer portal") }
                 )
             }
         ) { contentPadding ->
@@ -404,12 +401,19 @@ fun AllocationsScreen(
                     }
                 }
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Your account · ${customer.name}", style = MaterialTheme.typography.titleMedium)
-                        // keeps only the two primary allocation actions on the main screen
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { requesting = true }) { Text("Request allocation") }
-                            OutlinedButton(onClick = { refreshKey++ }) { Text("Refresh") }
+                    PortalHero("Customer portal", "Your allocations",
+                        "See your weekly taro requests, payments, and invoices in one place.")
+                }
+                item {
+                    PortalPanel {
+                        Text(customer.name, style = MaterialTheme.typography.titleMedium)
+                        Text("Manage this week's allocations", style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick = { requesting = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Request allocation")
+                        }
+                        OutlinedButton(onClick = { refreshKey++ }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Refresh allocations")
                         }
                     }
                     deleteError?.let {
@@ -492,10 +496,13 @@ private fun AllocationCard(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            InfoLine("Week Start", allocation.weekStart)
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("WEEK STARTING", style = MaterialTheme.typography.labelSmall, color = PortalGreen)
+            Text(formatDisplayDate(allocation.weekStart), style = MaterialTheme.typography.titleMedium)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             InfoLine("Order Status", allocation.deliveryStatus.readableStatus())
             InfoLine(
                 "Payment Status",
@@ -542,12 +549,9 @@ private fun AllocationCard(
 
 @Composable
 private fun InfoLine(label: String, value: String, paymentStatus: String? = null) {
-    val darkTheme = isSystemInDarkTheme()
     val badgeColors = when (paymentStatus) {
-        "PAID" -> if (darkTheme) Color(0xFFB9F6CA) to Color(0xFF174B31)
-            else Color(0xFF1B5E20) to Color(0xFFE2F4E5)
-        "UNPAID" -> if (darkTheme) Color(0xFFFFB4AB) to Color(0xFF5C1D1B)
-            else Color(0xFFB3261E) to Color(0xFFFCE8E6)
+        "PAID" -> Color(0xFF1B5E20) to Color(0xFFE2F4E5)
+        "UNPAID" -> Color(0xFFB3261E) to Color(0xFFFCE8E6)
         else -> null
     }
     Row(Modifier.fillMaxWidth()) {

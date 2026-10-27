@@ -32,13 +32,30 @@ fun PortalDrawerContent(
     var signOutError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.padding(horizontal = 24.dp, vertical = 24.dp)) {
-            Text(title, style = MaterialTheme.typography.titleLarge)
-            Text("Signed in as $username", modifier = Modifier.padding(top = 18.dp),
-                style = MaterialTheme.typography.titleMedium)
-            Text(role, style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.background) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 24.dp)) {
+            PortalHero(role, title, "Signed in as $username")
+            Text("MY ACCOUNT", modifier = Modifier.padding(top = 26.dp, bottom = 6.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary)
+        }
+        if (onEditInformation != null) {
+            NavigationDrawerItem(
+                label = { Text("Edit information") },
+                selected = false,
+                modifier = Modifier.padding(horizontal = 12.dp),
+                onClick = onEditInformation
+            )
+        }
+        if (onChangePassword != null) {
+            NavigationDrawerItem(
+                label = { Text("Change password") },
+                selected = false,
+                modifier = Modifier.padding(horizontal = 12.dp),
+                onClick = onChangePassword
+            )
+        }
+        Column(Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
             OutlinedButton(
                 enabled = !signingOut,
                 modifier = Modifier.padding(top = 12.dp),
@@ -64,22 +81,6 @@ fun PortalDrawerContent(
                 Text(it, color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall)
             }
-        }
-        if (onEditInformation != null) {
-            NavigationDrawerItem(
-                label = { Text("Edit information") },
-                selected = false,
-                modifier = Modifier.padding(horizontal = 12.dp),
-                onClick = onEditInformation
-            )
-        }
-        if (onChangePassword != null) {
-            NavigationDrawerItem(
-                label = { Text("Change password") },
-                selected = false,
-                modifier = Modifier.padding(horizontal = 12.dp),
-                onClick = onChangePassword
-            )
         }
     }
 }

@@ -56,7 +56,7 @@ fun ChangePasswordScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Change password") },
+                title = { PortalBrandTitle("My Account") },
                 navigationIcon = {
                     TextButton(onClick = onBack, enabled = !saving) { Text("Back") }
                 }
@@ -65,9 +65,12 @@ fun ChangePasswordScreen(
     ) { contentPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(contentPadding).imePadding()
-                .verticalScroll(rememberScrollState()).padding(20.dp),
+                .verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            PortalHero("Account settings", "Change password",
+                "Keep your account secure with a new sign-in password.")
+            PortalPanel {
             Text(
                 "Changing your password signs out all sessions for your account. Sign in again with your new password.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -146,6 +149,7 @@ fun ChangePasswordScreen(
             ) {
                 if (saving) CircularProgressIndicator(modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp) else Text("Change password")
+            }
             }
         }
     }

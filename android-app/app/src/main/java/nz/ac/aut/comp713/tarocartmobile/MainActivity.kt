@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,8 @@ import nz.ac.aut.comp713.tarocartmobile.data.SessionStore
 import nz.ac.aut.comp713.tarocartmobile.ui.AllocationsScreen
 import nz.ac.aut.comp713.tarocartmobile.ui.DispatcherScreen
 import nz.ac.aut.comp713.tarocartmobile.ui.MobileAuthScreen
+import nz.ac.aut.comp713.tarocartmobile.ui.PortalHero
+import nz.ac.aut.comp713.tarocartmobile.ui.PortalPanel
 import nz.ac.aut.comp713.tarocartmobile.ui.theme.TaroCartMobileTheme
 
 class MainActivity : ComponentActivity() {
@@ -52,10 +55,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        val systemBarColor = android.graphics.Color.rgb(244, 246, 246)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(systemBarColor, systemBarColor),
+            navigationBarStyle = SystemBarStyle.light(systemBarColor, systemBarColor)
+        )
         hasLocalNetworkAccess = canAccessLocalNetwork()
         setContent {
-            TaroCartMobileTheme(dynamicColor = false) {
+            TaroCartMobileTheme {
                 if (hasLocalNetworkAccess) {
                     TaroCartApp()
                 } else {
@@ -63,12 +70,15 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize().padding(24.dp),
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text("Local network access needed", style = MaterialTheme.typography.headlineSmall)
-                        Spacer(Modifier.height(12.dp))
-                        Text("Allow local network access to sign in and create an account with Taro Carts.")
-                        Spacer(Modifier.height(16.dp))
-                        Button(onClick = { requestLocalNetworkAccess() }) {
-                            Text("Allow access")
+                        PortalHero("Taro Carts", "Local network access",
+                            "Connect to your local Taro Carts services to sign in or create an account.")
+                        Spacer(Modifier.height(18.dp))
+                        PortalPanel {
+                            Text("Allow local network access to continue.",
+                                style = MaterialTheme.typography.bodyLarge)
+                            Button(onClick = { requestLocalNetworkAccess() }) {
+                                Text("Allow access")
+                            }
                         }
                     }
                 }

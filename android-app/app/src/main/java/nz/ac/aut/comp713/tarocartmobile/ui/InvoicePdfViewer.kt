@@ -131,7 +131,7 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Invoice #$allocationId") },
+                title = { PortalBrandTitle("Invoice #$allocationId") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
             )
         }
@@ -147,16 +147,19 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
-                    Button(onClick = { retryKey++ }, modifier = Modifier.padding(top = 16.dp)) {
-                        Text("Try again")
+                    PortalPanel {
+                        Text("Unable to open invoice", style = MaterialTheme.typography.titleMedium)
+                        Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
+                        Button(onClick = { retryKey++ }) { Text("Try again") }
                     }
                 }
                 document != null -> {
                     val current = requireNotNull(document)
                     // provides page navigation without allowing movement beyond the document
+                    PortalPanel(Modifier.padding(12.dp)) {
+                    Text("Invoice #$allocationId", style = MaterialTheme.typography.titleMedium)
                     Row(
-                        Modifier.fillMaxWidth().padding(12.dp),
+                        Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -168,7 +171,7 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
                     }
                     // limits zoom to a practical range for bitmap memory and readability
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                        Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -179,6 +182,7 @@ fun InvoicePdfViewer(allocationId: Long, onBack: () -> Unit) {
                         TextButton(onClick = { zoom = (zoom + 0.5f).coerceAtMost(2f) }, enabled = zoom < 2f) {
                             Text("Zoom in")
                         }
+                    }
                     }
                     BoxWithConstraints(
                         Modifier.fillMaxWidth().weight(1f).background(MaterialTheme.colorScheme.surfaceVariant)

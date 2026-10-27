@@ -87,7 +87,7 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Request weekly allocation") },
+            title = { PortalBrandTitle("Request allocation") },
             navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
         )
     }) { padding ->
@@ -97,11 +97,11 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text("Requesting as ${customer.name}", style = MaterialTheme.typography.titleMedium)
-                Text("New allocations start as Requested allocation and Unpaid.")
+                PortalHero("Customer portal", "Request allocation",
+                    "Requesting for ${customer.name}. Choose a week and the taro you need.")
             }
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                PortalPanel {
                     Text("Week starting", style = MaterialTheme.typography.labelLarge)
                     // normalizes any date selected by the user to its monday
                     OutlinedButton(onClick = {
@@ -113,11 +113,13 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
                             selected.get(Calendar.MONTH),
                             selected.get(Calendar.DAY_OF_MONTH)
                         ).show()
-                    }) { Text(weekStart) }
+                    }, modifier = Modifier.fillMaxWidth()) { Text(weekStart) }
                 }
             }
             item {
-                when {
+                PortalPanel {
+                    Text("Taro items", style = MaterialTheme.typography.titleMedium)
+                    when {
                     loadingTypes -> CircularProgressIndicator()
                     typesError != null -> Column {
                         Text(typesError.orEmpty(), color = MaterialTheme.colorScheme.error)
@@ -185,6 +187,7 @@ fun RequestAllocationScreen(customer: Customer, onBack: () -> Unit, onCreated: (
                                 nextRowKey++
                             }) { Text("Add another taro type") }
                         }
+                    }
                     }
                 }
             }
