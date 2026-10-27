@@ -112,7 +112,8 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/portal/allocations/")
                 || path.startsWith("/api/v1/mobile/portal/");
         boolean portalAsset = "GET".equals(request.getMethod())
-                && (path.equals("/css/style.css") || path.equals("/js/service-navigation.js")
+                && (path.equals("/css/style.css") || path.equals("/css/auth-inspired.css")
+                || path.equals("/js/service-navigation.js")
                 || path.equals("/js/address-autocomplete.js") || path.equals("/images/google-maps-logo.svg"));
         if (!"ADMIN".equals(principal.role())
                 && !("CUSTOMER".equals(principal.role()) && (customerPortal || portalAsset))) {

@@ -1,0 +1,234 @@
+/* Shared visual treatment for the service workspaces, based on login-service. */
+:root {
+    --page: #f4f6f6;
+    --surface: #ffffff;
+    --text: #243333;
+    --muted: #526464;
+    --line: #d5dede;
+    --accent: #17665f;
+    --accent-hover: #104c47;
+    --radius: 12px;
+    --panel-shadow: 0 20px 48px rgba(24, 51, 42, .08);
+    --card-shadow: 0 8px 26px rgba(24, 51, 42, .055);
+}
+
+body {
+    line-height: 1.5;
+}
+
+body.page-form:not(.page-allocation) {
+    max-width: 820px;
+}
+
+.app-nav {
+    border-radius: 12px;
+    box-shadow: 0 8px 26px rgba(24, 51, 42, .055);
+}
+
+.app-nav__brand {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: -.035em;
+}
+
+.app-nav__links a,
+.app-nav__toggle {
+    border-radius: 8px;
+}
+
+h1,
+h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    letter-spacing: -.035em;
+}
+
+h1 {
+    border: 0;
+    padding: 0;
+    font-size: clamp(2.35rem, 4.5vw, 3.65rem);
+    line-height: 1.12;
+}
+
+h2 {
+    font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+    line-height: 1.2;
+}
+
+/* The dark heading panel echoes the sign-in page's story panel. */
+body.page-list:not(.portal-page) > h1,
+body.page-form:not(.portal-page) > h1,
+.portal-hero {
+    position: relative;
+    overflow: hidden;
+    margin: 0 0 28px;
+    padding: clamp(28px, 5vw, 48px);
+    border: 1px solid #245b54;
+    border-radius: 20px;
+    background: radial-gradient(circle at 88% 12%, rgba(208, 230, 175, .24), transparent 34%),
+        linear-gradient(145deg, #174e49 0%, #103934 100%);
+    box-shadow: var(--panel-shadow);
+    color: #f9faf5;
+}
+
+body.page-list:not(.portal-page) > h1,
+body.page-form:not(.portal-page) > h1 {
+    margin-top: 0;
+    font-size: clamp(2.25rem, 4.3vw, 3.35rem);
+}
+
+.portal-hero h1 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: #f9faf5;
+}
+
+.portal-hero .portal-eyebrow {
+    margin: 0 0 12px;
+    color: #b4d2bb;
+    font-size: .75rem;
+    font-weight: 750;
+    letter-spacing: .14em;
+}
+
+.portal-hero .portal-intro {
+    max-width: 620px;
+    margin: 16px 0 0;
+    color: #d8e8dc;
+    font-size: 1.05rem;
+}
+
+.portal-heading h2 {
+    margin: 0;
+}
+
+.portal-page main > h2,
+.portal-page main > section > h2 {
+    margin-top: 34px;
+}
+
+.portal-select,
+.portal-empty,
+.portal-facts,
+.allocation-record,
+#allocationsContainer > div,
+.page-form form,
+.search-form,
+body.page-list.page-allocation > form:not(.delete-form) {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--card-shadow);
+}
+
+.portal-select,
+.portal-empty,
+.portal-facts {
+    padding: clamp(20px, 3vw, 28px);
+}
+
+.allocation-record,
+#allocationsContainer > div {
+    padding: clamp(20px, 3vw, 30px);
+}
+
+.page-form form {
+    padding: clamp(22px, 4vw, 34px);
+}
+
+.search-form,
+body.page-list.page-allocation > form:not(.delete-form) {
+    padding: 20px 24px;
+}
+
+.search-box {
+    max-width: none;
+    border-radius: 10px;
+}
+
+.table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--card-shadow);
+}
+
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+th {
+    background: #edf3f1;
+    color: #385350;
+    font-size: .77rem;
+    font-weight: 750;
+    letter-spacing: .055em;
+    text-transform: uppercase;
+}
+
+th,
+td {
+    padding: 15px 18px;
+}
+
+tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+tbody tr:hover {
+    background: #f5f9f7;
+}
+
+button,
+.button-primary,
+td a,
+.page-form form > a {
+    border-radius: 9px;
+}
+
+button[type="submit"],
+.button-primary {
+    box-shadow: 0 6px 15px rgba(23, 102, 95, .13);
+}
+
+input:not([type="checkbox"]),
+select,
+textarea {
+    border-color: #aabdb9;
+    border-radius: 9px;
+}
+
+input:not([type="checkbox"]):focus,
+select:focus,
+textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(23, 102, 95, .12);
+}
+
+.error-message,
+.portal-error,
+#status:not(:empty) {
+    border-radius: 12px;
+}
+
+@media (max-width: 760px) {
+    body.page-list:not(.portal-page) > h1,
+    body.page-form:not(.portal-page) > h1,
+    .portal-hero {
+        padding: 28px 24px;
+        border-radius: 16px;
+    }
+
+    .app-nav {
+        border-radius: 10px;
+    }
+
+    th,
+    td {
+        padding: 12px 14px;
+    }
+}

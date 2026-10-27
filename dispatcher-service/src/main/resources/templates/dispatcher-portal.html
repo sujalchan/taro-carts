@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>My deliveries · Taro Carts</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/auth-inspired.css">
     <script defer src="/js/service-navigation.js"></script>
 </head>
 <body class="page-list portal-page">
@@ -18,9 +19,11 @@
     </div>
 </nav>
 <main>
-    <p class="portal-eyebrow">Dispatcher portal</p>
-    <h1 th:text="${admin ? 'Dispatcher deliveries' : 'Your deliveries'}">Your deliveries</h1>
-    <p class="portal-intro" th:if="${!admin}">Only deliveries assigned to your dispatcher profile appear here.</p>
+    <header class="portal-hero">
+        <p class="portal-eyebrow">Dispatcher portal</p>
+        <h1 th:text="${admin ? 'Dispatcher deliveries' : 'Your deliveries'}">Your deliveries</h1>
+        <p class="portal-intro" th:if="${!admin}">Only deliveries assigned to your dispatcher profile appear here.</p>
+    </header>
     <p th:if="${admin}"><a class="button-primary" href="http://localhost:8082/allocations">Assign deliveries in Allocation Service</a></p>
     <form class="portal-select" th:if="${admin}" method="get" action="/portal/deliveries">
         <label for="dispatcherId">Choose a dispatcher to view</label>

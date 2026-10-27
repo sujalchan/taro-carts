@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Allocation details · Taro Carts</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/auth-inspired.css">
     <script defer src="/js/service-navigation.js"></script>
 </head>
 <body class="page-list portal-page">
@@ -13,9 +14,11 @@
     <div class="app-nav__links"><a th:href="@{/portal/allocations(customerId=${admin ? customerId : null})}">Allocations</a><a href="http://localhost:8085/logout">Sign out</a></div>
 </nav>
 <main>
-    <p class="portal-eyebrow">Customer portal</p>
-    <h1 th:text="|Allocation for week of ${allocation.weekStart}|">Allocation details</h1>
-    <p class="portal-intro" th:text="${selectedCustomer.name}">Customer</p>
+    <header class="portal-hero">
+        <p class="portal-eyebrow">Customer portal</p>
+        <h1 th:text="|Allocation for week of ${allocation.weekStart}|">Allocation details</h1>
+        <p class="portal-intro" th:text="${selectedCustomer.name}">Customer</p>
+    </header>
     <div class="portal-facts"><p><strong>Delivery</strong><span th:text="${#strings.replace(allocation.deliveryStatus, '_', ' ')}">Requested</span></p>
         <p><strong>Payment</strong><span th:text="${#strings.replace(allocation.paymentStatus, '_', ' ')}">Unpaid</span></p>
         <p><strong>Address</strong><span th:text="${allocation.deliveryAddress ?: 'No address specified'}">Address</span></p></div>

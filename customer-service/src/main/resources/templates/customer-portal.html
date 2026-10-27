@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>My allocations · Taro Carts</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/auth-inspired.css">
     <script defer src="/js/service-navigation.js"></script>
 </head>
 <body class="page-list portal-page">
@@ -18,9 +19,11 @@
     </div>
 </nav>
 <main>
-    <p class="portal-eyebrow">Customer portal</p>
-    <h1 th:text="${admin ? 'Customer allocations' : 'Your allocations'}">Your allocations</h1>
-    <p class="portal-intro" th:if="${!admin}">See your weekly taro requests, payments and invoices in one place.</p>
+    <header class="portal-hero">
+        <p class="portal-eyebrow">Customer portal</p>
+        <h1 th:text="${admin ? 'Customer allocations' : 'Your allocations'}">Your allocations</h1>
+        <p class="portal-intro" th:if="${!admin}">See your weekly taro requests, payments and invoices in one place.</p>
+    </header>
 
     <form class="portal-select" th:if="${admin}" method="get" action="/portal/allocations">
         <label for="customerId">Choose a customer to view</label>

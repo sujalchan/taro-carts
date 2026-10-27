@@ -6,6 +6,16 @@ ROOT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
+# Avoid misleading Maven build failures when a previous service stack is running.
+if command -v lsof >/dev/null 2>&1; then
+    for service_port in 8081 8082 8083 8084 8085; do
+        if lsof -nP -iTCP:"$service_port" -sTCP:LISTEN >/dev/null 2>&1; then
+            printf 'Port %s is already in use. Stop the running service stack before starting another one.\n' "$service_port" >&2
+            exit 1
+        fi
+    done
+fi
+
 browser_places_api_key="${GOOGLE_MAPS_BROWSER_API_KEY:-}"
 server_maps_api_key="${GOOGLE_MAPS_SERVER_API_KEY:-}"
 login_service_url="${LOGIN_SERVICE_URL:-http://localhost:8085}"

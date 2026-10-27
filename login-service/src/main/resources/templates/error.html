@@ -56,8 +56,9 @@
             margin-bottom: 36px;
             padding: 14px 18px;
             border: 1px solid var(--line);
-            border-radius: 5px;
+            border-radius: 12px;
             background: #fff;
+            box-shadow: 0 8px 26px rgba(24, 51, 42, .055);
         }
 
         .app-nav a {
@@ -71,8 +72,35 @@
         }
 
         .app-nav__brand {
-            font-size: 1.05rem;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: -.035em;
             white-space: nowrap;
+        }
+
+        .app-nav__toggle {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 7px 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--ink);
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .app-nav__toggle:hover {
+            background: #eaf0ef;
+        }
+
+        .app-nav__toggle:focus-visible {
+            outline: 3px solid #da9c4a;
+            outline-offset: 3px;
         }
 
         .app-nav__links {
@@ -196,14 +224,38 @@
 
         @media (max-width: 850px) {
             .app-nav {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 10px;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 8px 14px;
                 width: calc(100vw - 32px);
             }
 
-            .app-nav__links {
-                gap: 5px;
+            .app-nav__brand {
+                min-width: 0;
+                white-space: normal;
+            }
+
+            .app-nav--enhanced .app-nav__toggle {
+                display: inline-flex;
+            }
+
+            .app-nav--enhanced .app-nav__links {
+                display: none;
+                grid-column: 1 / -1;
+                flex-direction: column;
+                gap: 4px;
+                width: 100%;
+                padding-top: 8px;
+                border-top: 1px solid var(--line);
+            }
+
+            .app-nav--enhanced .app-nav__toggle[aria-expanded="true"] + .app-nav__links {
+                display: flex;
+            }
+
+            .app-nav--enhanced .app-nav__links a {
+                width: 100%;
             }
         }
 
@@ -243,6 +295,7 @@
             }
         }
     </style>
+    <script defer th:src="@{/js/auth-navigation.js}" src="/js/auth-navigation.js"></script>
 </head>
 
 <body>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Request allocation · Taro Carts</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/auth-inspired.css">
     <script defer src="/js/service-navigation.js"></script>
 </head>
 <body class="page-form portal-page">
@@ -13,9 +14,11 @@
     <div class="app-nav__links"><a th:href="@{/portal/allocations(customerId=${admin ? customerId : null})}">Allocations</a><a href="http://localhost:8085/logout">Sign out</a></div>
 </nav>
 <main>
-    <p class="portal-eyebrow">Customer portal</p>
-    <h1>Request a weekly allocation</h1>
-    <p class="portal-intro" th:text="|For ${selectedCustomer.name}. Choose a week, taro type and whole-kilogram quantity.|">Choose a week and taro type.</p>
+    <header class="portal-hero">
+        <p class="portal-eyebrow">Customer portal</p>
+        <h1>Request a weekly allocation</h1>
+        <p class="portal-intro" th:text="|For ${selectedCustomer.name}. Choose a week, taro type and whole-kilogram quantity.|">Choose a week and taro type.</p>
+    </header>
     <p class="portal-error" role="alert" th:if="${error}" th:text="${error}">Please check your request.</p>
     <form method="post" action="/portal/allocations/request" class="portal-form">
         <input type="hidden" name="csrf" th:value="${csrfToken}">
