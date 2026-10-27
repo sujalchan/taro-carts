@@ -7,6 +7,7 @@ LOG_DIR="$ROOT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 browser_places_api_key="${GOOGLE_MAPS_BROWSER_API_KEY:-}"
+server_maps_api_key="${GOOGLE_MAPS_SERVER_API_KEY:-}"
 login_service_url="${LOGIN_SERVICE_URL:-http://localhost:8085}"
 login_session_lifetime="${LOGIN_SESSION_LIFETIME:-PT8H}"
 login_cookie_secure="${LOGIN_COOKIE_SECURE:-false}"
@@ -50,6 +51,10 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
         if [[ -z "$browser_places_api_key" && "$line" == GOOGLE_MAPS_BROWSER_API_KEY=* ]]; then
             browser_places_api_key="${line#*=}"
             browser_places_api_key="${browser_places_api_key%$'\r'}"
+        fi
+        if [[ -z "$server_maps_api_key" && "$line" == GOOGLE_MAPS_SERVER_API_KEY=* ]]; then
+            server_maps_api_key="${line#*=}"
+            server_maps_api_key="${server_maps_api_key%$'\r'}"
         fi
         if [[ "${LOGIN_SERVICE_URL+x}" != x && "$line" == LOGIN_SERVICE_URL=* ]]; then
             login_service_url="${line#*=}"
@@ -113,6 +118,7 @@ for secret_index_value in "${!secret_names[@]}"; do
     all_secrets+=("${service_secret_values[$secret_index_value]}")
 done
 unset GOOGLE_MAPS_BROWSER_API_KEY
+unset GOOGLE_MAPS_SERVER_API_KEY
 export LOGIN_SERVICE_URL="$login_service_url"
 export LOGIN_SESSION_LIFETIME="$login_session_lifetime"
 export LOGIN_COOKIE_SECURE="$login_cookie_secure"
@@ -142,6 +148,9 @@ start_service() {
             export LOGIN_DISPATCHER_PROVISIONING_SECRET="$dispatcher_provisioning_secret"
         fi
         if [[ "$directory" == "login-service" ]]; then
+            if [[ -n "$server_maps_api_key" ]]; then
+                export GOOGLE_MAPS_SERVER_API_KEY="$server_maps_api_key"
+            fi
             export LOGIN_CUSTOMER_VALIDATION_SECRET="${service_secret_values[$customer_validation_index]}"
             export LOGIN_DISPATCHER_VALIDATION_SECRET="${service_secret_values[$dispatcher_validation_index]}"
             export LOGIN_ALLOCATION_VALIDATION_SECRET="${service_secret_values[$allocation_validation_index]}"

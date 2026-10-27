@@ -1,8 +1,12 @@
 package nz.ac.aut.comp713.tarocartmobile.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.compose.foundation.BorderStroke
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +15,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
@@ -45,6 +53,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
@@ -54,6 +64,7 @@ import com.google.android.libraries.places.api.net.kotlin.awaitFetchPlace
 import com.google.android.libraries.places.widget.PlaceAutocomplete
 import com.google.android.libraries.places.widget.PlaceAutocompleteActivity
 import nz.ac.aut.comp713.tarocartmobile.BuildConfig
+import nz.ac.aut.comp713.tarocartmobile.data.CurrentLocationAddress
 import nz.ac.aut.comp713.tarocartmobile.data.MobileAccount
 import nz.ac.aut.comp713.tarocartmobile.data.MobileAuthApi
 
@@ -74,39 +85,109 @@ fun MobileAuthScreen(
     var contactName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    var addressSelected by remember { mutableStateOf(false) }
+    var suggestedAddress by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var addressError by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var locating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val useCurrentLocation: () -> Unit = {
+        locating = true
+        addressError = null
+        suggestedAddress = null
+        scope.launch {
+            try {
+                suggestedAddress = CurrentLocationAddress.lookup(context)
+                addressError = null
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                addressError = exception.message ?: "Could not find your address. Search for it instead."
+            } finally {
+                locating = false
+            }
+        }
+    }
+    val locationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            useCurrentLocation()
+        } else if (permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+            addressError = "Precise location is needed for a street address. Tap Use current location again and choose Change to precise location."
+        } else {
+            addressError = "Location access was denied. Allow precise location, or search for your address instead."
+        }
+    }
     val addressSearch = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val intent: Intent = result.data ?: return@rememberLauncherForActivityResult
-        if (result.resultCode != PlaceAutocompleteActivity.RESULT_OK) return@rememberLauncherForActivityResult
+        if (result.resultCode == PlaceAutocompleteActivity.RESULT_CANCELED) {
+            return@rememberLauncherForActivityResult
+        }
+        if (result.resultCode != PlaceAutocompleteActivity.RESULT_OK) {
+            addressError = "Could not search for an address. Please try again."
+            return@rememberLauncherForActivityResult
+        }
+        val intent: Intent = result.data ?: run {
+            addressError = "Could not load the selected address. Please try again."
+            return@rememberLauncherForActivityResult
+        }
         val prediction = PlaceAutocomplete.getPredictionFromIntent(intent)
-            ?: return@rememberLauncherForActivityResult
+            ?: run {
+                addressError = "Could not load the selected address. Please try again."
+                return@rememberLauncherForActivityResult
+            }
         val sessionToken = PlaceAutocomplete.getSessionTokenFromIntent(intent)
         scope.launch {
             try {
-                val selectedAddress = Places.createClient(context).awaitFetchPlace(
-                    prediction.placeId, listOf(Place.Field.FORMATTED_ADDRESS)
-                ) { this.sessionToken = sessionToken }.place.formattedAddress
-                if (selectedAddress.isNullOrBlank() || selectedAddress.length > 500) {
-                    error = "Please enter this address manually."
+                val place = Places.createClient(context).awaitFetchPlace(
+                    prediction.placeId,
+                    listOf(Place.Field.FORMATTED_ADDRESS, Place.Field.ADDRESS_COMPONENTS)
+                ) { this.sessionToken = sessionToken }.place
+                val selectedAddress = place.formattedAddress
+                val components = place.addressComponents?.asList().orEmpty()
+                val types = components.flatMap { it.types }.toSet()
+                val country = components.firstOrNull { "country" in it.types }?.shortName
+                val hasLocality = types.any {
+                    it == "locality" || it == "postal_town" ||
+                        it == "sublocality_level_1" || it == "postal_code"
+                }
+                if (selectedAddress.isNullOrBlank() || selectedAddress.length > 500 ||
+                    "street_number" !in types || "route" !in types || !hasLocality || country != "NZ") {
+                    addressError = "Select a complete New Zealand street address, including its street number."
                 } else {
                     address = selectedAddress
-                    error = null
+                    addressSelected = true
+                    suggestedAddress = null
+                    addressError = null
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
-                error = exception.message ?: "Could not load the selected address."
+                addressError = exception.message ?: "Could not load the selected address."
             }
+        }
+    }
+    val openAddressSearch: () -> Unit = {
+        addressError = null
+        try {
+            if (!Places.isInitialized()) {
+                Places.initializeWithNewPlacesApiEnabled(context, BuildConfig.PLACES_API_KEY)
+            }
+            addressSearch.launch(PlaceAutocomplete.IntentBuilder()
+                .setCountries(listOf("NZ"))
+                .build(context))
+        } catch (exception: Exception) {
+            addressError = exception.message ?: "Could not open address search."
         }
     }
 
     Column(Modifier.fillMaxSize()
         .background(Color(0xFFF4F6F6))
         .statusBarsPadding()
+        .navigationBarsPadding()
+        .imePadding()
         .verticalScroll(rememberScrollState())
         .padding(16.dp)
         .background(Color.White, RoundedCornerShape(20.dp))
@@ -219,29 +300,128 @@ fun MobileAuthScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF17665F))) { Text("Continue  →") }
                 }
                 else -> {
-                    Field("Name", name, { name = it })
-                    if (role == "CUSTOMER") Field("Contact name", contactName, { contactName = it })
-                    Field("Phone", phone, { phone = it })
-                    Field("Address", address, { if (it.length <= 500) address = it }, singleLine = false)
+                    Field(if (role == "CUSTOMER") "Business name *" else "Dispatcher name *",
+                        name, { name = it })
+                    if (role == "CUSTOMER") {
+                        Field("Contact name (optional)", contactName, { contactName = it })
+                    }
+                    Field("Phone number (optional)", phone, { phone = it },
+                        keyboardType = KeyboardType.Phone)
+                    Spacer(Modifier.height(10.dp))
+                    Text("Street address *", style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(5.dp))
+                    Text("Choose the address where deliveries should go.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
                     if (BuildConfig.PLACES_API_KEY.isNotBlank()) {
-                        OutlinedButton(onClick = {
-                            try {
-                                if (!Places.isInitialized()) {
-                                    Places.initializeWithNewPlacesApiEnabled(context, BuildConfig.PLACES_API_KEY)
+                        Card(
+                            onClick = openAddressSearch,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAF8)),
+                            border = BorderStroke(1.dp,
+                                if (addressSelected) Color(0xFF17665F)
+                                else MaterialTheme.colorScheme.outline)
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(if (addressSelected) "Selected address" else "Search for an address",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = Color(0xFF17665F), fontWeight = FontWeight.SemiBold)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(if (address.isBlank()) "Tap to search New Zealand streets" else address,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (address.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant
+                                        else MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 3, overflow = TextOverflow.Ellipsis)
                                 }
-                                addressSearch.launch(PlaceAutocomplete.IntentBuilder()
-                                    .setCountries(listOf("NZ")).build(context))
-                            } catch (exception: Exception) {
-                                error = exception.message ?: "Could not open address search."
+                                Spacer(Modifier.width(12.dp))
+                                Text(if (addressSelected) "Change" else "Search",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = Color(0xFF17665F), fontWeight = FontWeight.Bold)
                             }
-                        }) { Text("Search address with Google") }
+                        }
+                    } else {
+                        Field("Street address", address, {
+                            if (it.length <= 500) {
+                                address = it
+                                addressSelected = false
+                                suggestedAddress = null
+                            }
+                        }, singleLine = false)
+                        Text("Address search is unavailable. Enter your street address manually.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        enabled = !locating && !busy, onClick = {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                            == PackageManager.PERMISSION_GRANTED) {
+                            useCurrentLocation()
+                        } else {
+                            locationPermission.launch(arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ))
+                        }
+                    }) {
+                        if (locating) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp)
+                            Spacer(Modifier.width(10.dp))
+                            Text("Finding nearby address...")
+                        } else {
+                            Text("Use my current location")
+                        }
+                    }
+                    addressError?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    suggestedAddress?.let { suggestion ->
+                        Card(modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF4F9F4)),
+                            border = BorderStroke(1.dp, Color(0xFF9BC8AE))) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text("Is this your address?", style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(8.dp))
+                                Text(suggestion, style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium)
+                                Spacer(Modifier.height(8.dp))
+                                Text("Check the street number and suburb before using this nearby address.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(12.dp))
+                                OutlinedButton(onClick = {
+                                    address = suggestion
+                                    addressSelected = true
+                                    suggestedAddress = null
+                                    addressError = null
+                                }, modifier = Modifier.fillMaxWidth()) { Text("Use this address") }
+                                TextButtonLike("Not my address", onClick = { suggestedAddress = null })
+                            }
+                        }
+                    }
+                    if (addressSelected) {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Check that this is the correct street address before submitting.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(Modifier.height(8.dp))
                     TextButtonLike("←  Account details", onClick = { step = 2 })
                     Spacer(Modifier.height(8.dp))
-                    Button(enabled = !busy, onClick = {
+                    Button(enabled = !busy && !locating, onClick = {
                         error = when {
                             name.isBlank() || address.isBlank() -> "Name and address are required."
+                            BuildConfig.PLACES_API_KEY.isNotBlank() && !addressSelected ->
+                                "Select an address from Google Places suggestions."
                             phone.isNotBlank() && !phone.matches(Regex("^\\+?[0-9]{7,15}$")) -> "Enter a valid phone number."
                             else -> null
                         }
@@ -383,8 +563,10 @@ private fun TextButtonLike(text: String, onClick: () -> Unit) {
 
 @Composable
 private fun Field(label: String, value: String, onValueChange: (String) -> Unit,
-                  password: Boolean = false, singleLine: Boolean = true) {
+                  password: Boolean = false, singleLine: Boolean = true,
+                  keyboardType: KeyboardType = KeyboardType.Text) {
     OutlinedTextField(value = value, onValueChange = onValueChange, label = { Text(label) },
         modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), singleLine = singleLine,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None)
 }

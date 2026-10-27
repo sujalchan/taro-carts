@@ -57,6 +57,11 @@ object MobileAuthApi {
         else -> fallback
     }
 
+    suspend fun reverseGeocode(latitude: Double, longitude: Double): String = withContext(Dispatchers.IO) {
+        post("/api/v1/mobile/address/reverse", JSONObject()
+            .put("latitude", latitude).put("longitude", longitude)).getString("address")
+    }
+
     private fun post(path: String, body: JSONObject): JSONObject {
         val url = nz.ac.aut.comp713.tarocartmobile.BuildConfig.LOGIN_SERVICE_BASE_URL.trimEnd('/') + path
         val connection = try {

@@ -209,14 +209,20 @@ GOOGLE_MAPS_BROWSER_API_KEY=your-google-api-key
 
 Restrict the browser key to the customer-service, dispatcher-service, and login-service web origins (`http://localhost:8081`, `http://localhost:8084`, and `http://localhost:8085`) and the Maps JavaScript API and Places API (New). The root `start-services.bat`, `start-services.ps1`, and `start-services.sh` launchers read this key and pass it to those three services; environment variables take precedence. When starting one of them directly, set `GOOGLE_MAPS_BROWSER_API_KEY` for address suggestions and selection checks. The login-service registration forms use the same Google Places address fill before provisioning an inactive account.
 
-For Android address search and the login-service endpoint, add these values to the ignored `android-app/local.properties` file, then sync and rebuild the app:
+For Android address search and the login-service endpoint, add these values to the ignored `android-app/local.properties` file, then sync, rebuild, and reinstall the app:
 
 ```properties
 GOOGLE_MAPS_ANDROID_API_KEY=your-google-api-key
 LOGIN_SERVICE_BASE_URL=http://10.0.2.2:8085
 ```
 
-Android registration uses the Places picker when the Android key is configured; the address can also be entered manually. The Android app supports customer/dispatcher registration requests and sign-in, but not admin account management.
+If `GOOGLE_MAPS_ANDROID_API_KEY` is omitted, the Android build uses `GOOGLE_MAPS_BROWSER_API_KEY` from the repository-root `.env` file. A key restricted to browser origins will not authorize Android requests; in that case, create an Android-restricted key for the app and put it in `android-app/local.properties`.
+
+Android registration uses the Places picker when the Android key is configured and requires a selected New Zealand street address with a street number before the account request can be submitted. Without a configured key, the address can be entered manually. The Android app supports customer/dispatcher registration requests and sign-in, but not admin account management.
+
+On the registration address step, **Use current location** opens Android's native precise/approximate foreground location permission prompt when permission has not already been granted. The app sends the coordinates to login-service, which uses the Google Geocoding API to suggest a nearby New Zealand street address. The user must confirm that address before registration uses it; GPS and reverse geocoding cannot reliably identify a particular entrance or building. An older login-service without this endpoint falls back to Android's built-in geocoder, which needs no app API key. Enable the Geocoding API for the project. For production, set `GOOGLE_MAPS_SERVER_API_KEY` in the root `.env` to a server-restricted key; the launchers pass it only to login-service. If it is unset, local development falls back to `GOOGLE_MAPS_BROWSER_API_KEY`, which is already exposed to browser clients and therefore is not a private server key. Serve the mobile API over HTTPS outside local emulator development.
+
+The Android customer **Edit information** screen offers the same precise-location suggestion. It keeps the current address until the user confirms the suggested address, and also allows address search or manual edits.
 
 If the Android build runs out of Java heap while merging dex files, set `org.gradle.jvmargs=-Xmx3g` in the ignored `android-app/gradle.properties` file and rebuild.
 
