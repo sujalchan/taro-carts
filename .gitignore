@@ -29,12 +29,16 @@ Thumbs.db
 # java heap dumps
 *.hprof
 
-# sqlite temporary files
+# database files and sqlite temporary files
+*.db
+*.sqlite
+*.sqlite3
+*.mdb
+*.realm
+*.duckdb
 *.db-shm
 *.db-wal
 *.db-journal
-/dispatcher-service/dispatcher.db
-/login-service/login.db
 
 # Local environment files, including the Google Maps key in the root .env
 .env
