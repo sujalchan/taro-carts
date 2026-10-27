@@ -49,10 +49,19 @@ object MobileAuthApi {
         post("/api/v1/mobile/session", JSONObject().put("sessionToken", sessionToken))
     }
 
+    suspend fun changePassword(sessionToken: String, currentPassword: String,
+                               newPassword: String, confirmPassword: String) = withContext(Dispatchers.IO) {
+        post("/api/v1/account/password", JSONObject()
+            .put("sessionToken", sessionToken)
+            .put("currentPassword", currentPassword)
+            .put("newPassword", newPassword)
+            .put("confirmPassword", confirmPassword))
+    }
+
     fun userFacingMessage(exception: Exception, fallback: String): String = when (exception) {
         is MobileApiException -> exception.message ?: fallback
-        is SocketTimeoutException -> "Taro Carts took too long to respond. Check your connection and try again."
-        is UnknownHostException, is ConnectException -> "Couldn't connect to Taro Carts. Check your network and try again."
+        is SocketTimeoutException -> "Login Service is not responding. Try again shortly."
+        is UnknownHostException, is ConnectException -> "Cannot connect to Login Service. Check your connection and try again."
         is IOException -> exception.message?.takeIf { it.isNotBlank() } ?: fallback
         else -> fallback
     }
@@ -87,8 +96,14 @@ object MobileAuthApi {
                     json.optString("code") to json.optString("message")
                 }.getOrNull()
                 val code = apiError?.first.orEmpty()
-                val message = apiError?.second?.takeIf { it.isNotBlank() }
-                    ?: statusMessage(path, status)
+                val serverMessage = apiError?.second.orEmpty()
+                val message = if (status in setOf(502, 503, 504)) {
+                    ServiceErrors.http(
+                        if (path.endsWith("/address/reverse")) BackendService.ADDRESS_LOOKUP
+                        else BackendService.LOGIN, status, code, serverMessage)
+                } else {
+                    serverMessage.takeIf { it.isNotBlank() } ?: statusMessage(path, status)
+                }
                 throw MobileApiException(status, code, message)
             }
             return if (responseText.isBlank()) JSONObject() else JSONObject(responseText)
@@ -107,15 +122,8 @@ object MobileAuthApi {
         }
     }
 
-    private fun friendlyNetworkFailure(exception: IOException): IOException = when {
-        exception.message?.startsWith("CLEARTEXT") == true ->
-            IOException("Taro Carts cannot use this network connection. Check the app network settings and try again.", exception)
-        exception is SocketTimeoutException ->
-            IOException("Taro Carts took too long to respond. Check your connection and try again.", exception)
-        exception is UnknownHostException || exception is ConnectException ->
-            IOException("Couldn't connect to Taro Carts. Check your network and try again.", exception)
-        else -> IOException("Couldn't complete the request to Taro Carts. Check your connection and try again.", exception)
-    }
+    private fun friendlyNetworkFailure(exception: IOException): IOException =
+        ServiceErrors.network(BackendService.LOGIN, exception)
 
     private fun statusMessage(path: String, status: Int): String = when {
         status == 400 -> "Some information is missing or invalid. Check it and try again."

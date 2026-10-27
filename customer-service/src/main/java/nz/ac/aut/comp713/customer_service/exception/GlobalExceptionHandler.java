@@ -84,6 +84,27 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(ResponseStatusException.class)
 	public ResponseEntity<ApiError> handleResponseStatus(ResponseStatusException exception,
 			HttpServletRequest request) {
+		if (exception.getStatusCode().value() == 503) {
+			String reason = exception.getReason();
+			String code = switch (reason == null ? "" : reason) {
+				case "Allocation Service is unavailable." -> "ALLOCATION_SERVICE_UNAVAILABLE";
+				case "Customer Service is unavailable." -> "CUSTOMER_SERVICE_UNAVAILABLE";
+				case "Dispatcher Service is unavailable." -> "DISPATCHER_SERVICE_UNAVAILABLE";
+				case "Taro Service is unavailable." -> "TARO_SERVICE_UNAVAILABLE";
+				case "Login Service is unavailable.",
+					"Password settings are temporarily unavailable. Please try again later." -> "LOGIN_SERVICE_UNAVAILABLE";
+				default -> "CUSTOMER_SERVICE_UNAVAILABLE";
+			};
+			String message = switch (code) {
+				case "ALLOCATION_SERVICE_UNAVAILABLE" -> "Allocation Service is unavailable.";
+				case "DISPATCHER_SERVICE_UNAVAILABLE" -> "Dispatcher Service is unavailable.";
+				case "TARO_SERVICE_UNAVAILABLE" -> "Taro Service is unavailable.";
+				case "LOGIN_SERVICE_UNAVAILABLE" -> "Login Service is unavailable.";
+				default -> "Customer Service is unavailable.";
+			};
+			return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+					.body(new ApiError(code, message, request.getRequestURI()));
+		}
 		String message = exception.getStatusCode().value() == 403 ? "Access denied" : "Request cannot be completed";
 		return ResponseEntity.status(exception.getStatusCode())
 				.body(new ApiError("REQUEST_DENIED", message, request.getRequestURI()));

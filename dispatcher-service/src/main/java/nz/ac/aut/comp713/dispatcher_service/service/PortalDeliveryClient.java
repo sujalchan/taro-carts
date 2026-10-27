@@ -7,6 +7,8 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -25,6 +27,7 @@ import nz.ac.aut.comp713.dispatcher_service.security.AllocationIdentitySigner;
 @Component
 @Profile("!legacy-tests")
 public class PortalDeliveryClient {
+    private static final ObjectMapper JSON = new ObjectMapper();
     public record Item(Long id, Long taroTypeId, String taroTypeName, Integer quantity, BigDecimal pricePerKg) {}
     public record Delivery(Long id, Long customerId, String customerName, LocalDate weekStart,
                            String deliveryStatus, String paymentStatus, Long dispatcherId,
@@ -71,7 +74,7 @@ public class PortalDeliveryClient {
     private <T> T call(ExternalCall<T> call) {
         try {
             T value = call.execute();
-            if (value == null) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE);
+            if (value == null) throw unavailable("Allocation Service is unavailable.");
             return value;
         } catch (RestClientResponseException exception) {
             HttpStatus mapped = switch (exception.getStatusCode().value()) {
@@ -82,9 +85,31 @@ public class PortalDeliveryClient {
                 case 409 -> HttpStatus.CONFLICT;
                 default -> HttpStatus.SERVICE_UNAVAILABLE;
             };
+            if (mapped == HttpStatus.SERVICE_UNAVAILABLE) {
+                throw unavailable(downstreamService(exception));
+            }
             throw new ResponseStatusException(mapped);
         } catch (RestClientException exception) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE);
+            throw unavailable("Allocation Service is unavailable.");
+        }
+    }
+
+    private static PortalServiceUnavailableException unavailable(String reason) {
+        return new PortalServiceUnavailableException(reason);
+    }
+
+    private static String downstreamService(RestClientResponseException response) {
+        try {
+            var body = JSON.readTree(response.getResponseBodyAsString());
+            return switch (body.path("code").asText()) {
+                case "CUSTOMER_SERVICE_UNAVAILABLE" -> "Customer Service is unavailable.";
+                case "DISPATCHER_SERVICE_UNAVAILABLE" -> "Dispatcher Service is unavailable.";
+                case "TARO_SERVICE_UNAVAILABLE" -> "Taro Service is unavailable.";
+                default -> body.path("error").asText().equalsIgnoreCase("Authentication service unavailable")
+                        ? "Login Service is unavailable." : "Allocation Service is unavailable.";
+            };
+        } catch (Exception ignored) {
+            return "Allocation Service is unavailable.";
         }
     }
 

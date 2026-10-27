@@ -25,7 +25,8 @@ fun PortalDrawerContent(
     username: String,
     role: String,
     onSignOut: suspend () -> Unit,
-    onEditInformation: (() -> Unit)? = null
+    onEditInformation: (() -> Unit)? = null,
+    onChangePassword: (() -> Unit)? = null
 ) {
     var signingOut by remember { mutableStateOf(false) }
     var signOutError by remember { mutableStateOf<String?>(null) }
@@ -70,6 +71,14 @@ fun PortalDrawerContent(
                 selected = false,
                 modifier = Modifier.padding(horizontal = 12.dp),
                 onClick = onEditInformation
+            )
+        }
+        if (onChangePassword != null) {
+            NavigationDrawerItem(
+                label = { Text("Change password") },
+                selected = false,
+                modifier = Modifier.padding(horizontal = 12.dp),
+                onClick = onChangePassword
             )
         }
     }
