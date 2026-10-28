@@ -65,6 +65,30 @@ For browser address search and maps, set `GOOGLE_MAPS_BROWSER_API_KEY` in the ro
 
 Each service owns its data and exchanges requests over HTTP so the assignment can demonstrate separate service boundaries without sharing a database. Registration starts inactive so an administrator can confirm that the linked customer or dispatcher profile was provisioned before granting access. The seeded admin makes that first approval possible on a fresh installation; the launch scripts distribute matching internal secrets to the services for local development.
 
+## Running integration tests
+
+Run the focused customer and dispatcher portal tests from their service directories:
+
+```powershell
+cd customer-service
+.\mvnw.cmd -Dtest=CustomerPortalWebIntegrationTest test
+
+cd ..\dispatcher-service
+.\mvnw.cmd -Dtest=DispatcherPortalWebIntegrationTest test
+
+cd ..\allocation-service
+.\mvnw.cmd -Dtest=DeliveryLocationServiceTest test
+```
+
+The Android customer and dispatcher client tests need a running emulator or connected device:
+
+```powershell
+cd android-app
+.\gradlew.bat :app:connectedDebugAndroidTest
+```
+
+The portal tests use mocked downstream services, the Android tests use a local HTTP stand-in, and the allocation test verifies location authorization and database persistence.
+
 ## Known limitations
 
 - This is a local assignment deployment. SQLite and the current HTTP service calls are simple to run but are not designed for high concurrency or deployment across untrusted networks. WebSocket live updates and gRPC service calls are not implemented.

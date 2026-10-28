@@ -15,9 +15,17 @@ private const val API_BASE_URL = "http://10.0.2.2:8082"
 private const val CUSTOMER_API_BASE_URL = "http://10.0.2.2:8081"
 private const val DISPATCHER_API_BASE_URL = "http://10.0.2.2:8084"
 
+// Kept separate so instrumentation can exercise the real HTTP client against a local test server.
+internal object DispatcherEndpoint {
+    @Volatile var baseUrl: String = DISPATCHER_API_BASE_URL
+}
+internal object CustomerEndpoint {
+    @Volatile var baseUrl: String = CUSTOMER_API_BASE_URL
+}
+
 private fun serviceFor(baseUrl: String): BackendService = when (baseUrl) {
-    CUSTOMER_API_BASE_URL -> BackendService.CUSTOMER
-    DISPATCHER_API_BASE_URL -> BackendService.DISPATCHER
+    CustomerEndpoint.baseUrl -> BackendService.CUSTOMER
+    DispatcherEndpoint.baseUrl -> BackendService.DISPATCHER
     else -> BackendService.ALLOCATION
 }
 
@@ -72,14 +80,14 @@ object AllocationApi {
     // Dispatcher profiles are owned by dispatcher-service, while assignments are
     // stored on allocations. Match by ID so duplicate or changed names are safe.
     suspend fun getDispatchers(): List<Dispatcher> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/mobile/portal/profile", DISPATCHER_API_BASE_URL) as? JSONObject
+        val json = getJson("/api/v1/mobile/portal/profile", DispatcherEndpoint.baseUrl) as? JSONObject
             ?: throw IOException("The server returned an unexpected dispatcher response.")
         listOf(Dispatcher(json.getLong("id"), json.optString("name", "Dispatcher"),
             json.optBoolean("active", true)))
     }
 
     suspend fun getAssignedDeliveries(dispatcherId: Long): List<AssignedDelivery> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/mobile/portal/deliveries", DISPATCHER_API_BASE_URL) as? JSONArray
+        val json = getJson("/api/v1/mobile/portal/deliveries", DispatcherEndpoint.baseUrl) as? JSONArray
             ?: throw IOException("The server returned an unexpected allocations response.")
         val assigned = (0 until json.length()).map { index ->
             json.getJSONObject(index).toAllocation()
@@ -91,7 +99,7 @@ object AllocationApi {
     suspend fun advanceDelivery(allocationId: Long, nextStatus: String) = withContext(Dispatchers.IO) {
         val body = JSONObject().put("nextStatus", nextStatus)
         request("PUT", "/api/v1/mobile/portal/deliveries/$allocationId/status", body,
-            DISPATCHER_API_BASE_URL)
+            DispatcherEndpoint.baseUrl)
     }
 
     // downloads an invoice into the app cache and removes partial files after failures
@@ -156,7 +164,7 @@ object AllocationApi {
 
     // loads active customers exposed through the allocation-service reference endpoint
     suspend fun getCustomers(): List<Customer> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/mobile/portal/profile", CUSTOMER_API_BASE_URL) as? JSONObject
+        val json = getJson("/api/v1/mobile/portal/profile", CustomerEndpoint.baseUrl) as? JSONObject
             ?: throw IOException("The server returned an unexpected customer response.")
         listOf(json.toCustomer())
     }
@@ -173,14 +181,14 @@ object AllocationApi {
             method = "PUT",
             path = "/api/v1/mobile/portal/profile",
             payload = body,
-            baseUrl = CUSTOMER_API_BASE_URL
+            baseUrl = CustomerEndpoint.baseUrl
         )
         JSONObject(response).toCustomer()
     }
 
     // loads taro types used to populate allocation request choices
     suspend fun getTaroTypes(): List<TaroType> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/mobile/portal/taro-types", CUSTOMER_API_BASE_URL) as? JSONArray
+        val json = getJson("/api/v1/mobile/portal/taro-types", CustomerEndpoint.baseUrl) as? JSONArray
             ?: throw IOException("The server returned an unexpected taro type response.")
         (0 until json.length()).map { index ->
             val taroType = json.getJSONObject(index)
@@ -194,7 +202,7 @@ object AllocationApi {
 
     // retrieves allocations belonging to the selected acting customer
     suspend fun getAllocations(customerId: Long): List<Allocation> = withContext(Dispatchers.IO) {
-        val json = getJson("/api/v1/mobile/portal/allocations", CUSTOMER_API_BASE_URL) as? JSONArray
+        val json = getJson("/api/v1/mobile/portal/allocations", CustomerEndpoint.baseUrl) as? JSONArray
             ?: throw IOException("The server returned an unexpected allocations response.")
         (0 until json.length()).map { index -> json.getJSONObject(index).toAllocation() }
     }
@@ -213,17 +221,17 @@ object AllocationApi {
                     }
                 })
             }
-            request("POST", "/api/v1/mobile/portal/allocations", body, CUSTOMER_API_BASE_URL)
+            request("POST", "/api/v1/mobile/portal/allocations", body, CustomerEndpoint.baseUrl)
         }
 
     // deletes a request while sending the acting customer for ownership validation
     suspend fun deleteCustomerRequest(allocationId: Long, customerId: Long) = withContext(Dispatchers.IO) {
-        request("DELETE", "/api/v1/mobile/portal/allocations/$allocationId/request", baseUrl = CUSTOMER_API_BASE_URL)
+        request("DELETE", "/api/v1/mobile/portal/allocations/$allocationId/request", baseUrl = CustomerEndpoint.baseUrl)
     }
 
     // records payment confirmation for an allocation owned by the acting customer
     suspend fun recordPayment(allocationId: Long, customerId: Long) = withContext(Dispatchers.IO) {
-        request("POST", "/api/v1/mobile/portal/allocations/$allocationId/pay", baseUrl = CUSTOMER_API_BASE_URL)
+        request("POST", "/api/v1/mobile/portal/allocations/$allocationId/pay", baseUrl = CustomerEndpoint.baseUrl)
     }
 
     // maps a nested allocation response into strongly typed app models
@@ -327,8 +335,8 @@ object AllocationApi {
     private fun sessionCookie(baseUrl: String): String {
         val token = sessionToken ?: throw IOException("Sign in to use the customer or dispatcher portal.")
         val csrfName = when (baseUrl) {
-            CUSTOMER_API_BASE_URL -> "CUSTOMER_CSRF"
-            DISPATCHER_API_BASE_URL -> "DISPATCHER_CSRF"
+            CustomerEndpoint.baseUrl -> "CUSTOMER_CSRF"
+            DispatcherEndpoint.baseUrl -> "DISPATCHER_CSRF"
             else -> null
         }
         val csrf = csrfName?.let { name -> csrfTokens[baseUrl]?.let { value -> "$name=$value" } }
@@ -337,8 +345,8 @@ object AllocationApi {
 
     private fun rememberCsrf(baseUrl: String, headers: List<String>?) {
         val csrfName = when (baseUrl) {
-            CUSTOMER_API_BASE_URL -> "CUSTOMER_CSRF"
-            DISPATCHER_API_BASE_URL -> "DISPATCHER_CSRF"
+            CustomerEndpoint.baseUrl -> "CUSTOMER_CSRF"
+            DispatcherEndpoint.baseUrl -> "DISPATCHER_CSRF"
             else -> return
         }
         headers.orEmpty().forEach { header ->
