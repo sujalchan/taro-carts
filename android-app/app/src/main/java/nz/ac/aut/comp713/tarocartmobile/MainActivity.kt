@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -67,7 +68,7 @@ class MainActivity : ComponentActivity() {
                     TaroCartApp()
                 } else {
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
                         verticalArrangement = Arrangement.Center
                     ) {
                         PortalHero("Taro Carts", "Local network access",

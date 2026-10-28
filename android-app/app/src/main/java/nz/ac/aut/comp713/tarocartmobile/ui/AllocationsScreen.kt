@@ -43,6 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +56,7 @@ import kotlinx.coroutines.launch
 import nz.ac.aut.comp713.tarocartmobile.data.Allocation
 import nz.ac.aut.comp713.tarocartmobile.data.AllocationApi
 import nz.ac.aut.comp713.tarocartmobile.data.Customer
+import nz.ac.aut.comp713.tarocartmobile.R
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -98,6 +102,7 @@ fun AllocationsScreen(
     var signingOutFromError by remember { mutableStateOf(false) }
     var signOutErrorFromError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val openMenuLabel = stringResource(R.string.open_menu)
     // tracks whether the customer actions drawer is open or closed
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
@@ -375,7 +380,12 @@ fun AllocationsScreen(
                 TopAppBar(
                     navigationIcon = {
                         // opens the customer actions drawer from the app bar
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        IconButton(
+                            onClick = { scope.launch { drawerState.open() } },
+                            modifier = Modifier.semantics {
+                                contentDescription = openMenuLabel
+                            }
+                        ) {
                             Text("☰", style = MaterialTheme.typography.headlineSmall)
                         }
                     },

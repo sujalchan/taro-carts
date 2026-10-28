@@ -38,6 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
@@ -45,6 +48,7 @@ import kotlinx.coroutines.launch
 import nz.ac.aut.comp713.tarocartmobile.data.AllocationApi
 import nz.ac.aut.comp713.tarocartmobile.data.AssignedDelivery
 import nz.ac.aut.comp713.tarocartmobile.data.Dispatcher
+import nz.ac.aut.comp713.tarocartmobile.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -76,6 +80,7 @@ fun DispatcherScreen(
     var changingPassword by rememberSaveable { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val openMenuLabel = stringResource(R.string.open_menu)
 
     LaunchedEffect(selectedId) { onAccountSelected(selectedId != null) }
 
@@ -152,7 +157,12 @@ fun DispatcherScreen(
             TopAppBar(
                 title = { PortalBrandTitle("Dispatcher portal") },
                 navigationIcon = {
-                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                    IconButton(
+                        onClick = { scope.launch { drawerState.open() } },
+                        modifier = Modifier.semantics {
+                            contentDescription = openMenuLabel
+                        }
+                    ) {
                         Text("☰", style = MaterialTheme.typography.headlineSmall)
                     }
                 }
