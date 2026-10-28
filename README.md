@@ -74,4 +74,4 @@ Each service owns its data and exchanges requests over HTTP so the assignment ca
 
 ## License
 
-Copyright © 2026 Static Talent Group Limited. All Rights Reserved. This proprietary source is available for viewing, study, and educational reference only. Copying, redistribution, modification, commercial use, or reuse in another academic submission requires prior written permission. See [LICENSE.md](LICENSE.md) for the full terms.
+Copyright © 2026 Sujal Chand and Kiran Matthew. All Rights Reserved. This proprietary source is available for viewing, study, and educational reference only. Copying, redistribution, modification, commercial use, or reuse in another academic submission requires prior written permission. See [LICENSE.md](LICENSE.md) for the full terms.

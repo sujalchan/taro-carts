@@ -1,6 +1,6 @@
-Copyright © 2026 Static Talent Group Limited. All Rights Reserved.
+Copyright © 2026 Sujal Chand and Kiran Matthew. All Rights Reserved.
 
-This software, including its source code, documentation, designs, and associated materials (the "Software"), is proprietary to Static Talent Group Limited.
+This software, including its source code, documentation, designs, and associated materials (the "Software"), is proprietary to Sujal Chand and Kiran Matthew.
 
 The Software is made publicly available solely for viewing, study, and educational reference purposes.
 
@@ -8,7 +8,7 @@ You may:
 
 - View and study the Software for personal and educational reference.
 
-You may not, without prior written permission from Static Talent Group Limited:
+You may not, without prior written permission from Sujal Chand and Kiran Matthew:
 
 - Copy or reproduce the Software, in whole or in substantial part.
 - Modify, adapt, or create derivative works based on the Software.
@@ -17,10 +17,10 @@ You may not, without prior written permission from Static Talent Group Limited:
 - Sell, license, monetize, or otherwise commercially exploit the Software.
 - Use the Software or substantial portions of it as your own academic work or submission.
 
-Static Talent Group Limited retains the exclusive right to use, modify, reproduce, distribute, sublicense, license, sell, and otherwise commercially exploit the Software.
+Sujal Chand and Kiran Matthew retain the exclusive right to use, modify, reproduce, distribute, sublicense, license, sell, and otherwise commercially exploit the Software.
 
 No patent, trademark, copyright, or other intellectual property rights are granted except for the limited permission to view and study the Software described above.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED BY LAW, STATIC TALENT GROUP LIMITED SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED BY LAW, SUJAL CHAND AND KIRAN MATTHEW SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
 
-All rights not expressly granted under this license are reserved by Static Talent Group Limited.
+All rights not expressly granted under this license are reserved by Sujal Chand and Kiran Matthew.
