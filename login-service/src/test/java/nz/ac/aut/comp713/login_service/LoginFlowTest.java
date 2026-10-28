@@ -177,7 +177,8 @@ class LoginFlowTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.message").value(
-                        "Sign-in failed. Check your details or account status and try again."))
+                        "Your username or password may be incorrect, or your account may not be available. "
+                                + "Check your details; if your account is disabled, contact your administrator."))
                 .andExpect(jsonPath("$.path").value("/api/v1/mobile/login"));
 
         mvc.perform(post("/api/v1/mobile/register/customer").contentType(MediaType.APPLICATION_JSON)
