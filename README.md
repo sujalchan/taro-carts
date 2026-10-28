@@ -1,6 +1,6 @@
 # Taro Carts
 
-Taro Carts is a **COMP713 assignment**: a distributed web and Android app for customer profiles, taro products, weekly allocations, payments, invoices, and deliveries. The five Spring Boot services run separately and keep their own SQLite databases; the Android client is written in Kotlin with Jetpack Compose.
+Taro Carts is for a **AUT COMP713 assignment**: a distributed web and Android app for customer profiles, taro products, weekly allocations, payments, invoices, and deliveries. The five Spring Boot services run separately and keep their own SQLite databases, the Android client is written in Kotlin with Jetpack Compose.
 
 ## Start here
 
